@@ -1,0 +1,327 @@
+[
+  {
+    "itemId": "small_hp_drop",
+    "name": "Small Hp Drop",
+    "rarity": 1,
+    "description": "Restores 100 Hp",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "FixedValue",
+      "UsableOutsideCombat",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "Healing"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "holy_water",
+    "name": "Holy Water",
+    "rarity": 1,
+    "description": "Dispels all negative simple status effects from target",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "Unredirectable"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "small_tp_drop",
+    "name": "Small Tp Drop",
+    "rarity": 1,
+    "description": "Restores 12 Tp",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "FixedValue",
+      "UsableOutsideCombat",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "Healing",
+      "AffectsTp"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "ointment",
+    "name": "Ointment",
+    "rarity": 1,
+    "description": "Applies HP+ 3 to target",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "Unredirectable",
+      "Unevadeable"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "HpPlus3"
+    ],
+    "userStatuses": []
+  },
+  {
+    "itemId": "hourglass",
+    "name": "Hourglass",
+    "rarity": 1,
+    "description": "Applies Delay 2 to target",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "Delay2"
+    ],
+    "userStatuses": []
+  },
+  {
+    "itemId": "fireball_scroll",
+    "name": "Fireball Scroll",
+    "rarity": 1,
+    "description": "50 Power atk vs 1 target",
+    "powerModifier": 50.0,
+    "numAttacks": 1,
+    "traits": [
+      "FixedPower"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": "Fire",
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "power_scroll",
+    "name": "Power Scroll",
+    "rarity": 1,
+    "description": "Applies P Up 3 to target",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "Unredirectable"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "PUp3"
+    ],
+    "userStatuses": []
+  },
+  {
+    "itemId": "defense_scroll",
+    "name": "Defense Scroll",
+    "rarity": 1,
+    "description": "Applies D Up 3 to target",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "Unredirectable"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "DUp3"
+    ],
+    "userStatuses": []
+  },
+  {
+    "itemId": "antimagic_field",
+    "name": "Anti-Magic Field",
+    "rarity": 1,
+    "description": "Dispel all simple status effects",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [],
+    "targetingType": "AllEntities",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "ice_scroll",
+    "name": "Ice Scroll",
+    "rarity": 1,
+    "description": "Applies Delay 1 to all targets",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [],
+    "targetingType": "AllEnemies",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "Delay1"
+    ],
+    "userStatuses": []
+  },
+  {
+    "itemId": "tainted_hp_drop",
+    "name": "Tainted HP Drop",
+    "rarity": 1,
+    "description": "Restore 250 Hp. Applies HP-3",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "HpMinus3"
+    ],
+    "userStatuses": []
+  },
+  {
+    "itemId": "deflector",
+    "name": "Deflector",
+    "rarity": 1,
+    "description": "Another ally Covers you until the end of your next turn.",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "Unredirectable"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "good_berries",
+    "name": "Good Berries",
+    "rarity": 1,
+    "description": "Restore 25% of an ally's max Hp",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "Healing",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "FixedValue",
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "glowing_lichen",
+    "name": "Glowing Lichen",
+    "rarity": 1,
+    "description": "Restore 25% of an ally's max Tp",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "Healing",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "FixedValue",
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "power_tab",
+    "name": "Power Tab",
+    "rarity": 1,
+    "description": "Permanently increase your Power by 2",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "defense_tab",
+    "name": "Defense Tab",
+    "rarity": 1,
+    "description": "Permanently increase your Defense by 2",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "med_hp_drop",
+    "name": "Med Hp Drop",
+    "rarity": 1,
+    "description": "Restores 200 Hp",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "FixedValue",
+      "UsableOutsideCombat",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "Healing"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "itemId": "med_tp_drop",
+    "name": "Med Tp Drop",
+    "rarity": 1,
+    "description": "Restores 24 Tp",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "traits": [
+      "FixedValue",
+      "UsableOutsideCombat",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "Healing",
+      "AffectsTp"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  }
+]

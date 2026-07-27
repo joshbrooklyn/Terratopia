@@ -1,0 +1,661 @@
+
+  {
+    "techId": "slow_burn",
+    "name": "Slow Burn",
+    "jobClass": "BlackMage",
+    "tpCost": 5,
+    "tier": 1,
+    "rarity": 1,
+    "description": "70% Fire Dmg",
+    "powerModifier": 0.7,
+    "numAttacks": 1,
+    "keywords": [
+      "Growth"
+    ],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": "Fire",
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "icebolt",
+    "name": "Icebolt",
+    "jobClass": "BlackMage",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "110.% Ice Dmg",
+    "powerModifier": 1.1,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": "Ice",
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "shock",
+    "name": "Shock",
+    "jobClass": "BlackMage",
+    "tpCost": 13,
+    "tier": 2,
+    "rarity": 1,
+    "description": "100(+0-30)% Lit Dmg to all opponents",
+    "powerModifier": 1.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "AllEnemies",
+    "element": "Lightning",
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "manabolt",
+    "name": "Manabolt",
+    "jobClass": "BlackMage",
+    "tpCost": 5,
+    "tier": 1,
+    "rarity": 1,
+    "description": "100% Dmg",
+    "powerModifier": 1.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "concordance",
+    "name": "Concordance",
+    "jobClass": "BlackMage",
+    "tpCost": 6,
+    "tier": 1,
+    "rarity": 1,
+    "description": "85% Dmg",
+    "powerModifier": 0.85,
+    "numAttacks": 1,
+    "keywords": [
+      "Teamwork"
+    ],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "gather_power",
+    "name": "Gather Power",
+    "jobClass": "BlackMage",
+    "tpCost": 8,
+    "tier": 2,
+    "rarity": 1,
+    "description": "Gain P Up 2",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [
+      "Unredirectable"
+    ],
+    "targetingType": "Self",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "PUp2"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "infuse",
+    "name": "Infuse",
+    "jobClass": "BlackMage",
+    "tpCost": 10,
+    "tier": 2,
+    "rarity": 1,
+    "description": "50% Healing to self",
+    "powerModifier": 0.5,
+    "numAttacks": 1,
+    "keywords": [
+      "Exhaust"
+    ],
+    "traits": [
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "Healing"
+    ],
+    "targetingType": "Self",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "cure_wounds",
+    "name": "Cure Wounds",
+    "jobClass": "WhiteMage",
+    "tpCost": 6,
+    "tier": 1,
+    "rarity": 1,
+    "description": "100% Heal",
+    "powerModifier": 1.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [
+      "Healing",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "cure_greatest_wounds",
+    "name": "Cure Greatest Wounds",
+    "jobClass": "WhiteMage",
+    "tpCost": 16,
+    "tier": 3,
+    "rarity": 1,
+    "description": "Restores 100% of an ally's max Hp",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "keywords": [
+      "Exhaust"
+    ],
+    "traits": [
+      "Healing",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "renew",
+    "name": "Renew",
+    "jobClass": "WhiteMage",
+    "tpCost": 8,
+    "tier": 2,
+    "rarity": 1,
+    "description": "60% Healing & Applies HP Up 2",
+    "powerModifier": 0.6,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [
+      "Healing",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [
+      "HpUp2"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "verdict",
+    "name": "Verdict",
+    "jobClass": "WhiteMage",
+    "tpCost": 8,
+    "tier": 2,
+    "rarity": 1,
+    "description": "70% Power. Applies D Dwn 2",
+    "powerModifier": 0.7,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [
+      "DDwn2"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "invigorate",
+    "name": "Invigorate",
+    "jobClass": "WhiteMage",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "40% Healing & Applies Fast 1",
+    "powerModifier": 0.4,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [
+      "Healing",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [
+      "Fast1"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "harmony",
+    "name": "Harmony",
+    "jobClass": "WhiteMage",
+    "tpCost": 6,
+    "tier": 1,
+    "rarity": 1,
+    "description": "80% Heal",
+    "powerModifier": 0.8,
+    "numAttacks": 1,
+    "keywords": [
+      "Teamwork"
+    ],
+    "traits": [
+      "Unredirectable",
+      "IgnoresDefense",
+      "Unevadeable",
+      "Healing",
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "smite",
+    "name": "Smite",
+    "jobClass": "WhiteMage",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "60% Dmg",
+    "powerModifier": 0.6,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": "Lightning",
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "nurture",
+    "name": "Nurture",
+    "jobClass": "WhiteMage",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "90% Heal",
+    "powerModifier": 0.9,
+    "numAttacks": 1,
+    "keywords": [
+      "Growth"
+    ],
+    "traits": [
+      "Healing",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "UsableOutsideCombat"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "blinding_powder",
+    "name": "Blinding Powder",
+    "jobClass": "Rogue",
+    "tpCost": 4,
+    "tier": 1,
+    "rarity": 1,
+    "description": "120% Dmg. Gain 40% Evasion",
+    "powerModifier": 1.2,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": [
+      "EvasionPlus40Pct"
+    ]
+  },
+  {
+    "techId": "combo",
+    "name": "Combo",
+    "jobClass": "Rogue",
+    "tpCost": 10,
+    "tier": 2,
+    "rarity": 1,
+    "description": "70% Dmg",
+    "powerModifier": 0.7,
+    "numAttacks": 3,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "RandomWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "coordinated_strike",
+    "name": "Coordinated Strike",
+    "jobClass": "Rogue",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "70% Dmg. Applies P Dwn 2 to target",
+    "powerModifier": 0.7,
+    "numAttacks": 1,
+    "keywords": [
+      "Teamwork"
+    ],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [
+      "PDwn2"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "costly_capitalization",
+    "name": "Costly Capitalization",
+    "jobClass": "Rogue",
+    "tpCost": 6,
+    "tier": 1,
+    "rarity": 1,
+    "description": "140% Dmg. Applies D Dwn 2 to target and D Dwn 2 to user",
+    "powerModifier": 1.4,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [
+      "DDwn2"
+    ],
+    "userStatuses": [
+      "DDwn2"
+    ]
+  },
+  {
+    "techId": "first_aid",
+    "name": "First Aid",
+    "jobClass": "Rogue",
+    "tpCost": 2,
+    "tier": 1,
+    "rarity": 1,
+    "description": "40% Healing. Can only target characters at critical HP",
+    "powerModifier": 0.4,
+    "numAttacks": 1,
+    "keywords": [
+      "Exhaust"
+    ],
+    "traits": [
+      "Healing",
+      "IgnoresDefense",
+      "Unredirectable",
+      "Unevadeable",
+      "UsableOutsideCombat",
+      "TargetFiltering"
+    ],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Heal",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "hunters_mark",
+    "name": "Hunter's Mark",
+    "jobClass": "Rogue",
+    "tpCost": 6,
+    "tier": 1,
+    "rarity": 1,
+    "description": "Applies D Dwn 2, Delay 1",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "DDwn2",
+      "Delay1"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "sneak_attack",
+    "name": "Sneak Attack",
+    "jobClass": "Rogue",
+    "tpCost": 5,
+    "tier": 1,
+    "rarity": 1,
+    "description": "100% Dmg. If the Engage condition is met, inflict Delay 1",
+    "powerModifier": 1.0,
+    "numAttacks": 1,
+    "keywords": [
+      "Engage"
+    ],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [
+      "Delay1"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "venom",
+    "name": "Venom",
+    "jobClass": "Rogue",
+    "tpCost": 8,
+    "tier": 2,
+    "rarity": 1,
+    "description": "100% Dmg. Applies HP-3 to target",
+    "powerModifier": 1.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [
+      "HpMinus3"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "disarm",
+    "name": "Disarm",
+    "jobClass": "Fighter",
+    "tpCost": 4,
+    "tier": 1,
+    "rarity": 1,
+    "description": "80% Dmg. Applies P Dwn 2 to target",
+    "powerModifier": 0.8,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [
+      "PDwn2"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "wild_swing",
+    "name": "Wild Swing",
+    "jobClass": "Fighter",
+    "tpCost": 2,
+    "tier": 1,
+    "rarity": 1,
+    "description": "120% Dmg to one random target",
+    "powerModifier": 1.2,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "RandomWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "whirlwind",
+    "name": "Whirlwind",
+    "jobClass": "Fighter",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "100% Dmg to all enemies",
+    "powerModifier": 1.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "AllEnemies",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "enrage",
+    "name": "Enrage",
+    "jobClass": "Fighter",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "Applies P Up 4 to self",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "Self",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [
+      "PUp4"
+    ],
+    "userStatuses": []
+  },
+  {
+    "techId": "dual_strike",
+    "name": "Dual Strike",
+    "jobClass": "Fighter",
+    "tpCost": 4,
+    "tier": 1,
+    "rarity": 1,
+    "description": "110.% Dmg to two different random targets",
+    "powerModifier": 1.1,
+    "numAttacks": 2,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "RandomWithoutReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "momentum",
+    "name": "Momentum",
+    "jobClass": "Fighter",
+    "tpCost": 6,
+    "tier": 1,
+    "rarity": 1,
+    "description": "70% Dmg. Applies P Up 2 to user",
+    "powerModifier": 0.7,
+    "numAttacks": 1,
+    "keywords": [
+      "Teamwork"
+    ],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": [
+      "PUp2"
+    ]
+  },
+  {
+    "techId": "shrug_off",
+    "name": "Shrug Off",
+    "jobClass": "Fighter",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "Dispel all negative simple status effects from self",
+    "powerModifier": 0.0,
+    "numAttacks": 1,
+    "keywords": [],
+    "traits": [],
+    "targetingType": "Self",
+    "element": null,
+    "effectType": null,
+    "targetStatuses": [],
+    "userStatuses": []
+  },
+  {
+    "techId": "charge",
+    "name": "Charge!",
+    "jobClass": "Fighter",
+    "tpCost": 7,
+    "tier": 1,
+    "rarity": 1,
+    "description": "100% Dmg",
+    "powerModifier": 1.0,
+    "numAttacks": 1,
+    "keywords": [
+      "Engage"
+    ],
+    "traits": [],
+    "targetingType": "ChooseWithReplacement",
+    "element": null,
+    "effectType": "Damage",
+    "targetStatuses": [],
+    "userStatuses": []
+  }
+]

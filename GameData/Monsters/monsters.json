@@ -1,0 +1,17 @@
+[
+  {
+    "monsterId": "skeleton",
+    "name": "Skeleton",
+    "hpBase": 60,
+    "hpPerLevel": 60,
+    "powerBase": 18,
+    "powerPerLevel": 8,
+    "defenseBase": 18,
+    "defensePerLevel": 8,
+    "speedBase": 3,
+    "speedBasePerLevel": 2,
+    "monsterActionIds": [],
+    "monsterPassiveIds": ["living_dead"],
+    "canFight": true
+  }
+]
