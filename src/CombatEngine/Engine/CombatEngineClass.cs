@@ -31,14 +31,10 @@ public class CombatEngineClass
     public void InitCombat(
         IReadOnlyList<CombatEntity> allies,
         IReadOnlyList<CombatEntity> enemies,
-        Func<CombatEntity, CombatCommand> chooseAiCommand,
         bool isBossFight = false)
     {
         CombatEventBus.Reset();
-
-        _allies.Clear();
-        _enemies.Clear();
-        _roundNumber = 0;
+        this.Reset();
 
         _allies.AddRange(allies);
         _enemies.AddRange(enemies);
@@ -53,16 +49,15 @@ public class CombatEngineClass
             evaluateWinCondition:     EvaluateWinCondition,
             getValidTargets:          GetValidTargets,
             expandAutoTargets:        ExpandAutoTargets,
-            chooseAiCommand:          chooseAiCommand,
             assignAiTarget:           AssignRandomAiTarget,
             nextTurn:                 NextTurn
         );
     }
 
-    public void SubmitPlayerTargets(List<string> chosenTargetIds) =>
+    public void SubmitTargets(List<string> chosenTargetIds) =>
         _combatFlowMachine.SubmitTargets(chosenTargetIds);
 
-    public void SubmitPlayerCommand(CombatCommand cmd) =>
+    public void SubmitCommand(CombatCommand cmd) =>
         _combatFlowMachine.SubmitCommand(cmd);
 
     public void BeginCombat()

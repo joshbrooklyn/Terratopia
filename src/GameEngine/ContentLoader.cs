@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Linq;
 using CombatEngine.Enums;
 using GameEngine.DataClasses;
 
@@ -16,9 +17,7 @@ public static class ContentLoader
 
     public static List<Tech> LoadTechs()
     {
-        var path = Path.Combine(FindGameDataPath(), "Techs", "techs.json");
-        var techs = JsonSerializer.Deserialize<List<Tech>>(File.ReadAllText(path), _options)
-            ?? throw new InvalidOperationException("techs.json deserialized to null.");
+        var techs = LoadDirectory<Tech>("Techs");
 
         foreach (var tech in techs)
         {
@@ -32,40 +31,34 @@ public static class ContentLoader
         return techs;
     }
 
-    public static List<Item> LoadItems()
+    public static List<Item> LoadItems() => LoadDirectory<Item>("Items");
+
+    public static List<Monster> LoadMonsters() => LoadDirectory<Monster>("Monsters");
+
+    public static List<MonsterAction> LoadMonsterActions() => LoadDirectory<MonsterAction>("MonsterActions");
+
+    public static List<Dungeon> LoadDungeons() => LoadDirectory<Dungeon>("Dungeons");
+
+    public static List<Adventurer> LoadAdventurers() => LoadDirectory<Adventurer>("Adventurers");
+
+    private static List<T> LoadDirectory<T>(string subfolder)
     {
-        var path = Path.Combine(FindGameDataPath(), "Items", "items.json");
-        return JsonSerializer.Deserialize<List<Item>>(File.ReadAllText(path), _options)
-            ?? throw new InvalidOperationException("items.json deserialized to null.");
+        var dir = Path.Combine(FindGameDataPath(), subfolder);
+        var files = Directory.EnumerateFiles(dir, "*.json")
+            .Where(f => !Path.GetFileName(f).Equals("NotImplemented.json", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(f => f, StringComparer.Ordinal);
+
+        var result = new List<T>();
+        foreach (var file in files)
+        {
+            var item = JsonSerializer.Deserialize<T>(File.ReadAllText(file), _options)
+                ?? throw new InvalidOperationException($"{Path.GetFileName(file)} deserialized to null.");
+            result.Add(item);
+        }
+
+        return result;
     }
 
-    public static List<Monster> LoadMonsters()
-    {
-        var path = Path.Combine(FindGameDataPath(), "Monsters", "monsters.json");
-        return JsonSerializer.Deserialize<List<Monster>>(File.ReadAllText(path), _options)
-            ?? throw new InvalidOperationException("monsters.json deserialized to null.");
-    }
-
-    public static List<MonsterAction> LoadMonsterActions()
-    {
-        var path = Path.Combine(FindGameDataPath(), "MonsterActions", "monsterActions.json");
-        return JsonSerializer.Deserialize<List<MonsterAction>>(File.ReadAllText(path), _options)
-            ?? throw new InvalidOperationException("monsterActions.json deserialized to null.");
-    }
-
-    public static List<Dungeon> LoadDungeons()
-    {
-        var path = Path.Combine(FindGameDataPath(), "Dungeons", "dungeons.json");
-        return JsonSerializer.Deserialize<List<Dungeon>>(File.ReadAllText(path), _options)
-            ?? throw new InvalidOperationException("dungeons.json deserialized to null.");
-    }
-
-    public static List<Adventurer> LoadAdventurers()
-    {
-        var path = Path.Combine(FindGameDataPath(), "Adventurers", "adventurers.json");
-        return JsonSerializer.Deserialize<List<Adventurer>>(File.ReadAllText(path), _options)
-            ?? throw new InvalidOperationException("adventurers.json deserialized to null.");
-    }
     private static string FindGameDataPath()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

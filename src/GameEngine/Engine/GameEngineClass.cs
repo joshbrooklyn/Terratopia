@@ -97,7 +97,7 @@ public class GameEngineClass
             })
             .ToList();
 
-        CombatEngineClass.Instance.InitCombat(allies, enemies, ChooseAiCommand);
+        CombatEngineClass.Instance.InitCombat(allies, enemies);
         return new CombatStartData(allySeeds, enemySeeds);
     }
 
@@ -179,20 +179,20 @@ public class GameEngineClass
         };
     }
 
-    private CombatCommand ChooseAiCommand(CombatEntity actor)
+    public CombatCommand ChooseAiCommand(string actorId)
     {
-        var monster = _enemyMonsterMap[actor.EntityId];
+        var monster = _enemyMonsterMap[actorId];
 
-        var factories = new List<Func<CombatCommand>>();
+        var availableActions = new List<Func<CombatCommand>>();
         foreach (var actionId in monster.MonsterActionIds)
-            factories.Add(() => MakeMonsterCombatCommand(actor.EntityId, actionId));
+            availableActions.Add(() => MakeMonsterCombatCommand(actorId, actionId));
         if (monster.CanFight)
-            factories.Add(() => MakeFightCommand(actor.EntityId));
+            availableActions.Add(() => MakeFightCommand(actorId));
 
-        if (factories.Count == 0)
+        if (availableActions.Count == 0)
             throw new InvalidOperationException($"Monster '{monster.MonsterId}' has no available actions.");
 
-        return factories[_rng.Next(factories.Count)]();
+        return availableActions[_rng.Next(availableActions.Count)]();
     }
 
     public CombatCommand MakeFightCommand(string actorId)

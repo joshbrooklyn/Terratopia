@@ -4,11 +4,9 @@ public enum CombatFlowTrigger
 {
     CombatStarted,
     RoundBuilt,
-    PlayerTurn,
-    EnemyTurn,
-    PlayerSubmittedCommand,
+    TurnReady,
+    CommandSubmitted,
     TargetsSubmitted,
-    AIResolved,
     ActionResolved,
     //ActionValidated,
     //ActionRejected,

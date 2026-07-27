@@ -1,3 +1,4 @@
+using CombatEngine.Enums;
 
 namespace GameEngine.DataClasses;
 
@@ -18,7 +19,7 @@ public class Monster : IGameDataObject
     public int SpeedBasePerLevel { get; init; }
 
     public List<string> MonsterActionIds { get; init; } = [];
-    public List<string> MonsterPassiveIds { get; init; } = [];
+    public List<MonsterPassive>? Passives { get; init; }
 
     // Combat access
     public bool CanFight { get; init; }

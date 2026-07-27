@@ -36,11 +36,12 @@ public class EvasionTests
     };
 
     // Creates a fresh (non-singleton) engine with a controlled RNG.
-    // Defender → _allies (isPlayerEntity = true → WaitingForPlayerAction).
-    // Attacker → _enemies (isPlayerEntity = false → AIDeciding, targets _allies[0] = defender).
-    // A WaitingForPlayerAction subscription is wired so the defender's turn is a no-op:
-    //   TargetingType.Single has no case in ExpandAutoTargets → ChosenTargets stays null,
-    //   but DirectEffects = [] means ResolveAction never reads ChosenTargets anyway.
+    // Defender → _allies (isAlly = true → shows up as the ally branch of WaitingForTurn).
+    // Attacker → _enemies (isAlly = false → enemy branch of WaitingForTurn, targets _allies[0] = defender).
+    // A WaitingForTurn subscription is wired so each side's turn is handled:
+    //   defender's turn is a no-op (TargetingType.Single has no case in ExpandAutoTargets →
+    //   ChosenTargets stays null, but DirectEffects = [] means ResolveAction never reads it anyway);
+    //   attacker's turn always submits MakeMeleeCommand(attacker).
     // Subscribe to other CombatEventBus events AFTER this method returns, before BeginCombat.
     private static (CombatEngineClass engine, CombatEntity attacker, CombatEntity defender)
         SetupCombat(float rngValue, float defenderEvasion)
@@ -63,21 +64,27 @@ public class EvasionTests
             evasion: defenderEvasion, critChance: 0.0f, critModifier: 0.0f);
 
         engine.InitCombat(
-            allies:          [defender],
-            enemies:         [attacker],
-            chooseAiCommand: MakeMeleeCommand);
+            allies:  [defender],
+            enemies: [attacker]);
 
-        // Wire defender's no-op turn AFTER InitCombat (which calls CombatEventBus.Reset).
-        CombatEventBus.WaitingForPlayerAction += (_, _, _) =>
+        // Wire both sides' turns AFTER InitCombat (which calls CombatEventBus.Reset).
+        CombatEventBus.WaitingForTurn += (_, _, _, isAlly) =>
         {
-            engine.SubmitPlayerCommand(new CombatCommand
+            if (isAlly)
             {
-                ActorId       = "defender",
-                TargetingType = TargetingType.Self,
-                ValidTargets  = ValidTarget.Allies,
-                LivingOrDead  = LivingOrDead.Living,
-                DirectEffects = [],
-            });
+                engine.SubmitCommand(new CombatCommand
+                {
+                    ActorId       = "defender",
+                    TargetingType = TargetingType.Self,
+                    ValidTargets  = ValidTarget.Allies,
+                    LivingOrDead  = LivingOrDead.Living,
+                    DirectEffects = [],
+                });
+            }
+            else
+            {
+                engine.SubmitCommand(MakeMeleeCommand(attacker));
+            }
         };
 
         return (engine, attacker, defender);

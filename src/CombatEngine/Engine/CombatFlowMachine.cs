@@ -19,7 +19,6 @@ namespace CombatEngine.Engine
         private readonly Action                    _doRoundEnd;
         private readonly Func<CombatCommand, IReadOnlyList<CombatEntity>> _getValidTargets;
         private readonly Action<CombatCommand>     _expandAutoTargets;
-        private readonly Func<CombatEntity, CombatCommand> _chooseAiCommand;
         private readonly Action<CombatCommand>     _assignAiTarget;
         private readonly Func<bool>                _isRoundOver;
         private readonly Func<bool>                _evaluateWinCondition;
@@ -30,7 +29,7 @@ namespace CombatEngine.Engine
         internal void SubmitCommand(CombatCommand cmd)
         {
             _pendingCommand = cmd;
-            _machine.Fire(CombatFlowTrigger.PlayerSubmittedCommand);
+            _machine.Fire(CombatFlowTrigger.CommandSubmitted);
         }
 
         internal void SubmitTargets(List<string> chosenTargets)
@@ -48,7 +47,6 @@ namespace CombatEngine.Engine
             Func<bool>                evaluateWinCondition,
             Func<CombatCommand, IReadOnlyList<CombatEntity>> getValidTargets,
             Action<CombatCommand>     expandAutoTargets,
-            Func<CombatEntity, CombatCommand> chooseAiCommand,
             Action<CombatCommand>     assignAiTarget,
             Func<CombatEntity?>       nextTurn
             )
@@ -61,7 +59,6 @@ namespace CombatEngine.Engine
             _evaluateWinCondition     = evaluateWinCondition;
             _getValidTargets          = getValidTargets;
             _expandAutoTargets        = expandAutoTargets;
-            _chooseAiCommand          = chooseAiCommand;
             _assignAiTarget           = assignAiTarget;
             _nextTurn                 = nextTurn;
 
@@ -86,20 +83,23 @@ namespace CombatEngine.Engine
                 });
 
             _machine.Configure(CombatFlowState.TurnStart)
-                .Permit(CombatFlowTrigger.PlayerTurn, CombatFlowState.WaitingForPlayerAction)
-                .Permit(CombatFlowTrigger.EnemyTurn,  CombatFlowState.AIDeciding)
+                .Permit(CombatFlowTrigger.TurnReady, CombatFlowState.WaitingForTurn)
                 .OnEntry(() =>
                 {
                     _currentEntity = _nextTurn();
                     CombatEventBus.RaiseTurnStarted(_currentEntity!.EntityId, _currentEntity!.Name);
-                    _machine.Fire(_isPlayerEntity(_currentEntity!)
-                        ? CombatFlowTrigger.PlayerTurn
-                        : CombatFlowTrigger.EnemyTurn);
+                    _machine.Fire(CombatFlowTrigger.TurnReady);
                 });
 
-            _machine.Configure(CombatFlowState.WaitingForPlayerAction)
-                .PermitDynamic(CombatFlowTrigger.PlayerSubmittedCommand, () =>
+            _machine.Configure(CombatFlowState.WaitingForTurn)
+                .PermitDynamic(CombatFlowTrigger.CommandSubmitted, () =>
                 {
+                    if (!_isPlayerEntity(_currentEntity!))
+                    {
+                        _assignAiTarget(_pendingCommand!);
+                        return CombatFlowState.ResolvingAction;
+                    }
+
                     if (_pendingCommand!.TargetingType is TargetingType.Choose or TargetingType.SelectiveMulti)
                         return CombatFlowState.WaitingForTargetSelection;
 
@@ -108,7 +108,9 @@ namespace CombatEngine.Engine
                 })
                 .OnEntry(() =>
                 {
-                    CombatEventBus.RaiseWaitingForPlayerAction(_currentEntity!.EntityId, _currentEntity!.Name, _currentEntity!.Tp);
+                    CombatEventBus.RaiseWaitingForTurn(
+                        _currentEntity!.EntityId, _currentEntity!.Name, _currentEntity!.Tp,
+                        _isPlayerEntity(_currentEntity!));
                 });
 
             _machine.Configure(CombatFlowState.WaitingForTargetSelection)
@@ -120,15 +122,6 @@ namespace CombatEngine.Engine
                     var validNames = validTargets.Select(e => e.Name).ToList();
                     CombatEventBus.RaiseTargetSelectionRequested(
                         _pendingCommand!.ActorId, _currentEntity!.Name, _pendingCommand!.TargetingType, validIds, validNames);
-                });
-
-            _machine.Configure(CombatFlowState.AIDeciding)
-                .Permit(CombatFlowTrigger.AIResolved, CombatFlowState.ResolvingAction)
-                .OnEntry(() =>
-                {
-                    _pendingCommand = _chooseAiCommand(_currentEntity!);
-                    _assignAiTarget(_pendingCommand);
-                    _machine.Fire(CombatFlowTrigger.AIResolved);
                 });
 
             _machine.Configure(CombatFlowState.ResolvingAction)
@@ -174,8 +167,7 @@ namespace CombatEngine.Engine
                     _machine.Fire(CombatFlowTrigger.WinConditionChecked);
                 });
 
-            _machine.Configure(CombatFlowState.CombatOver);
-                //.OnEntry(() => CALL RESET HERE
+            _machine.Configure(CombatFlowState.CombatOver);                
 
             _machine.OnTransitioned(t =>
                 Console.WriteLine($"[flow] {t.Source} → {t.Destination}"));

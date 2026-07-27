@@ -51,7 +51,7 @@ public partial class Battle : Control
 		CombatEventBus.RoundEnded             += OnRoundEnded;
 		CombatEventBus.TurnStarted            += OnTurnStarted;
 		CombatEventBus.TurnEnded              += OnTurnEnded;
-		CombatEventBus.WaitingForPlayerAction += OnWaitingForPlayerAction;
+		CombatEventBus.WaitingForTurn          += OnWaitingForTurn;
 		CombatEventBus.TargetSelectionRequested += OnTargetSelectionRequested;
 		CombatEventBus.EntityHpChanged        += OnEntityHpChanged;
 		CombatEventBus.EntityTpChanged        += OnEntityTpChanged;
@@ -96,8 +96,17 @@ public partial class Battle : Control
 	private void OnTurnEnded(string entityId, string entityName) =>
 		AddLogEntry($"{entityName}'s turn ended.");
 
-	private void OnWaitingForPlayerAction(string entityId, string entityName, int currentTp) =>
-		PopulateAndShowModal(entityId, currentTp);
+	private void OnWaitingForTurn(string entityId, string entityName, int currentTp, bool isAlly)
+	{
+		if (isAlly)
+		{
+			PopulateAndShowModal(entityId, currentTp);
+			return;
+		}
+
+		var cmd = GameEngineClass.Instance.ChooseAiCommand(entityId);
+		CombatEngineClass.Instance.SubmitCommand(cmd);
+	}
 
 	private void PopulateAndShowModal(string entityId, int currentTp)
 	{
@@ -139,14 +148,14 @@ public partial class Battle : Control
 	{
 		_actionModal.Hide();
 		var cmd = GameEngineClass.Instance.MakeCombatCommand(actorId, techId);
-		CombatEngineClass.Instance.SubmitPlayerCommand(cmd);
+		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
 
 	private void OnFightSelected(string actorId)
 	{
 		_actionModal.Hide();
 		var cmd = GameEngineClass.Instance.MakeFightCommand(actorId);
-		CombatEngineClass.Instance.SubmitPlayerCommand(cmd);
+		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
 
 	private void OnTargetSelectionRequested(string actorId, string actorName, TargetingType targetingType, IReadOnlyList<string> validTargetIds, IReadOnlyList<string> validTargetNames)
@@ -173,7 +182,7 @@ public partial class Battle : Control
 	private void OnTargetChosen(string targetId)
 	{
 		_targetModal.Hide();
-		CombatEngineClass.Instance.SubmitPlayerTargets(new List<string> { targetId });
+		CombatEngineClass.Instance.SubmitTargets(new List<string> { targetId });
 	}
 
 	private void OnEntityHpChanged(string entityId, string entityName, int oldHp, int newHp) =>
@@ -226,7 +235,7 @@ public partial class Battle : Control
 		CombatEventBus.RoundEnded             -= OnRoundEnded;
 		CombatEventBus.TurnStarted            -= OnTurnStarted;
 		CombatEventBus.TurnEnded              -= OnTurnEnded;
-		CombatEventBus.WaitingForPlayerAction -= OnWaitingForPlayerAction;
+		CombatEventBus.WaitingForTurn          -= OnWaitingForTurn;
 		CombatEventBus.TargetSelectionRequested -= OnTargetSelectionRequested;
 		CombatEventBus.EntityHpChanged        -= OnEntityHpChanged;
 		CombatEventBus.EntityTpChanged        -= OnEntityTpChanged;

@@ -16,8 +16,8 @@ public class DamageTests
         public override int Next(int maxValue) => 0;
     }
 
-    // attacker → ally (player, Speed=10, goes first each round).
-    // counter  → enemy (AI, Speed=5, goes second). Power=10/Level=1/Defense=0 against the attacker
+    // attacker → ally (Speed=10, goes first each round).
+    // counter  → enemy (Speed=5, goes second). Power=10/Level=1/Defense=0 against the attacker
     //            so the counter always deals exactly 25 damage → kills attacker (MaxHp=25) after
     //            one round, ending combat regardless of how much damage the attacker dealt.
     private static (CombatEngineClass engine, CombatEntity attacker, CombatEntity counter)
@@ -39,46 +39,52 @@ public class DamageTests
             evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
 
         engine.InitCombat(
-            allies:          [attacker],
-            enemies:         [counter],
-            chooseAiCommand: e => new CombatCommand
-            {
-                ActorId       = e.EntityId,
-                TargetingType = TargetingType.Random,
-                ValidTargets  = ValidTarget.Enemies,
-                LivingOrDead  = LivingOrDead.Living,
-                TPCost        = 0,
-                DirectEffects =
-                [
-                    new CombatDirectEffect
-                    {
-                        EffectType  = CombatDirectEffectType.Damage,
-                        CalcType    = DamageCalcType.StandardFormula,
-                        PowerFactor = 1.0,
-                    },
-                ],
-            });
+            allies:  [attacker],
+            enemies: [counter]);
 
         // Wire AFTER InitCombat (which calls CombatEventBus.Reset).
-        CombatEventBus.WaitingForPlayerAction += (_, _, _) =>
+        CombatEventBus.WaitingForTurn += (_, _, _, isAlly) =>
         {
-            engine.SubmitPlayerCommand(new CombatCommand
+            if (isAlly)
             {
-                ActorId       = "attacker",
-                TargetingType = TargetingType.Random,
-                ValidTargets  = ValidTarget.Enemies,
-                LivingOrDead  = LivingOrDead.Living,
-                TPCost        = 0,
-                DirectEffects =
-                [
-                    new CombatDirectEffect
-                    {
-                        EffectType  = CombatDirectEffectType.Damage,
-                        CalcType    = DamageCalcType.StandardFormula,
-                        PowerFactor = powerFactor,
-                    },
-                ],
-            });
+                engine.SubmitCommand(new CombatCommand
+                {
+                    ActorId       = "attacker",
+                    TargetingType = TargetingType.Random,
+                    ValidTargets  = ValidTarget.Enemies,
+                    LivingOrDead  = LivingOrDead.Living,
+                    TPCost        = 0,
+                    DirectEffects =
+                    [
+                        new CombatDirectEffect
+                        {
+                            EffectType  = CombatDirectEffectType.Damage,
+                            CalcType    = DamageCalcType.StandardFormula,
+                            PowerFactor = powerFactor,
+                        },
+                    ],
+                });
+            }
+            else
+            {
+                engine.SubmitCommand(new CombatCommand
+                {
+                    ActorId       = "counter",
+                    TargetingType = TargetingType.Random,
+                    ValidTargets  = ValidTarget.Enemies,
+                    LivingOrDead  = LivingOrDead.Living,
+                    TPCost        = 0,
+                    DirectEffects =
+                    [
+                        new CombatDirectEffect
+                        {
+                            EffectType  = CombatDirectEffectType.Damage,
+                            CalcType    = DamageCalcType.StandardFormula,
+                            PowerFactor = 1.0,
+                        },
+                    ],
+                });
+            }
         };
 
         return (engine, attacker, counter);

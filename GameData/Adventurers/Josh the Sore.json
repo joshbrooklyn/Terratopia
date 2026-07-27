@@ -1,0 +1,18 @@
+{
+  "adventurerId": "adventurer_001",
+  "name": "Josh the Sore",
+  "level": 1,
+  "maxHp": 100,
+  "hp": 100,
+  "maxTp": 50,
+  "tp": 50,
+  "power": 10,
+  "defense": 10,
+  "speed": 10,
+  "evasion": 0.05,
+  "critChance": 0.05,
+  "critModifier": 0.5,
+  "techsIds": ["fireblast"],
+  "itemIds": [],
+  "canFight": true
+}
