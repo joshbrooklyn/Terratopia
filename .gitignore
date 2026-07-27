@@ -1,0 +1,12 @@
+# Godot 4+ specific ignores
+/src/Game/.godot/
+/src/Game/.vs/
+/docs/.obsidian/workspace.json
+/src/GameEngine/obj
+/src/CombatEngine/bin
+/src/CombatEngine/obj
+/tests/Terratopia.Tests/bin
+/tests/Terratopia.Tests/obj
+/src/BattleEngine_old/obj
+/src/GameEngine/bin
+/GameData

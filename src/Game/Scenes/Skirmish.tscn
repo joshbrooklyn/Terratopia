@@ -1,0 +1,66 @@
+[gd_scene load_steps=2 format=3 uid="uid://gjqvqpvo14nn"]
+
+[ext_resource type="Script" path="res://Scenes/Skirmish.cs" id="1_skirmish"]
+
+[node name="Skirmish" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_skirmish")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "Select Combatants"
+horizontal_alignment = 1
+
+[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AdventurerPanel" type="VBoxContainer" parent="VBoxContainer/HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AdventurerLabel" type="Label" parent="VBoxContainer/HSplitContainer/AdventurerPanel"]
+layout_mode = 2
+text = "Adventurers"
+
+[node name="AdventurerList" type="ItemList" parent="VBoxContainer/HSplitContainer/AdventurerPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MonsterPanel" type="VBoxContainer" parent="VBoxContainer/HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MonsterLabel" type="Label" parent="VBoxContainer/HSplitContainer/MonsterPanel"]
+layout_mode = 2
+text = "Monsters"
+
+[node name="MonsterList" type="ItemList" parent="VBoxContainer/HSplitContainer/MonsterPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ButtonRow" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="VBoxContainer/ButtonRow"]
+layout_mode = 2
+text = "← Back"
+
+[node name="StartCombatButton" type="Button" parent="VBoxContainer/ButtonRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "Start Combat"

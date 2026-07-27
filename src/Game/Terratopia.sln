@@ -1,0 +1,43 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terratopia", "Terratopia.csproj", "{56B81538-D8BF-440A-ABCE-7B81946D3DA7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CombatEngine", "..\CombatEngine\CombatEngine.csproj", "{E0C1A88A-18FC-4BE3-8144-BF7A6F4F30E2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEngine", "..\GameEngine\GameEngine.csproj", "{8ABFC5F8-8C2D-44AC-8A34-5859611F5D69}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terratopia.Tests", "..\..\tests\Terratopia.Tests\Terratopia.Tests.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+	Debug|Any CPU = Debug|Any CPU
+	ExportDebug|Any CPU = ExportDebug|Any CPU
+	ExportRelease|Any CPU = ExportRelease|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{56B81538-D8BF-440A-ABCE-7B81946D3DA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56B81538-D8BF-440A-ABCE-7B81946D3DA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56B81538-D8BF-440A-ABCE-7B81946D3DA7}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{56B81538-D8BF-440A-ABCE-7B81946D3DA7}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{56B81538-D8BF-440A-ABCE-7B81946D3DA7}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{56B81538-D8BF-440A-ABCE-7B81946D3DA7}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{E0C1A88A-18FC-4BE3-8144-BF7A6F4F30E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0C1A88A-18FC-4BE3-8144-BF7A6F4F30E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0C1A88A-18FC-4BE3-8144-BF7A6F4F30E2}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0C1A88A-18FC-4BE3-8144-BF7A6F4F30E2}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{E0C1A88A-18FC-4BE3-8144-BF7A6F4F30E2}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{E0C1A88A-18FC-4BE3-8144-BF7A6F4F30E2}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{8ABFC5F8-8C2D-44AC-8A34-5859611F5D69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8ABFC5F8-8C2D-44AC-8A34-5859611F5D69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8ABFC5F8-8C2D-44AC-8A34-5859611F5D69}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8ABFC5F8-8C2D-44AC-8A34-5859611F5D69}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{8ABFC5F8-8C2D-44AC-8A34-5859611F5D69}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{8ABFC5F8-8C2D-44AC-8A34-5859611F5D69}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

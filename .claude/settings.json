@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($enums = @\\(\"ElementType\",\"ResistanceLevel\",\"EntityState\",\"DurationType\",\"StackBehavior\",\"StatusSimplicity\",\"StatusPolarity\",\"EffectType\"\\); foreach \\($e in $enums\\) { Move-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\\\\$e.cs\" \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\\\\Enums\\\\$e.cs\" }; Get-ChildItem \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\\\\Enums\" | Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\" -Recurse -File)",
+      "Bash(Select-Object FullName, Extension)",
+      "Bash(Move-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\\\\CombatEngine.cs\" \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\\\\BattleEngine.cs\")",
+      "Bash(powershell -Command \"[System.Guid]::NewGuid\\(\\).ToString\\(\\).ToUpper\\(\\)\")",
+      "PowerShell(dotnet build \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\Game\\\\Terratopia.sln\" 2>&1)",
+      "Bash(Remove-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\\\\Engine\\\\EntityLifecycleMachine.cs\")",
+      "Bash(Remove-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\\\\Enums\\\\EntityTrigger.cs\")",
+      "Bash(Write-Output \"Deleted\")",
+      "Bash(dotnet test *)",
+      "Bash(Move-Item src/BattleEngine src/CombatEngine)",
+      "PowerShell(Move-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\BattleEngine\" \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\CombatEngine\")",
+      "PowerShell(Rename-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\CombatEngine\\\\BattleEngine.csproj\" \"CombatEngine.csproj\")",
+      "PowerShell(Rename-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\CombatEngine\\\\Engine\\\\BattleEngineClass.cs\" \"CombatEngineClass.cs\")",
+      "PowerShell(Copy-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\Game\\\\BattleEngineAutoload.cs\" \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\Game\\\\CombatEngineAutoload.cs\")",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git restore *)",
+      "Bash(dotnet restore *)",
+      "PowerShell(New-Item -ItemType Directory \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\GameData\\\\MonsterActions\")",
+      "Bash(Remove-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\Game\\\\Scenes\\\\Skirmish.cs\")",
+      "Bash(Remove-Item \"d:\\\\Documents\\\\GIT\\\\Terratopia\\\\src\\\\Game\\\\Scenes\\\\Skirmish.tscn\")"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}

@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://b2usddi0wlxkl"]
+
+[ext_resource type="Script" path="res://Scenes/HpStatDisplay.cs" id="1_hpstat"]
+
+[node name="HpStatDisplay" type="Label"]
+text = "HP: — / —"
+script = ExtResource("1_hpstat")

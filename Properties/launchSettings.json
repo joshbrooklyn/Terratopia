@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Terratopia": {
+      "commandName": "Executable",
+      "executablePath": "%GODOT4%",
+      "commandLineArgs": "--path . --verbose",
+      "workingDirectory": "./src/Game"
+    }
+  }
+}

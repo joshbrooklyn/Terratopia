@@ -1,0 +1,73 @@
+[gd_scene load_steps=2 format=3 uid="uid://bhdmurq0tmk6n"]
+
+[ext_resource type="Script" path="res://Scenes/DataBrowser.cs" id="1_databrowser"]
+
+[node name="DataBrowser" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_databrowser")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BackButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "← Back"
+
+[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CategoryPanel" type="VBoxContainer" parent="VBoxContainer/HSplitContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="TechsButton" type="Button" parent="VBoxContainer/HSplitContainer/CategoryPanel"]
+layout_mode = 2
+text = "Techs"
+
+[node name="ItemsButton" type="Button" parent="VBoxContainer/HSplitContainer/CategoryPanel"]
+layout_mode = 2
+text = "Items"
+
+[node name="MonstersButton" type="Button" parent="VBoxContainer/HSplitContainer/CategoryPanel"]
+layout_mode = 2
+text = "Monsters"
+
+[node name="MonsterActionsButton" type="Button" parent="VBoxContainer/HSplitContainer/CategoryPanel"]
+layout_mode = 2
+text = "Monster Actions"
+
+[node name="DungeonsButton" type="Button" parent="VBoxContainer/HSplitContainer/CategoryPanel"]
+layout_mode = 2
+text = "Dungeons"
+
+[node name="AdventurersButton" type="Button" parent="VBoxContainer/HSplitContainer/CategoryPanel"]
+layout_mode = 2
+text = "Adventurers"
+
+[node name="InnerSplit" type="HSplitContainer" parent="VBoxContainer/HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ObjectList" type="ItemList" parent="VBoxContainer/HSplitContainer/InnerSplit"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PropertyScroll" type="ScrollContainer" parent="VBoxContainer/HSplitContainer/InnerSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PropertyContainer" type="VBoxContainer" parent="VBoxContainer/HSplitContainer/InnerSplit/PropertyScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
