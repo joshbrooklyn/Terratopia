@@ -40,6 +40,14 @@ text = "Adventurers"
 layout_mode = 2
 size_flags_vertical = 3
 
+[node name="SelectedAdventurerLabel" type="Label" parent="VBoxContainer/HSplitContainer/AdventurerPanel"]
+layout_mode = 2
+text = "Selected"
+
+[node name="SelectedAdventurerRows" type="VBoxContainer" parent="VBoxContainer/HSplitContainer/AdventurerPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
 [node name="MonsterPanel" type="VBoxContainer" parent="VBoxContainer/HSplitContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -56,9 +64,28 @@ size_flags_vertical = 3
 layout_mode = 2
 text = "Selected"
 
-[node name="SelectedMonstersList" type="ItemList" parent="VBoxContainer/HSplitContainer/MonsterPanel"]
+[node name="SelectedMonsterRows" type="VBoxContainer" parent="VBoxContainer/HSplitContainer/MonsterPanel"]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="ApplyToAllRow" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="ApplyToAllLabel" type="Label" parent="VBoxContainer/ApplyToAllRow"]
+layout_mode = 2
+text = "Apply Level to All:"
+
+[node name="ApplyToAllSpinBox" type="SpinBox" parent="VBoxContainer/ApplyToAllRow"]
+layout_mode = 2
+min_value = 1
+max_value = 99
+value = 1
+step = 1
+rounded = true
+
+[node name="ApplyToAllButton" type="Button" parent="VBoxContainer/ApplyToAllRow"]
+layout_mode = 2
+text = "Apply to All"
 
 [node name="ButtonRow" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2

@@ -1,5 +1,6 @@
 using Godot;
 using GameEngine;
+using GameEngine.DataClasses;
 using GameEngine.Engine;
 using GameEngine.Enums;
 using System.Collections.Generic;
@@ -9,17 +10,27 @@ public partial class Skirmish : Control
 {
 	private ItemList _adventurerList = null!;
 	private ItemList _monsterList = null!;
-	private ItemList _selectedMonstersList = null!;
+	private VBoxContainer _selectedAdventurerRows = null!;
+	private VBoxContainer _selectedMonsterRows = null!;
+	private SpinBox _applyToAllSpinBox = null!;
+	private Button _applyToAllButton = null!;
 	private Button _startCombatButton = null!;
+	private PackedScene _rowScene = null!;
 
-	private readonly List<string> _selectedMonsterIds = new();
+	private readonly Dictionary<string, SkirmishParticipantRow> _adventurerRowsById = new();
+	private readonly List<SkirmishParticipantRow> _monsterRows = new();
 
 	public override void _Ready()
 	{
 		_adventurerList = GetNode<ItemList>("VBoxContainer/HSplitContainer/AdventurerPanel/AdventurerList");
+		_selectedAdventurerRows = GetNode<VBoxContainer>("VBoxContainer/HSplitContainer/AdventurerPanel/SelectedAdventurerRows");
 		_monsterList = GetNode<ItemList>("VBoxContainer/HSplitContainer/MonsterPanel/MonsterList");
-		_selectedMonstersList = GetNode<ItemList>("VBoxContainer/HSplitContainer/MonsterPanel/SelectedMonstersList");
+		_selectedMonsterRows = GetNode<VBoxContainer>("VBoxContainer/HSplitContainer/MonsterPanel/SelectedMonsterRows");
+		_applyToAllSpinBox = GetNode<SpinBox>("VBoxContainer/ApplyToAllRow/ApplyToAllSpinBox");
+		_applyToAllButton = GetNode<Button>("VBoxContainer/ApplyToAllRow/ApplyToAllButton");
 		_startCombatButton = GetNode<Button>("VBoxContainer/ButtonRow/StartCombatButton");
+
+		_rowScene = GD.Load<PackedScene>("res://Scenes/SkirmishParticipantRow.tscn");
 
 		_adventurerList.SelectMode = ItemList.SelectModeEnum.Multi;
 
@@ -29,11 +40,10 @@ public partial class Skirmish : Control
 
 		_adventurerList.MultiSelected += OnAdventurerMultiSelected;
 		_monsterList.ItemSelected += OnMonsterAdded;
-		_selectedMonstersList.ItemSelected += OnSelectedMonsterClicked;
+		_applyToAllButton.Pressed += OnApplyToAllPressed;
 
 		PopulateAdventurers();
 		PopulateMonsters();
-		RefreshSelectedMonsters();
 		UpdateStartButtonState();
 	}
 
@@ -70,56 +80,100 @@ public partial class Skirmish : Control
 	private void OnAdventurerMultiSelected(long index, bool selected)
 	{
 		if (selected && _adventurerList.GetSelectedItems().Length > 4)
+		{
 			_adventurerList.Deselect((int)index);
+			return;
+		}
+
+		var adventurerId = (string)_adventurerList.GetItemMetadata((int)index);
+		if (selected) AddAdventurerRow(adventurerId);
+		else RemoveAdventurerRow(adventurerId);
+
 		UpdateStartButtonState();
+	}
+
+	private void AddAdventurerRow(string adventurerId)
+	{
+		if (_adventurerRowsById.ContainsKey(adventurerId)) return;
+
+		var adventurer = GameEngineClass.Instance.AllAdventurers.Lookup(adventurerId);
+		var row = _rowScene.Instantiate<SkirmishParticipantRow>();
+		_selectedAdventurerRows.AddChild(row);
+		row.Initialize(adventurerId, adventurer.Name, adventurer.Level, showRemoveButton: false);
+		_adventurerRowsById[adventurerId] = row;
+	}
+
+	private void RemoveAdventurerRow(string adventurerId)
+	{
+		if (!_adventurerRowsById.TryGetValue(adventurerId, out var row)) return;
+		row.QueueFree();
+		_adventurerRowsById.Remove(adventurerId);
 	}
 
 	private void OnMonsterAdded(long index)
 	{
 		_monsterList.DeselectAll();
-		if (_selectedMonsterIds.Count >= 4) return;
+		if (_monsterRows.Count >= 4) return;
 
 		var monsterId = (string)_monsterList.GetItemMetadata((int)index);
-		_selectedMonsterIds.Add(monsterId);
-		RefreshSelectedMonsters();
+		var monster = GameEngineClass.Instance.AllMonsters.Lookup(monsterId);
+
+		var row = _rowScene.Instantiate<SkirmishParticipantRow>();
+		_selectedMonsterRows.AddChild(row);
+		row.Initialize(monsterId, monster.Name, monster.Level, showRemoveButton: true);
+		row.RemoveRequested += OnMonsterRowRemoveRequested;
+		_monsterRows.Add(row);
+
+		RenumberMonsterRows();
 		UpdateStartButtonState();
 	}
 
-	private void OnSelectedMonsterClicked(long index)
+	private void OnMonsterRowRemoveRequested(SkirmishParticipantRow row)
 	{
-		var monsterId = (string)_selectedMonstersList.GetItemMetadata((int)index);
-		int removeAt = _selectedMonsterIds.LastIndexOf(monsterId);
-		if (removeAt >= 0) _selectedMonsterIds.RemoveAt(removeAt);
-		RefreshSelectedMonsters();
+		row.RemoveRequested -= OnMonsterRowRemoveRequested;
+		_monsterRows.Remove(row);
+		row.QueueFree();
+
+		RenumberMonsterRows();
 		UpdateStartButtonState();
 	}
 
-	private void RefreshSelectedMonsters()
+	private void RenumberMonsterRows()
 	{
-		_selectedMonstersList.Clear();
 		var allMonsters = GameEngineClass.Instance.AllMonsters;
-		foreach (var group in _selectedMonsterIds.GroupBy(id => id))
+		foreach (var group in _monsterRows.GroupBy(r => r.ParticipantId))
 		{
 			var name = allMonsters.Lookup(group.Key).Name;
-			int idx = _selectedMonstersList.AddItem($"{name} x{group.Count()}");
-			_selectedMonstersList.SetItemMetadata(idx, group.Key);
+			int i = 1;
+			var groupRows = group.ToList();
+			foreach (var row in groupRows)
+				row.SetDisplayName(groupRows.Count > 1 ? $"{name} #{i++}" : name);
 		}
+	}
+
+	private void OnApplyToAllPressed()
+	{
+		int level = (int)_applyToAllSpinBox.Value;
+		foreach (var row in _adventurerRowsById.Values) row.Level = level;
+		foreach (var row in _monsterRows) row.Level = level;
 	}
 
 	private void UpdateStartButtonState()
 	{
-		_startCombatButton.Disabled =
-			_adventurerList.GetSelectedItems().Length == 0 || _selectedMonsterIds.Count == 0;
+		_startCombatButton.Disabled = _adventurerRowsById.Count == 0 || _monsterRows.Count == 0;
 	}
 
 	private void OnStartCombatPressed()
 	{
-		var adventurerIds = _adventurerList.GetSelectedItems()
-			.Select(i => (string)_adventurerList.GetItemMetadata(i))
+		GameEngineClass.Instance.SelectedAdventurerSlots = _adventurerRowsById
+			.Select(kv => new SkirmishSlot(kv.Key, kv.Value.Level))
+			.Select(s => (s.Id, s.Level))
 			.ToList();
 
-		GameEngineClass.Instance.SelectedAdventurerIds = adventurerIds;
-		GameEngineClass.Instance.SelectedMonsterIds = new List<string>(_selectedMonsterIds);
+		GameEngineClass.Instance.SelectedMonsterSlots = _monsterRows
+			.Select(row => new SkirmishSlot(row.ParticipantId, row.Level))
+			.Select(s => (s.Id, s.Level))
+			.ToList();
 
 		GameEventBus.StateChanged -= OnStateChanged;
 		GetTree().ChangeSceneToFile("res://Scenes/Battle.tscn");

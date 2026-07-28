@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scenes/SkirmishParticipantRow.cs" id="1_row"]
+
+[node name="SkirmishParticipantRow" type="HBoxContainer"]
+script = ExtResource("1_row")
+
+[node name="NameLabel" type="Label" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LevelSpinBox" type="SpinBox" parent="."]
+layout_mode = 2
+min_value = 1
+max_value = 99
+value = 1
+step = 1
+rounded = true
+
+[node name="RemoveButton" type="Button" parent="."]
+layout_mode = 2
+text = "x"

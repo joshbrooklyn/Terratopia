@@ -12,7 +12,7 @@
   "targetingType": "Choose",
   "validTargets": "Enemies",
   "livingOrDead": "Living",
-  "allowMultipleAttackOnSameTarget": true,
+  "allowMultipleAttackOnSameTarget": false,
   "targetStatuses": [],
   "userStatuses": [],
   "directEffects": [

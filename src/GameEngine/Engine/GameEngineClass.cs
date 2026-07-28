@@ -28,8 +28,8 @@ public class GameEngineClass
     public IReadOnlyList<Dungeon> AllDungeons => _allDungeons;
     public IReadOnlyList<Adventurer> AllAdventurers => _allAdventurers;
 
-    public IReadOnlyList<string> SelectedAdventurerIds { get; set; } = [];
-    public IReadOnlyList<string> SelectedMonsterIds    { get; set; } = [];
+    public IReadOnlyList<(string Id, int Level)> SelectedAdventurerSlots { get; set; } = [];
+    public IReadOnlyList<(string Id, int Level)> SelectedMonsterSlots    { get; set; } = [];
 
     private GameEngineClass()
     {
@@ -51,44 +51,48 @@ public class GameEngineClass
 
     public CombatStartData InitSkirmishCombat()
     {
-        var selectedAdventurers = SelectedAdventurerIds.Select(id => AllAdventurers.Lookup(id)).ToList();
+        var allies = new List<CombatEntity>();
+        var allySeeds = new List<CombatantSeed>();
 
-        var allies = selectedAdventurers.Select(MakeCombatEntity).ToList();
-        var allySeeds = selectedAdventurers
-            .Select(a =>
-            {
-                var techs = a.TechsIds
-                    .Select(id => _allTechs.Lookup(id))
-                    .Where(t => t != null)
-                    .Select(t => new CombatantInventoryEntry(t.TechId, t.Name, t.Description))
-                    .ToList();
-                return new CombatantSeed(
-                    a.AdventurerId, a.Name,
-                    a.Hp, a.MaxHp, a.Tp, a.MaxTp,
-                    a.Level, a.Power, a.Defense, a.Speed, a.Evasion, a.CritChance,
-                    techs, [], [], []);
-            })
-            .ToList();
+        foreach (var slot in SelectedAdventurerSlots)
+        {
+            var a = AllAdventurers.Lookup(slot.Id);
+            allies.Add(MakeCombatEntity(a, slot.Level));
+
+            var techs = a.TechsIds
+                .Select(id => _allTechs.Lookup(id))
+                .Where(t => t != null)
+                .Select(t => new CombatantInventoryEntry(t.TechId, t.Name, t.Description))
+                .ToList();
+
+            allySeeds.Add(new CombatantSeed(
+                a.AdventurerId, a.Name,
+                a.Hp, a.MaxHp, a.Tp, a.MaxTp,
+                slot.Level, a.Power, a.Defense, a.Speed, a.Evasion, a.CritChance,
+                techs, [], [], []));
+        }
 
         _enemyMonsterMap = new Dictionary<string, Monster>();
         var enemies = new List<CombatEntity>();
         var enemySeeds = new List<CombatantSeed>();
 
-        for (int i = 0; i < SelectedMonsterIds.Count; i++)
+        for (int i = 0; i < SelectedMonsterSlots.Count; i++)
         {
-            var monster = AllMonsters.Lookup(SelectedMonsterIds[i]);
+            var slot = SelectedMonsterSlots[i];
+            var monster = AllMonsters.Lookup(slot.Id);
+            var level = slot.Level;
             var entityId = $"{monster.MonsterId}_{i + 1}";
             var displayName = $"{monster.Name} {i + 1}";
 
-            int hp    = monster.HpBase    + (monster.Level - 1) * monster.HpPerLevel;
-            int power = monster.PowerBase + (monster.Level - 1) * monster.PowerPerLevel;
-            int def   = monster.DefenseBase + (monster.Level - 1) * monster.DefensePerLevel;
-            int speed = monster.SpeedBase + (monster.Level - 1) * monster.SpeedBasePerLevel;
+            int hp    = monster.HpBase      + (level - 1) * monster.HpPerLevel;
+            int power = monster.PowerBase   + (level - 1) * monster.PowerPerLevel;
+            int def   = monster.DefenseBase + (level - 1) * monster.DefensePerLevel;
+            int speed = monster.SpeedBase   + (level - 1) * monster.SpeedBasePerLevel;
 
             _enemyMonsterMap[entityId] = monster;
 
             enemies.Add(new CombatEntity(
-                entityId, displayName, monster.Level,
+                entityId, displayName, level,
                 hp, hp, 0, 0,
                 power, def, speed,
                 0f, 0f, 0.5f, passives: monster.Passives));
@@ -96,7 +100,7 @@ public class GameEngineClass
             enemySeeds.Add(new CombatantSeed(
                 entityId, displayName,
                 hp, hp, 0, 0,
-                monster.Level, power, def, speed, 0f, 0f,
+                level, power, def, speed, 0f, 0f,
                 [], [], [], []));
         }
 
@@ -106,8 +110,10 @@ public class GameEngineClass
 
     public void BeginSkirmishCombat() => CombatEngineClass.Instance.BeginCombat();
 
-    public CombatEntity MakeCombatEntity(Adventurer a) => new(
-        a.AdventurerId, a.Name, a.Level,
+    public CombatEntity MakeCombatEntity(Adventurer a) => MakeCombatEntity(a, a.Level);
+
+    public CombatEntity MakeCombatEntity(Adventurer a, int level) => new(
+        a.AdventurerId, a.Name, level,
         a.MaxHp, a.Hp, a.MaxTp, a.Tp,
         a.Power, a.Defense, a.Speed,
         a.Evasion, a.CritChance, a.CritModifier);
