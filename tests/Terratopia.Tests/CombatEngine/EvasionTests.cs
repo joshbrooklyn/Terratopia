@@ -93,7 +93,15 @@ public class EvasionTests
     [Fact]
     public void Attack_IsEvaded_WhenRandomValueBelowEvasion()
     {
-        // 0.05 < 0.1 → evasion fires before any damage on the first round
+        // What: verifies that when the random evasion roll lands below the defender's evasion
+        //       stat, the attack is evaded (AttackEvaded fires) instead of landing as damage.
+        // How:  SetupCombat is given a ControlledRandom fixed at 0.05 and a defender evasion of
+        //       0.1, so every NextSingle() call the engine makes returns 0.05. The engine's
+        //       evasion check is `rng.NextSingle() < target.Evasion`, i.e. 0.05 < 0.1, which is
+        //       true, so the very first attack against the defender should evade rather than
+        //       deal damage. The test subscribes to both AttackEvaded and EntityDamaged and
+        //       tracks which one fires first for "defender", then asserts AttackEvaded fired
+        //       and EntityDamaged never fired before it.
         var (engine, _, _) = SetupCombat(rngValue: 0.05f, defenderEvasion: 0.1f);
 
         bool evadeBeforeHit = false;
@@ -117,7 +125,14 @@ public class EvasionTests
     [Fact]
     public void Attack_HitsTarget_WhenEvasionBelowRandomValue()
     {
-        // 0.5 < 0.0 is false → evasion never fires; damage lands immediately
+        // What: verifies the counterpart case to the evasion test above — when the roll is
+        //       NOT below the defender's evasion, the attack should land as damage and
+        //       AttackEvaded should never fire at all.
+        // How:  SetupCombat is given a ControlledRandom fixed at 0.5 and a defender evasion of
+        //       0.0, so the evasion check `0.5 < 0.0` is always false. With evasion never
+        //       triggering, the attack falls through to the normal damage path immediately.
+        //       The test subscribes to EntityDamaged and AttackEvaded for "defender" and
+        //       asserts damage was received while evasion never occurred.
         var (engine, _, _) = SetupCombat(rngValue: 0.5f, defenderEvasion: 0.0f);
 
         bool damageReceived = false;
@@ -141,9 +156,16 @@ public class EvasionTests
     [Fact]
     public void Evasion_DegradesBy025_OnSuccessfulDodge()
     {
-        // 0.05 < 1.0 → first dodge reduces 1.0 by 0.25 → 0.75
-        // AttackEvaded is raised AFTER target.Evasion is already reduced, so
-        // reading defender.Evasion inside the handler gives the post-degradation value.
+        // What: verifies that each successful dodge permanently reduces the defender's own
+        //       evasion stat by a flat 0.25, rather than evasion staying constant across
+        //       repeated dodges.
+        // How:  SetupCombat uses a ControlledRandom fixed at 0.05 and gives the defender a
+        //       very high evasion of 1.0, so the roll (0.05 < 1.0) is guaranteed true and the
+        //       first attack against the defender always evades. In the engine, evasion is
+        //       decremented by 0.25 (floored at 0) before AttackEvaded is raised, so by the
+        //       time this test's handler runs, defender.Evasion should already reflect the
+        //       post-dodge value of 1.0 − 0.25 = 0.75. The test captures defender.Evasion
+        //       inside the AttackEvaded handler and asserts it equals 0.75.
         var (engine, _, defender) = SetupCombat(rngValue: 0.05f, defenderEvasion: 1.0f);
 
         float? capturedEvasion = null;
@@ -162,7 +184,13 @@ public class EvasionTests
     [Fact]
     public void Evaded_Attack_DealsNoDamage()
     {
-        // 0.05 < 1.0 → always evades; defender HP must stay at 100 after each evaded hit
+        // What: verifies an evaded attack truly deals zero damage — evasion isn't just a flag
+        //       that gets reported while HP still ticks down underneath it.
+        // How:  As in the previous test, SetupCombat is given a ControlledRandom fixed at 0.05
+        //       and a defender evasion of 1.0, so the very first attack against the defender is
+        //       guaranteed to evade (0.05 < 1.0). The test captures defender.Hp at the moment
+        //       AttackEvaded first fires and asserts it is still 100 (the defender's starting
+        //       HP), confirming the evaded hit never touched HP at all.
         var (engine, _, defender) = SetupCombat(rngValue: 0.05f, defenderEvasion: 1.0f);
 
         int? hpAfterFirstEvade = null;
@@ -181,7 +209,14 @@ public class EvasionTests
     [Fact]
     public void Evasion_ClampsAtZero_WhenDegradationWouldGoNegative()
     {
-        // 0.05 < 0.2 → dodge fires; 0.2 - 0.25 = -0.05 → clamped to 0.0
+        // What: verifies the 0.25 evasion degradation is clamped at zero rather than allowed
+        //       to go negative when the defender's remaining evasion is smaller than 0.25.
+        // How:  SetupCombat is given a ControlledRandom fixed at 0.05 and a defender evasion of
+        //       just 0.2. The dodge still fires because 0.05 < 0.2, but subtracting the usual
+        //       0.25 from 0.2 would produce −0.05, which the engine instead clamps to 0.0 via
+        //       Math.Max. The test captures defender.Evasion inside the AttackEvaded handler
+        //       and asserts it equals 0.0, and additionally asserts it is never below zero as a
+        //       belt-and-suspenders check on the clamping behavior.
         var (engine, _, defender) = SetupCombat(rngValue: 0.05f, defenderEvasion: 0.2f);
 
         float? capturedEvasion = null;

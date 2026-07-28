@@ -27,6 +27,11 @@ public partial class Battle : Control
 	private Window        _resultModal         = null!;
 	private Label         _resultLabel         = null!;
 
+	private List<string> _pendingChosenTargets = new();
+	private int  _pendingNumAttacks;
+	private bool _pendingAllowMultipleAttackOnSameTarget;
+	private readonly Dictionary<string, Button> _targetButtonsById = new();
+
 	public override void _Ready()
 	{
 		_roundLabel          = GetNode<Label>("VBoxContainer/HeaderRow/RoundLabel");
@@ -181,10 +186,15 @@ public partial class Battle : Control
 		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
 
-	private void OnTargetSelectionRequested(string actorId, string actorName, TargetingType targetingType, IReadOnlyList<string> validTargetIds, IReadOnlyList<string> validTargetNames)
+	private void OnTargetSelectionRequested(string actorId, string actorName, TargetingType targetingType, IReadOnlyList<string> validTargetIds, IReadOnlyList<string> validTargetNames, int numAttacks, bool allowMultipleAttackOnSameTarget)
 	{
 		foreach (Node child in _targetButtonContainer.GetChildren())
 			child.QueueFree();
+		_targetButtonsById.Clear();
+
+		_pendingChosenTargets = new List<string>();
+		_pendingNumAttacks = numAttacks;
+		_pendingAllowMultipleAttackOnSameTarget = allowMultipleAttackOnSameTarget;
 
 		var entitiesById = CombatEngineClass.Instance.GetLivingEntities().ToDictionary(e => e.EntityId);
 
@@ -197,16 +207,34 @@ public partial class Battle : Control
 			btn.Pressed += () => OnTargetChosen(capturedTargetId);
 
 			_targetButtonContainer.AddChild(btn);
+			_targetButtonsById[targetId] = btn;
 		}
 
+		UpdateTargetModalTitle();
 		_targetModal.PopupCentered();
 	}
 
 	private void OnTargetChosen(string targetId)
 	{
-		_targetModal.Hide();
-		CombatEngineClass.Instance.SubmitTargets(new List<string> { targetId });
+		_pendingChosenTargets.Add(targetId);
+
+		if (!_pendingAllowMultipleAttackOnSameTarget && _targetButtonsById.TryGetValue(targetId, out var pickedBtn))
+			pickedBtn.Disabled = true;
+
+		if (_pendingChosenTargets.Count >= _pendingNumAttacks)
+		{
+			_targetModal.Hide();
+			CombatEngineClass.Instance.SubmitTargets(_pendingChosenTargets);
+			return;
+		}
+
+		UpdateTargetModalTitle();
 	}
+
+	private void UpdateTargetModalTitle() =>
+		_targetModal.Title = _pendingNumAttacks > 1
+			? $"Choose target ({_pendingChosenTargets.Count + 1}/{_pendingNumAttacks})"
+			: "Choose target";
 
 	private void OnEntityHpChanged(string entityId, string entityName, int oldHp, int newHp) =>
 		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName}: HP {oldHp} → {newHp}"));

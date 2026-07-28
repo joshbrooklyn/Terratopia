@@ -76,7 +76,7 @@ Static event bus; the engine's only channel for reporting what happened. All eve
 | `TurnStarted` | `Action<string, string>` | entityId, entityName |
 | `TurnEnded` | `Action<string, string>` | entityId, entityName |
 | `WaitingForTurn` | `Action<string, string, int, bool>` | entityId, entityName, currentTp, isAlly — `isAlly` tells the caller which side must act |
-| `TargetSelectionRequested` | `Action<string, string, TargetingType, IReadOnlyList<string>, IReadOnlyList<string>>` | actorId, actorName, targetingType, validTargetIds, validTargetNames |
+| `TargetSelectionRequested` | `Action<string, string, TargetingType, IReadOnlyList<string>, IReadOnlyList<string>, int, bool>` | actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget — `numAttacks` is already capped to the valid-target pool size when repeats aren't allowed |
 | `CombatOver` | `Action<bool>` | playerWon |
 | `ActionRejected` | `Action<CombatCommand, string, string>` | command, actorName, reason |
 | `ActionResolved` | `Action<CombatCommand, string>` | command, actorName |
@@ -104,8 +104,10 @@ Describes an action being taken. Constructed by callers (player UI or the caller
 - `ValidTarget ValidTargets` *(required)* — which side(s) may be targeted.
 - `LivingOrDead LivingOrDead` *(required)* — living/dead filter on targets.
 - `int TPCost` — TP deducted from the actor on resolution.
+- `int NumAttacks` — number of separate attack instances this command performs (default 1).
+- `bool AllowMultipleAttackOnSameTarget` — whether the same target may be chosen/picked more than once across the `NumAttacks` attacks (default false; when false and the valid-target pool is smaller than `NumAttacks`, the required picks are capped to the pool size rather than forcing repeats).
 - `List<CombatDirectEffect> DirectEffects` — effects applied to each chosen target.
-- `List<string> ChosenTargets` — target entity IDs; publicly gettable, set internally by the engine (via `SubmitTargets` or auto-target expansion).
+- `List<string> ChosenTargets` — target entity IDs, one per attack instance; publicly gettable, set internally by the engine (via `SubmitTargets` or auto-target expansion).
 
 ### `CombatDirectEffect` (`CombatEngine.DataClasses`)
 
@@ -115,7 +117,7 @@ A single effect within a command: `CombatDirectEffectType EffectType`, `ElementT
 
 - `ValidTarget`: `Allies`, `Enemies`, `Both`
 - `LivingOrDead`: `Living`, `Dead`, `Both`
-- `TargetingType`: `Choose`, `Random`, `SelectiveMulti`, `All`, `Self`
+- `TargetingType`: `Choose`, `Random`, `All`, `Self`
 - `CombatDirectEffectType`: `Damage`, `Heal`
 - `DamageCalcType`: `StandardFormula`
 - `ElementType`: `Fire`, `Ice`, `Lightning`, `Void`
@@ -138,6 +140,7 @@ else
     // decide the enemy's action yourself (e.g. GameEngine.ChooseAiCommand)
     CombatEngineClass.Instance.SubmitCommand(enemyCmd);
 }
-// if TargetSelectionRequested fires (ally turns only):
+// if TargetSelectionRequested fires (ally turns only): collect `numAttacks` picks
+// (the event's payload), then call SubmitTargets once with the full list.
 CombatEngineClass.Instance.SubmitTargets(targetIds);
 ```

@@ -63,6 +63,22 @@ public class LivingDeadTests
     [Fact]
     public void LethalDamage_WithLivingDead_RevivesOnceThenDiesOnNextLethalHit()
     {
+        // What: verifies the LivingDead passive saves an entity from its first lethal hit by
+        //       reviving it at 1 HP, but is consumed after that single use — a second lethal
+        //       hit should then kill the entity for real.
+        // How:  SetupCombat gives the defender the LivingDead passive and pits it against an
+        //       attacker whose hits are always exactly lethal (25 damage vs 25 max HP), while
+        //       the defender's own counterattacks are floored to 0 damage by the attacker's
+        //       high defense — so only the attacker's hits matter and combat runs across
+        //       multiple rounds. The test records every EntityHpChanged value for "defender"
+        //       plus counts of EntityRevived and EntityDeath. On the first lethal hit, HP would
+        //       drop to 0, but LivingDeadPassive.TryPreventDeath intercepts it and immediately
+        //       bumps HP back up to 1, so the trace should show 0 then 1. On the next lethal
+        //       hit the passive is already consumed (ConsumedPassives already contains its
+        //       name), so this time HP drops to 0 and stays there — a real death. The test
+        //       asserts the HP trace is exactly [0, 1, 0], revivedCount is 1, deathCount is 1,
+        //       the defender ends up dead at 0 HP, and its ConsumedPassives set contains the
+        //       LivingDead passive name.
         var (engine, _, defender) = SetupCombat([LivingDeadPassive.PassiveName]);
 
         var hpTrace = new List<int>();
@@ -87,6 +103,17 @@ public class LivingDeadTests
     [Fact]
     public void LethalDamage_WithoutLivingDead_DiesOnFirstHit()
     {
+        // What: confirms the baseline behavior an entity with no death-preventing passive
+        //       simply dies on the first lethal hit, with no revive — this is the contrast
+        //       case for LethalDamage_WithLivingDead_RevivesOnceThenDiesOnNextLethalHit above,
+        //       which proves LivingDead is actually doing something rather than death
+        //       -prevention being the engine's default behavior.
+        // How:  SetupCombat is called with defenderPassives: null, so the defender has no
+        //       passives attached at all and nothing intercepts HandleEntityDefeated's death
+        //       -prevention hook. The test counts EntityRevived and EntityDeath events raised
+        //       for "defender" across the whole fight, then asserts EntityRevived never fired
+        //       (revivedCount == 0), EntityDeath fired exactly once (deathCount == 1), and the
+        //       defender ends the fight dead at 0 HP.
         var (engine, _, defender) = SetupCombat(defenderPassives: null);
 
         int revivedCount = 0;
@@ -116,6 +143,14 @@ public class LivingDeadPassiveTests
     [Fact]
     public void TryPreventDeath_FirstCall_RevivesAtOneHp()
     {
+        // What: unit-tests LivingDeadPassive.TryPreventDeath directly (bypassing the combat
+        //       engine entirely) to verify that on its first invocation it revives the entity
+        //       at 1 HP and reports success.
+        // How:  MakeEntity() builds a bare CombatEntity with hp=0, simulating "just died".
+        //       Calling passive.TryPreventDeath(entity) directly should add the passive's name
+        //       to entity.ConsumedPassives (marking it used), set entity.Hp to 1, and return
+        //       true to signal that death was prevented. The test asserts the return value is
+        //       true, entity.Hp is 1, and ConsumedPassives contains the LivingDead passive name.
         var entity  = MakeEntity();
         var passive = new LivingDeadPassive();
 
@@ -129,6 +164,16 @@ public class LivingDeadPassiveTests
     [Fact]
     public void TryPreventDeath_SecondCall_ReturnsFalseAndLeavesHpUnchanged()
     {
+        // What: verifies LivingDeadPassive is single-use — a second call to TryPreventDeath on
+        //       the same entity must fail and leave HP at 0, rather than reviving again.
+        // How:  The passive is invoked once up front to consume it (mirroring the setup in
+        //       TryPreventDeath_FirstCall_RevivesAtOneHp), then entity.Hp is manually reset to
+        //       0 to simulate the entity taking a second lethal hit. Calling
+        //       TryPreventDeath(entity) again should hit the internal
+        //       `!target.ConsumedPassives.Add(Name)` guard — since the name is already in the
+        //       set, Add returns false, the guard's negation makes the condition true, and the
+        //       method returns false immediately without touching HP. The test asserts the
+        //       second call returns false and entity.Hp is still 0.
         var entity  = MakeEntity();
         var passive = new LivingDeadPassive();
         passive.TryPreventDeath(entity);

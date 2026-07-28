@@ -23,6 +23,7 @@ namespace CombatEngine.Engine
         private readonly Func<bool>                _isRoundOver;
         private readonly Func<bool>                _evaluateWinCondition;
         private readonly Func<CombatEntity?>       _nextTurn;
+        private readonly Func<int, bool, int, int> _resolvePickCount;
 
         public CombatFlowState CurrentState => _machine.State;
 
@@ -34,6 +35,12 @@ namespace CombatEngine.Engine
 
         internal void SubmitTargets(List<string> chosenTargets)
         {
+            var validIds = _getValidTargets(_pendingCommand!).Select(e => e.EntityId).ToHashSet();
+            var invalid  = chosenTargets.Where(id => !validIds.Contains(id)).ToList();
+            if (invalid.Count > 0)
+                throw new InvalidOperationException(
+                    $"Chosen target(s) not in valid pool: {string.Join(", ", invalid)}");
+
             _pendingCommand!.ChosenTargets = chosenTargets;
             _machine.Fire(CombatFlowTrigger.TargetsSubmitted);
         }
@@ -48,7 +55,8 @@ namespace CombatEngine.Engine
             Func<CombatCommand, IReadOnlyList<CombatEntity>> getValidTargets,
             Action<CombatCommand>     expandAutoTargets,
             Action<CombatCommand>     assignAiTarget,
-            Func<CombatEntity?>       nextTurn
+            Func<CombatEntity?>       nextTurn,
+            Func<int, bool, int, int> resolvePickCount
             )
         {
             _isPlayerEntity           = isPlayerEntity;
@@ -61,6 +69,7 @@ namespace CombatEngine.Engine
             _expandAutoTargets        = expandAutoTargets;
             _assignAiTarget           = assignAiTarget;
             _nextTurn                 = nextTurn;
+            _resolvePickCount         = resolvePickCount;
 
 
             _machine = new StateMachine<CombatFlowState, CombatFlowTrigger>(CombatFlowState.Idle);
@@ -100,7 +109,7 @@ namespace CombatEngine.Engine
                         return CombatFlowState.ResolvingAction;
                     }
 
-                    if (_pendingCommand!.TargetingType is TargetingType.Choose or TargetingType.SelectiveMulti)
+                    if (_pendingCommand!.TargetingType is TargetingType.Choose)
                         return CombatFlowState.WaitingForTargetSelection;
 
                     _expandAutoTargets(_pendingCommand!);
@@ -120,8 +129,11 @@ namespace CombatEngine.Engine
                     var validTargets = _getValidTargets(_pendingCommand!);
                     var validIds   = validTargets.Select(e => e.EntityId).ToList();
                     var validNames = validTargets.Select(e => e.Name).ToList();
+                    int numAttacks = _resolvePickCount(
+                        _pendingCommand!.NumAttacks, _pendingCommand!.AllowMultipleAttackOnSameTarget, validTargets.Count);
                     CombatEventBus.RaiseTargetSelectionRequested(
-                        _pendingCommand!.ActorId, _currentEntity!.Name, _pendingCommand!.TargetingType, validIds, validNames);
+                        _pendingCommand!.ActorId, _currentEntity!.Name, _pendingCommand!.TargetingType,
+                        validIds, validNames, numAttacks, _pendingCommand!.AllowMultipleAttackOnSameTarget);
                 });
 
             _machine.Configure(CombatFlowState.ResolvingAction)

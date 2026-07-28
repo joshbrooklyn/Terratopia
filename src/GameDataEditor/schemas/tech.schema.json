@@ -58,7 +58,7 @@
     },
     "targetingType": {
       "type": "string",
-      "enum": ["Choose", "Random", "SelectiveMulti", "All", "Self"],
+      "enum": ["Choose", "Random", "All", "Self"],
       "default": "Choose"
     },
     "validTargets": {

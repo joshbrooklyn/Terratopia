@@ -9,6 +9,8 @@ public class CombatCommand
     public required ValidTarget ValidTargets { get; init; }
     public required LivingOrDead LivingOrDead { get; init; }
     public int TPCost { get; init; }
+    public int NumAttacks { get; init; } = 1;
+    public bool AllowMultipleAttackOnSameTarget { get; init; } = false;
     public List<CombatDirectEffect> DirectEffects { get; init; } = [];
     public List<string> ChosenTargets { get; internal set; } = [];
 }

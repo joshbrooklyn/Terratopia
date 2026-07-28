@@ -11,7 +11,7 @@ public static class CombatEventBus
     public static event Action<string, string>? TurnStarted; // entityId, entityName
     public static event Action<string, string>? TurnEnded;   // entityId, entityName
     public static event Action<string, string, int, bool>? WaitingForTurn;   // entityId, entityName, currentTp, isAlly
-    public static event Action<string, string, TargetingType, IReadOnlyList<string>, IReadOnlyList<string>>? TargetSelectionRequested; // actorId, actorName, targetingType, validTargetIds, validTargetNames
+    public static event Action<string, string, TargetingType, IReadOnlyList<string>, IReadOnlyList<string>, int, bool>? TargetSelectionRequested; // actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget
     public static event Action<bool>? CombatOver; // playerWon
 
     // Action resolution
@@ -36,7 +36,7 @@ public static class CombatEventBus
     public static void RaiseTurnStarted(string entityId, string entityName) => TurnStarted?.Invoke(entityId, entityName);
     public static void RaiseTurnEnded(string entityId, string entityName)   => TurnEnded?.Invoke(entityId, entityName);
     public static void RaiseWaitingForTurn(string entityId, string entityName, int currentTp, bool isAlly) => WaitingForTurn?.Invoke(entityId, entityName, currentTp, isAlly);
-    public static void RaiseTargetSelectionRequested(string actorId, string actorName, TargetingType targetingType, IReadOnlyList<string> validTargetIds, IReadOnlyList<string> validTargetNames) => TargetSelectionRequested?.Invoke(actorId, actorName, targetingType, validTargetIds, validTargetNames);
+    public static void RaiseTargetSelectionRequested(string actorId, string actorName, TargetingType targetingType, IReadOnlyList<string> validTargetIds, IReadOnlyList<string> validTargetNames, int numAttacks, bool allowMultipleAttackOnSameTarget) => TargetSelectionRequested?.Invoke(actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget);
     public static void RaiseCombatOver(bool playerWon)           => CombatOver?.Invoke(playerWon);
     public static void RaiseActionRejected(CombatCommand c, string actorName, string reason) => ActionRejected?.Invoke(c, actorName, reason);
     public static void RaiseActionResolved(CombatCommand c, string actorName) => ActionResolved?.Invoke(c, actorName);

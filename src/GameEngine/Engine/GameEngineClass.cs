@@ -80,10 +80,10 @@ public class GameEngineClass
             var entityId = $"{monster.MonsterId}_{i + 1}";
             var displayName = $"{monster.Name} {i + 1}";
 
-            int hp    = monster.HpBase    + monster.Level * monster.HpPerLevel;
-            int power = monster.PowerBase + monster.Level * monster.PowerPerLevel;
-            int def   = monster.DefenseBase + monster.Level * monster.DefensePerLevel;
-            int speed = monster.SpeedBase + monster.Level * monster.SpeedBasePerLevel;
+            int hp    = monster.HpBase    + (monster.Level - 1) * monster.HpPerLevel;
+            int power = monster.PowerBase + (monster.Level - 1) * monster.PowerPerLevel;
+            int def   = monster.DefenseBase + (monster.Level - 1) * monster.DefensePerLevel;
+            int speed = monster.SpeedBase + (monster.Level - 1) * monster.SpeedBasePerLevel;
 
             _enemyMonsterMap[entityId] = monster;
 
@@ -150,6 +150,8 @@ public class GameEngineClass
             LivingOrDead  = tech.LivingOrDead,
             TPCost        = tech.TpCost,
             DirectEffects = directEffects,
+            NumAttacks    = tech.NumAttacks,
+            AllowMultipleAttackOnSameTarget = tech.AllowMultipleAttackOnSameTarget ?? false,
         };
     }
 

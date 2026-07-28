@@ -51,7 +51,8 @@ public class CombatEngineClass
             getValidTargets:          GetValidTargets,
             expandAutoTargets:        ExpandAutoTargets,
             assignAiTarget:           AssignRandomAiTarget,
-            nextTurn:                 NextTurn
+            nextTurn:                 NextTurn,
+            resolvePickCount:         ResolveRequiredPickCount
         );
     }
 
@@ -214,12 +215,41 @@ public class CombatEngineClass
                 cmd.ChosenTargets = new List<string> { cmd.ActorId };
                 break;
             case TargetingType.Random:
+            {
                 var pool = IsPlayerEntity(_allEntities[cmd.ActorId])
                     ? GetLivingEnemies()
                     : GetLivingAllies();
-                cmd.ChosenTargets = new List<string> { pool[_rng.Next(pool.Count)].EntityId };
+                int picks = ResolveRequiredPickCount(cmd.NumAttacks, cmd.AllowMultipleAttackOnSameTarget, pool.Count);
+                cmd.ChosenTargets = cmd.AllowMultipleAttackOnSameTarget
+                    ? PickWithReplacement(pool, picks, _rng)
+                    : PickDistinctWithoutReplacement(pool, picks, _rng);
                 break;
+            }
         }
+    }
+
+    private static int ResolveRequiredPickCount(int numAttacks, bool allowMultipleAttackOnSameTarget, int poolSize) =>
+        allowMultipleAttackOnSameTarget ? numAttacks : Math.Min(numAttacks, poolSize);
+
+    private static List<string> PickWithReplacement(IReadOnlyList<CombatEntity> pool, int count, Random rng)
+    {
+        var result = new List<string>(count);
+        for (int i = 0; i < count; i++)
+            result.Add(pool[rng.Next(pool.Count)].EntityId);
+        return result;
+    }
+
+    private static List<string> PickDistinctWithoutReplacement(IReadOnlyList<CombatEntity> pool, int count, Random rng)
+    {
+        var remaining = pool.ToList();
+        var result = new List<string>(count);
+        for (int i = 0; i < count; i++)
+        {
+            int idx = rng.Next(remaining.Count);
+            result.Add(remaining[idx].EntityId);
+            remaining.RemoveAt(idx);
+        }
+        return result;
     }
 
     private bool EvasionCheck(CombatEntity actor, CombatEntity target, CombatCommand cmd)
