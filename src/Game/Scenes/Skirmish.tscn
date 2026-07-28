@@ -52,6 +52,14 @@ text = "Monsters"
 layout_mode = 2
 size_flags_vertical = 3
 
+[node name="SelectedLabel" type="Label" parent="VBoxContainer/HSplitContainer/MonsterPanel"]
+layout_mode = 2
+text = "Selected"
+
+[node name="SelectedMonstersList" type="ItemList" parent="VBoxContainer/HSplitContainer/MonsterPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
 [node name="ButtonRow" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 

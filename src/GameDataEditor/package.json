@@ -1,0 +1,45 @@
+{
+  "name": "gamedata-editor",
+  "displayName": "Terratopia GameData Editor",
+  "description": "Schema-backed editing support for Terratopia GameData JSON files (Adventurers, Monsters, Techs).",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "jsonValidation": [
+      {
+        "fileMatch": "/GameData/Adventurers/*.json",
+        "url": "./schemas/adventurer.schema.json"
+      },
+      {
+        "fileMatch": "/GameData/Monsters/*.json",
+        "url": "./schemas/monster.schema.json"
+      },
+      {
+        "fileMatch": "/GameData/Techs/*.json",
+        "url": "./schemas/tech.schema.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "gamedataEditor.openFormEditor",
+        "title": "GameData: Open in Form Editor"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.x"
+  }
+}

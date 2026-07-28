@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Monster",
+  "description": "Terratopia monster definition (src/GameEngine/DataClasses/Monster.cs)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "monsterId",
+    "name",
+    "hpBase",
+    "hpPerLevel",
+    "powerBase",
+    "powerPerLevel",
+    "defenseBase",
+    "defensePerLevel",
+    "speedBase",
+    "speedBasePerLevel",
+    "canFight"
+  ],
+  "properties": {
+    "monsterId": {
+      "type": "string",
+      "description": "Unique identifier for this monster."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name."
+    },
+    "level": {
+      "type": "integer"
+    },
+    "hpBase": {
+      "type": "integer"
+    },
+    "hpPerLevel": {
+      "type": "integer"
+    },
+    "powerBase": {
+      "type": "integer"
+    },
+    "powerPerLevel": {
+      "type": "integer"
+    },
+    "defenseBase": {
+      "type": "integer"
+    },
+    "defensePerLevel": {
+      "type": "integer"
+    },
+    "speedBase": {
+      "type": "integer"
+    },
+    "speedBasePerLevel": {
+      "type": "integer"
+    },
+    "monsterActionIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ids of monster actions (GameData/MonsterActions) this monster can use."
+    },
+    "passives": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Names of passive classes (src/CombatEngine/Passives) applied to this monster, e.g. \"LivingDead\"."
+    },
+    "canFight": {
+      "type": "boolean"
+    }
+  }
+}

@@ -22,13 +22,13 @@ public partial class MainMenu : Control
 		else if (newState == GameFlowState.Skirmish)
 		{
 			GameEventBus.StateChanged -= OnStateChanged;
-			CallDeferred(nameof(GoToBattle));
+			CallDeferred(nameof(GoToSkirmish));
 		}
 	}
 
 	private void GoToDataBrowser() => GetTree().ChangeSceneToFile("res://Scenes/DataBrowser.tscn");
 
-	private void GoToBattle() => GetTree().ChangeSceneToFile("res://Scenes/Battle.tscn");
+	private void GoToSkirmish() => GetTree().ChangeSceneToFile("res://Scenes/Skirmish.tscn");
 
 	private void OnStartSkirmishPressed() => GameEngineClass.Instance.StartSkirmish();
 

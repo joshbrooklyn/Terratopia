@@ -28,6 +28,9 @@ public class GameEngineClass
     public IReadOnlyList<Dungeon> AllDungeons => _allDungeons;
     public IReadOnlyList<Adventurer> AllAdventurers => _allAdventurers;
 
+    public IReadOnlyList<string> SelectedAdventurerIds { get; set; } = [];
+    public IReadOnlyList<string> SelectedMonsterIds    { get; set; } = [];
+
     private GameEngineClass()
     {
         _gameFlowMachine = new GameFlowMachine();
@@ -48,8 +51,10 @@ public class GameEngineClass
 
     public CombatStartData InitSkirmishCombat()
     {
-        var allies = AllAdventurers.Select(MakeCombatEntity).ToList();
-        var allySeeds = AllAdventurers
+        var selectedAdventurers = SelectedAdventurerIds.Select(id => AllAdventurers.Lookup(id)).ToList();
+
+        var allies = selectedAdventurers.Select(MakeCombatEntity).ToList();
+        var allySeeds = selectedAdventurers
             .Select(a =>
             {
                 var techs = a.TechsIds
@@ -65,37 +70,35 @@ public class GameEngineClass
             })
             .ToList();
 
-        var skeleton = AllMonsters.Lookup("skeleton");
         _enemyMonsterMap = new Dictionary<string, Monster>();
-        var enemies = Enumerable.Range(1, 4)
-            .Select(i =>
-            {
-                int hp = skeleton.HpBase + skeleton.Level * skeleton.HpPerLevel;
-                var entityId = $"skeleton_{i}";
-                _enemyMonsterMap[entityId] = skeleton;
-                return new CombatEntity(
-                    entityId, $"Skeleton {i}", skeleton.Level,
-                    hp, hp, 0, 0,
-                    skeleton.PowerBase   + skeleton.Level * skeleton.PowerPerLevel,
-                    skeleton.DefenseBase + skeleton.Level * skeleton.DefensePerLevel,
-                    skeleton.SpeedBase   + skeleton.Level * skeleton.SpeedBasePerLevel,
-                    0f, 0f, 0.5f, passives: skeleton.Passives);
-            })
-            .ToList();
-        var enemySeeds = Enumerable.Range(1, 4)
-            .Select(i =>
-            {
-                int hp    = skeleton.HpBase    + skeleton.Level * skeleton.HpPerLevel;
-                int power = skeleton.PowerBase + skeleton.Level * skeleton.PowerPerLevel;
-                int def   = skeleton.DefenseBase + skeleton.Level * skeleton.DefensePerLevel;
-                int speed = skeleton.SpeedBase + skeleton.Level * skeleton.SpeedBasePerLevel;
-                return new CombatantSeed(
-                    $"skeleton_{i}", $"Skeleton {i}",
-                    hp, hp, 0, 0,
-                    skeleton.Level, power, def, speed, 0f, 0f,
-                    [], [], [], []);
-            })
-            .ToList();
+        var enemies = new List<CombatEntity>();
+        var enemySeeds = new List<CombatantSeed>();
+
+        for (int i = 0; i < SelectedMonsterIds.Count; i++)
+        {
+            var monster = AllMonsters.Lookup(SelectedMonsterIds[i]);
+            var entityId = $"{monster.MonsterId}_{i + 1}";
+            var displayName = $"{monster.Name} {i + 1}";
+
+            int hp    = monster.HpBase    + monster.Level * monster.HpPerLevel;
+            int power = monster.PowerBase + monster.Level * monster.PowerPerLevel;
+            int def   = monster.DefenseBase + monster.Level * monster.DefensePerLevel;
+            int speed = monster.SpeedBase + monster.Level * monster.SpeedBasePerLevel;
+
+            _enemyMonsterMap[entityId] = monster;
+
+            enemies.Add(new CombatEntity(
+                entityId, displayName, monster.Level,
+                hp, hp, 0, 0,
+                power, def, speed,
+                0f, 0f, 0.5f, passives: monster.Passives));
+
+            enemySeeds.Add(new CombatantSeed(
+                entityId, displayName,
+                hp, hp, 0, 0,
+                monster.Level, power, def, speed, 0f, 0f,
+                [], [], [], []));
+        }
 
         CombatEngineClass.Instance.InitCombat(allies, enemies);
         return new CombatStartData(allySeeds, enemySeeds);

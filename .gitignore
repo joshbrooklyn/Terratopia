@@ -9,3 +9,8 @@
 /tests/Terratopia.Tests/obj
 /src/BattleEngine_old/obj
 /src/GameEngine/bin
+
+# GameDataEditor (VS Code extension)
+/src/GameDataEditor/node_modules/
+/src/GameDataEditor/out/
+/src/GameDataEditor/*.vsix

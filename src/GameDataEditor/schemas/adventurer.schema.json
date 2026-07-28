@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Adventurer",
+  "description": "Terratopia adventurer definition (src/GameEngine/DataClasses/Adventurer.cs)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "adventurerId",
+    "name",
+    "level",
+    "maxHp",
+    "hp",
+    "maxTp",
+    "tp",
+    "power",
+    "defense",
+    "speed",
+    "canFight"
+  ],
+  "properties": {
+    "adventurerId": {
+      "type": "string",
+      "description": "Unique identifier for this adventurer."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name."
+    },
+    "level": {
+      "type": "integer"
+    },
+    "maxHp": {
+      "type": "integer"
+    },
+    "hp": {
+      "type": "integer"
+    },
+    "maxTp": {
+      "type": "integer"
+    },
+    "tp": {
+      "type": "integer"
+    },
+    "power": {
+      "type": "integer"
+    },
+    "defense": {
+      "type": "integer"
+    },
+    "speed": {
+      "type": "integer"
+    },
+    "evasion": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Chance to evade an attack, 0-1."
+    },
+    "critChance": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Chance to land a critical hit, 0-1."
+    },
+    "critModifier": {
+      "type": "number",
+      "description": "Damage multiplier applied on a critical hit. Defaults to 0.5 (i.e. +50%)."
+    },
+    "techsIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ids of techs (GameData/Techs) this adventurer knows."
+    },
+    "itemIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ids of items (GameData/Items) this adventurer carries."
+    },
+    "canFight": {
+      "type": "boolean"
+    }
+  }
+}

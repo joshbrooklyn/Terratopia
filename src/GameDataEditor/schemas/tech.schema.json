@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tech",
+  "description": "Terratopia tech definition (src/GameEngine/DataClasses/Tech.cs). Note: if targetingType is \"All\" or \"Self\", allowMultipleAttackOnSameTarget must be omitted — enforced at load time by ContentLoader, not expressible here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "techId",
+    "name",
+    "jobClass",
+    "tpCost",
+    "tier",
+    "rarity",
+    "description",
+    "validTargets",
+    "livingOrDead"
+  ],
+  "properties": {
+    "techId": {
+      "type": "string",
+      "description": "Unique identifier for this tech."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name."
+    },
+    "jobClass": {
+      "type": "string",
+      "description": "Job class that can use this tech, e.g. \"BlackMage\", \"WhiteMage\", \"Rogue\", \"Fighter\"."
+    },
+    "tpCost": {
+      "type": "integer"
+    },
+    "tier": {
+      "type": "integer"
+    },
+    "rarity": {
+      "type": "integer"
+    },
+    "description": {
+      "type": "string"
+    },
+    "numAttacks": {
+      "type": "integer",
+      "default": 1
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "traits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "targetingType": {
+      "type": "string",
+      "enum": ["Choose", "Random", "SelectiveMulti", "All", "Self"],
+      "default": "Choose"
+    },
+    "validTargets": {
+      "type": "string",
+      "enum": ["Allies", "Enemies", "Both"]
+    },
+    "livingOrDead": {
+      "type": "string",
+      "enum": ["Living", "Dead", "Both"]
+    },
+    "allowMultipleAttackOnSameTarget": {
+      "type": "boolean",
+      "description": "Must be omitted when targetingType is \"All\" or \"Self\"."
+    },
+    "element": {
+      "type": "string",
+      "enum": ["Fire", "Ice", "Lightning", "Void"]
+    },
+    "effectType": {
+      "type": "string",
+      "enum": ["Damage", "Heal"]
+    },
+    "targetStatuses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "userStatuses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "directEffects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["effectType"],
+        "properties": {
+          "effectType": {
+            "type": "string",
+            "enum": ["Damage", "Heal"]
+          },
+          "element": {
+            "type": "string",
+            "enum": ["Fire", "Ice", "Lightning", "Void"]
+          },
+          "calcType": {
+            "type": "string",
+            "enum": ["StandardFormula"],
+            "default": "StandardFormula"
+          },
+          "powerFactor": {
+            "type": "number",
+            "default": 1.0
+          }
+        }
+      }
+    }
+  }
+}

@@ -12,8 +12,6 @@
   "evasion": 0.05,
   "critChance": 0.05,
   "critModifier": 0.5,
-  "spritePath": "",
-  "hitSoundPath": "",
   "techsIds": ["fireblast"],
   "itemIds": [],
   "canFight": true
