@@ -1,5 +1,6 @@
 using CombatEngine.DataClasses;
 using CombatEngine.Enums;
+using CombatEngine.Passives;
 
 namespace CombatEngine.Engine;
 
@@ -169,13 +170,22 @@ public class CombatEngineClass
                 CombatEventBus.RaiseEntityDamaged(target.EntityId, target.Name, damage, actor.EntityId, actor.Name, isCrit);
                 CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
                 if (target.Hp == 0 && !target.IsDead)
-                {
-                    target.IsDead = true;
-                    CombatEventBus.RaiseEntityDeath(target.EntityId, target.Name);
-                }
+                    HandleEntityDefeated(target);
             }
         }
-    }   
+    }
+
+    private void HandleEntityDefeated(CombatEntity target)
+    {
+        foreach (var passive in PassiveRegistry.GetForTrigger<DeathPassive>(target.Passives, PassiveTrigger.OnDeath))
+        {
+            if (passive.TryPreventDeath(target))
+                return;
+        }
+
+        target.IsDead = true;
+        CombatEventBus.RaiseEntityDeath(target.EntityId, target.Name);
+    }
 
     private void AssignRandomAiTarget(CombatCommand cmd)
     {

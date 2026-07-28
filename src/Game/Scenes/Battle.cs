@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using CombatEngine;
@@ -11,6 +12,9 @@ using Godot;
 
 public partial class Battle : Control
 {
+	[Export] private float _eventDelaySeconds = 0.5f;
+	private double _eventDelayRemaining = 0.0;
+
 	private Label         _roundLabel          = null!;
 	private VBoxContainer _enemiesColumn       = null!;
 	private VBoxContainer _alliesColumn        = null!;
@@ -37,6 +41,8 @@ public partial class Battle : Control
 		_resultModal         = GetNode<Window>("ResultModal");
 		_resultLabel         = GetNode<Label>("ResultModal/ModalVBox/ResultLabel");
 
+		UiEventQueue.Clear();
+
 		GetNode<Button>("VBoxContainer/HeaderRow/QuitBattleButton").Pressed += OnQuitBattlePressed;
 		GetNode<Button>("ResultModal/ModalVBox/ReturnToMenuButton").Pressed += OnQuitBattlePressed;
 		_actionModal.CloseRequested += () => _actionModal.Hide();
@@ -55,10 +61,26 @@ public partial class Battle : Control
 		CombatEventBus.TargetSelectionRequested += OnTargetSelectionRequested;
 		CombatEventBus.EntityHpChanged        += OnEntityHpChanged;
 		CombatEventBus.EntityTpChanged        += OnEntityTpChanged;
+		CombatEventBus.EntityRevived          += OnEntityRevived;
 		CombatEventBus.ActionResolved         += OnActionResolved;
 		CombatEventBus.CombatOver             += OnCombatOver;
 
 		GameEngineClass.Instance.BeginSkirmishCombat();
+	}
+
+	public override void _Process(double delta)
+	{
+		if (_eventDelayRemaining > 0)
+		{
+			_eventDelayRemaining -= delta;
+			return;
+		}
+
+		if (UiEventQueue.TryDequeue(out var action))
+		{
+			action();
+			_eventDelayRemaining = _eventDelaySeconds;
+		}
 	}
 
 	private void BuildCombatantCards(CombatStartData startData)
@@ -80,21 +102,22 @@ public partial class Battle : Control
 		}
 	}
 
-	private void OnRoundStarted(int round, IReadOnlyList<string> turnOrderIds, IReadOnlyList<string> turnOrderNames)
-	{
-		_roundLabel.Text = $"Round {round}";
-		AddLogEntry($"--- Round {round} Started! ---");
-		AddLogEntry("Turn order: " + string.Join(", ", turnOrderNames));
-	}
+	private void OnRoundStarted(int round, IReadOnlyList<string> turnOrderIds, IReadOnlyList<string> turnOrderNames) =>
+		UiEventQueue.Enqueue(() =>
+		{
+			_roundLabel.Text = $"Round {round}";
+			AddLogEntry($"--- Round {round} Started! ---");
+			AddLogEntry("Turn order: " + string.Join(", ", turnOrderNames));
+		});
 
 	private void OnRoundEnded(int round) =>
-		AddLogEntry($"--- Round {round} ended ---");
+		UiEventQueue.Enqueue(() => AddLogEntry($"--- Round {round} ended ---"));
 
 	private void OnTurnStarted(string entityId, string entityName) =>
-		AddLogEntry($"{entityName}'s turn.");
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName}'s turn."));
 
 	private void OnTurnEnded(string entityId, string entityName) =>
-		AddLogEntry($"{entityName}'s turn ended.");
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName}'s turn ended."));
 
 	private void OnWaitingForTurn(string entityId, string entityName, int currentTp, bool isAlly)
 	{
@@ -186,30 +209,35 @@ public partial class Battle : Control
 	}
 
 	private void OnEntityHpChanged(string entityId, string entityName, int oldHp, int newHp) =>
-		AddLogEntry($"{entityName}: HP {oldHp} → {newHp}");
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName}: HP {oldHp} → {newHp}"));
 
 	private void OnEntityTpChanged(string entityId, string entityName, int oldTp, int newTp) =>
-		AddLogEntry($"{entityName}: TP {oldTp} → {newTp}");
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName}: TP {oldTp} → {newTp}"));
 
-	private void OnActionResolved(CombatCommand cmd, string actorName)
-	{
-		var entitiesById = CombatEngineClass.Instance.GetLivingEntities().ToDictionary(e => e.EntityId);
+	private void OnEntityRevived(string entityId, string entityName) =>
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} was revived!"));
 
-		string ActorOrTargetName(string id) =>
-			entitiesById.TryGetValue(id, out var entity) ? entity.Name : id;
+	private void OnActionResolved(CombatCommand cmd, string actorName) =>
+		UiEventQueue.Enqueue(() =>
+		{
+			var entitiesById = CombatEngineClass.Instance.GetLivingEntities().ToDictionary(e => e.EntityId);
 
-		var targetNames = string.Join(", ", cmd.ChosenTargets.Select(ActorOrTargetName));
-		var effectSummary = string.Join(", ", cmd.DirectEffects.Select(e =>
-			e.Element.HasValue ? $"{e.EffectType} ({e.Element})" : e.EffectType.ToString()));
+			string ActorOrTargetName(string id) =>
+				entitiesById.TryGetValue(id, out var entity) ? entity.Name : id;
 
-		AddLogEntry($"{actorName} used {effectSummary} on {targetNames} (cost {cmd.TPCost} TP).");
-	}
+			var targetNames = string.Join(", ", cmd.ChosenTargets.Select(ActorOrTargetName));
+			var effectSummary = string.Join(", ", cmd.DirectEffects.Select(e =>
+				e.Element.HasValue ? $"{e.EffectType} ({e.Element})" : e.EffectType.ToString()));
 
-	private void OnCombatOver(bool playerWon)
-	{
-		_resultLabel.Text = playerWon ? "Victory!" : "Defeat...";
-		_resultModal.PopupCentered();
-	}
+			AddLogEntry($"{actorName} used {effectSummary} on {targetNames} (cost {cmd.TPCost} TP).");
+		});
+
+	private void OnCombatOver(bool playerWon) =>
+		UiEventQueue.Enqueue(() =>
+		{
+			_resultLabel.Text = playerWon ? "Victory!" : "Defeat...";
+			_resultModal.PopupCentered();
+		});
 
 	private void AddLogEntry(string text)
 	{
@@ -226,6 +254,7 @@ public partial class Battle : Control
 	private void OnQuitBattlePressed()
 	{
 		UnsubscribeAll();
+		UiEventQueue.Clear();
 		CallDeferred(nameof(GoToMainMenu));
 	}
 
@@ -239,6 +268,7 @@ public partial class Battle : Control
 		CombatEventBus.TargetSelectionRequested -= OnTargetSelectionRequested;
 		CombatEventBus.EntityHpChanged        -= OnEntityHpChanged;
 		CombatEventBus.EntityTpChanged        -= OnEntityTpChanged;
+		CombatEventBus.EntityRevived          -= OnEntityRevived;
 		CombatEventBus.ActionResolved         -= OnActionResolved;
 		CombatEventBus.CombatOver             -= OnCombatOver;
 	}

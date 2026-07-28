@@ -29,6 +29,7 @@ public static class CombatEventBus
     public static event Action<string, string, int, int>? EntityMaxHpChanged;  // entityId, entityName, oldMaxHp, newMaxHp
     public static event Action<string, string, int, int>? EntityMaxTpChanged;  // entityId, entityName, oldMaxTp, newMaxTp
     public static event Action<string, string>? EntityDeath; // entityId, entityName
+    public static event Action<string, string>? EntityRevived; // entityId, entityName
 
     public static void RaiseRoundStarted(int round, IReadOnlyList<string> turnOrderIds, IReadOnlyList<string> turnOrderNames) => RoundStarted?.Invoke(round, turnOrderIds, turnOrderNames);
     public static void RaiseRoundEnded(int round)               => RoundEnded?.Invoke(round);
@@ -47,6 +48,7 @@ public static class CombatEventBus
     public static void RaiseEntityMaxHpChanged(string entityId, string entityName, int oldMaxHp, int newMaxHp) => EntityMaxHpChanged?.Invoke(entityId, entityName, oldMaxHp, newMaxHp);
     public static void RaiseEntityMaxTpChanged(string entityId, string entityName, int oldMaxTp, int newMaxTp) => EntityMaxTpChanged?.Invoke(entityId, entityName, oldMaxTp, newMaxTp);
     public static void RaiseEntityDeath(string entityId, string entityName) => EntityDeath?.Invoke(entityId, entityName);
+    public static void RaiseEntityRevived(string entityId, string entityName) => EntityRevived?.Invoke(entityId, entityName);
 
     public static void Reset()
     {
@@ -67,5 +69,6 @@ public static class CombatEventBus
         EntityMaxHpChanged     = null;
         EntityMaxTpChanged     = null;
         EntityDeath            = null;
+        EntityRevived          = null;
     }
 }

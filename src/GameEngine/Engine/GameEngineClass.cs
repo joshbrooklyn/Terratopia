@@ -79,7 +79,7 @@ public class GameEngineClass
                     skeleton.PowerBase   + skeleton.Level * skeleton.PowerPerLevel,
                     skeleton.DefenseBase + skeleton.Level * skeleton.DefensePerLevel,
                     skeleton.SpeedBase   + skeleton.Level * skeleton.SpeedBasePerLevel,
-                    0f, 0f, 0.5f);
+                    0f, 0f, 0.5f, passives: skeleton.Passives);
             })
             .ToList();
         var enemySeeds = Enumerable.Range(1, 4)
@@ -118,7 +118,7 @@ public class GameEngineClass
             m.PowerBase   + m.Level * m.PowerPerLevel,
             m.DefenseBase + m.Level * m.DefensePerLevel,
             m.SpeedBase   + m.Level * m.SpeedBasePerLevel,
-            0f, 0f, 0.5f);
+            0f, 0f, 0.5f, passives: m.Passives);
     }
 
     public CombatCommand MakeCombatCommand(string actorId, string techId)
