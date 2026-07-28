@@ -19,8 +19,6 @@ public class Tech : IGameDataObject
     public required ValidTarget ValidTargets { get; init; }
     public required LivingOrDead LivingOrDead { get; init; }
     public bool? AllowMultipleAttackOnSameTarget { get; init; }
-    public ElementType? Element { get; init; }
-    public CombatDirectEffectType? EffectType { get; init; }
     public List<string> TargetStatuses { get; init; } = [];
     public List<string> UserStatuses { get; init; } = [];
     public List<TechDirectEffect> DirectEffects { get; init; } = [];

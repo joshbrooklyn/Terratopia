@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
+import { showFormEditorPanel } from './formEditorPanel';
 
 export function activate(context: vscode.ExtensionContext) {
 	const openFormEditor = vscode.commands.registerCommand('gamedataEditor.openFormEditor', () => {
-		vscode.window.showInformationMessage('Form editor coming soon — for now, edit GameData JSON directly (schema validation is active).');
+		showFormEditorPanel(context);
 	});
 
 	context.subscriptions.push(openFormEditor);

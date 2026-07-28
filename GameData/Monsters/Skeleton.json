@@ -10,6 +10,8 @@
   "speedBase": 3,
   "speedBasePerLevel": 2,
   "monsterActionIds": [],
-  "passives": ["LivingDead"],
-  "canFight": true
+  "passives": [
+    "LivingDead"
+  ],
+  "canUseFightAction": true
 }

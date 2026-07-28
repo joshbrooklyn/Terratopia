@@ -1,7 +1,6 @@
 {
   "adventurerId": "adventurer_004",
   "name": "Michal the Pedantic",
-  "level": 1,
   "maxHp": 80,
   "hp": 80,
   "maxTp": 50,
@@ -12,7 +11,10 @@
   "evasion": 0.05,
   "critChance": 0.05,
   "critModifier": 0.5,
-  "techsIds": ["fireblast"],
+  "techsIds": [
+    "fireblast",
+    "fireblast_multi"
+  ],
   "itemIds": [],
-  "canFight": true
+  "canUseFightAction": true
 }

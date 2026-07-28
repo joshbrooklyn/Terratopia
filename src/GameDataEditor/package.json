@@ -34,8 +34,9 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p ./",
-    "watch": "tsc -w -p ./"
+    "generate-schemas": "node ./scripts/generate-passive-enum.js",
+    "compile": "npm run generate-schemas && tsc -p ./",
+    "watch": "npm run generate-schemas && tsc -w -p ./"
   },
   "devDependencies": {
     "@types/node": "^20.x",

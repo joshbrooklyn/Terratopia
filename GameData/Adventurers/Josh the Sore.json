@@ -1,7 +1,6 @@
 {
   "adventurerId": "adventurer_001",
   "name": "Josh the Sore",
-  "level": 1,
   "maxHp": 100,
   "hp": 100,
   "maxTp": 50,
@@ -14,5 +13,5 @@
   "critModifier": 0.5,
   "techsIds": ["fireblast"],
   "itemIds": [],
-  "canFight": true
+  "canUseFightAction": true
 }

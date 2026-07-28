@@ -7,7 +7,6 @@
   "required": [
     "adventurerId",
     "name",
-    "level",
     "maxHp",
     "hp",
     "maxTp",
@@ -15,7 +14,7 @@
     "power",
     "defense",
     "speed",
-    "canFight"
+    "canUseFightAction"
   ],
   "properties": {
     "adventurerId": {
@@ -25,9 +24,6 @@
     "name": {
       "type": "string",
       "description": "Display name."
-    },
-    "level": {
-      "type": "integer"
     },
     "maxHp": {
       "type": "integer"
@@ -80,7 +76,7 @@
       },
       "description": "Ids of items (GameData/Items) this adventurer carries."
     },
-    "canFight": {
+    "canUseFightAction": {
       "type": "boolean"
     }
   }

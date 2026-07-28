@@ -73,14 +73,6 @@
       "type": "boolean",
       "description": "Must be omitted when targetingType is \"All\" or \"Self\"."
     },
-    "element": {
-      "type": "string",
-      "enum": ["Fire", "Ice", "Lightning", "Void"]
-    },
-    "effectType": {
-      "type": "string",
-      "enum": ["Damage", "Heal"]
-    },
     "targetStatuses": {
       "type": "array",
       "items": {

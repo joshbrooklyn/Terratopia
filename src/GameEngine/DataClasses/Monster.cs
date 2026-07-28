@@ -6,7 +6,7 @@ public class Monster : IGameDataObject
     public string MonsterId { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
     // Primary stats
-    public int Level { get; init; }
+    public int Level { get; init; } = 1;
     public int HpBase { get; init; }
     public int HpPerLevel { get; init; }
     public int PowerBase { get; init; }
@@ -20,5 +20,5 @@ public class Monster : IGameDataObject
     public List<string>? Passives { get; init; }
 
     // Combat access
-    public bool CanFight { get; init; }
+    public bool CanUseFightAction { get; init; }
 }

@@ -189,7 +189,7 @@ public class GameEngineClass
         var availableActions = new List<Func<CombatCommand>>();
         foreach (var actionId in monster.MonsterActionIds)
             availableActions.Add(() => MakeMonsterCombatCommand(actorId, actionId));
-        if (monster.CanFight)
+        if (monster.CanUseFightAction)
             availableActions.Add(() => MakeFightCommand(actorId));
 
         if (availableActions.Count == 0)

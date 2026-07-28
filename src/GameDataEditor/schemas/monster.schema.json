@@ -15,7 +15,7 @@
     "defensePerLevel",
     "speedBase",
     "speedBasePerLevel",
-    "canFight"
+    "canUseFightAction"
   ],
   "properties": {
     "monsterId": {
@@ -25,9 +25,6 @@
     "name": {
       "type": "string",
       "description": "Display name."
-    },
-    "level": {
-      "type": "integer"
     },
     "hpBase": {
       "type": "integer"
@@ -63,11 +60,14 @@
     "passives": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "enum": [
+          "LivingDead"
+        ]
       },
-      "description": "Names of passive classes (src/CombatEngine/Passives) applied to this monster, e.g. \"LivingDead\"."
+      "description": "Names of passive classes (src/CombatEngine/Passives) applied to this monster, e.g. \"LivingDead\". The enum is generated from PassiveRegistry.cs by `npm run generate-schemas` - do not hand-edit it."
     },
-    "canFight": {
+    "canUseFightAction": {
       "type": "boolean"
     }
   }

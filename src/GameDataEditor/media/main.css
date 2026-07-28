@@ -1,0 +1,329 @@
+body {
+	display: flex;
+	height: 100vh;
+	margin: 0;
+	padding: 0;
+	font-family: var(--vscode-font-family);
+	color: var(--vscode-foreground);
+}
+
+#tree-pane {
+	width: 280px;
+	flex-shrink: 0;
+	overflow-y: auto;
+	border-right: 1px solid var(--vscode-panel-border);
+	padding: 8px;
+	box-sizing: border-box;
+}
+
+#detail-pane {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px;
+	box-sizing: border-box;
+}
+
+.category > summary {
+	cursor: pointer;
+	font-weight: bold;
+	padding: 4px 0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 6px;
+}
+
+.item-list {
+	list-style: none;
+	margin: 0;
+	padding-left: 12px;
+}
+
+.item-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	padding: 3px 6px;
+	border-radius: 3px;
+}
+
+.item-row .item-name {
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	flex: 1;
+}
+
+.item-row .copy-btn {
+	visibility: hidden;
+	flex-shrink: 0;
+}
+
+.item-row:hover .copy-btn {
+	visibility: visible;
+}
+
+.item-row:hover {
+	background-color: var(--vscode-list-hoverBackground);
+}
+
+.item-row.selected {
+	background-color: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+}
+
+.empty-category {
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+	padding: 3px 6px;
+}
+
+.placeholder {
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+}
+
+.detail-note {
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+	margin-top: 4px;
+}
+
+.disabled-note {
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+	font-size: 0.85em;
+	margin: 2px 0;
+}
+
+pre {
+	background-color: var(--vscode-textCodeBlock-background);
+	padding: 12px;
+	overflow: auto;
+	border-radius: 4px;
+}
+
+#form-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding-bottom: 16px;
+}
+
+.form-row {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	max-width: 480px;
+}
+
+.form-row label {
+	font-weight: 600;
+	font-size: 0.9em;
+}
+
+.required-marker {
+	color: var(--vscode-errorForeground);
+	margin-left: 2px;
+}
+
+.form-row input[type="text"],
+.form-row input[type="number"],
+.form-row select {
+	background-color: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border: 1px solid var(--vscode-input-border, transparent);
+	border-radius: 2px;
+	padding: 4px 6px;
+	font-family: inherit;
+	font-size: inherit;
+}
+
+.form-row input[type="checkbox"] {
+	width: fit-content;
+}
+
+.form-row input.invalid,
+.form-row select.invalid,
+.array-list input.invalid,
+.array-list select.invalid {
+	border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+	background-color: var(--vscode-inputValidation-errorBackground, inherit);
+}
+
+.field-error-msg {
+	color: var(--vscode-errorForeground);
+	font-size: 0.85em;
+}
+
+.array-row {
+	max-width: 640px;
+}
+
+.array-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.array-list li {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+}
+
+.array-list li input {
+	flex: 1;
+	background-color: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border: 1px solid var(--vscode-input-border, transparent);
+	border-radius: 2px;
+	padding: 4px 6px;
+}
+
+.array-list li .field-error-msg {
+	flex-basis: 100%;
+}
+
+.array-group {
+	border: 1px solid var(--vscode-panel-border);
+	border-radius: 4px;
+	padding: 10px;
+	margin: 6px 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.array-group-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-weight: 600;
+}
+
+.btn {
+	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	border-radius: 2px;
+	padding: 6px 14px;
+	cursor: pointer;
+	font-family: inherit;
+}
+
+.btn:hover {
+	background-color: var(--vscode-button-hoverBackground);
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+	background-color: var(--vscode-button-background);
+}
+
+.btn-secondary {
+	background-color: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+	width: fit-content;
+}
+
+.btn-small {
+	padding: 2px 8px;
+	font-size: 0.85em;
+}
+
+.btn-secondary:hover {
+	background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.btn-remove {
+	background-color: transparent;
+	color: var(--vscode-errorForeground);
+	border: 1px solid var(--vscode-errorForeground);
+	width: fit-content;
+}
+
+#form-errors {
+	display: none;
+	border: 1px solid var(--vscode-errorForeground);
+	background-color: var(--vscode-inputValidation-errorBackground);
+	color: var(--vscode-errorForeground);
+	border-radius: 4px;
+	padding: 8px 12px;
+	margin-bottom: 12px;
+	max-width: 640px;
+}
+
+#form-errors.visible {
+	display: block;
+}
+
+#form-errors ul {
+	margin: 4px 0 0;
+	padding-left: 18px;
+}
+
+#form-actions {
+	position: sticky;
+	bottom: 0;
+	background-color: var(--vscode-editor-background);
+	padding: 10px 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	border-top: 1px solid var(--vscode-panel-border);
+}
+
+.save-status.success {
+	color: var(--vscode-testing-iconPassed, #4caf50);
+}
+
+.form-row.disabled {
+	opacity: 0.5;
+}
+
+.form-row.disabled label {
+	cursor: not-allowed;
+}
+
+.form-row.disabled input,
+.form-row.disabled select,
+.form-row.disabled button {
+	cursor: not-allowed;
+}
+
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.modal-dialog {
+	background-color: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-panel-border);
+	border-radius: 4px;
+	padding: 16px 20px;
+	max-width: 360px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 14px;
+}

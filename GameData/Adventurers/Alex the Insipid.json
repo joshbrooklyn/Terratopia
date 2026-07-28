@@ -1,7 +1,6 @@
 {
   "adventurerId": "adventurer_002",
   "name": "Alex the Insipid",
-  "level": 1,
   "maxHp": 80,
   "hp": 80,
   "maxTp": 50,
@@ -14,5 +13,5 @@
   "critModifier": 0.5,
   "techsIds": ["fireblast"],
   "itemIds": [],
-  "canFight": true
+  "canUseFightAction": true
 }

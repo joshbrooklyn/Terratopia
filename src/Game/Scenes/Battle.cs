@@ -152,7 +152,7 @@ public partial class Battle : Control
 			_techButtonContainer.AddChild(btn);
 		}
 
-		if (adventurer.CanFight)
+		if (adventurer.CanUseFightAction)
 		{
 			var fightBtn = new Button();
 			fightBtn.Text = "Fight";
