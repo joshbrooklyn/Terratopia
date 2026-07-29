@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dungeon",
+  "description": "Terratopia dungeon definition (src/GameEngine/DataClasses/Dungeon.cs)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "dungeonId",
+    "name"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
+    },
+    "dungeonId": {
+      "type": "string",
+      "description": "Unique identifier for this dungeon."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name."
+    },
+    "monsterIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Ids of monsters (GameData/Monsters) that can appear in this dungeon."
+    }
+  }
+}

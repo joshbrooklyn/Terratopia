@@ -5,6 +5,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "schemaVersion",
     "techId",
     "name",
     "jobClass",
@@ -16,6 +17,11 @@
     "livingOrDead"
   ],
   "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
+    },
     "techId": {
       "type": "string",
       "description": "Unique identifier for this tech."

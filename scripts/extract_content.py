@@ -225,11 +225,13 @@ def main():
     techs = extract_techs(wb)
     items = extract_items(wb)
 
-    os.makedirs(os.path.join("GameData", "Techs"), exist_ok=True)
-    os.makedirs(os.path.join("GameData", "Items"), exist_ok=True)
+    game_data_root = os.environ["TerratopiaGameDataPath"]
 
-    tech_path = os.path.join("GameData", "Techs", "techs.json")
-    item_path = os.path.join("GameData", "Items", "items.json")
+    os.makedirs(os.path.join(game_data_root, "Techs"), exist_ok=True)
+    os.makedirs(os.path.join(game_data_root, "Items"), exist_ok=True)
+
+    tech_path = os.path.join(game_data_root, "Techs", "techs.json")
+    item_path = os.path.join(game_data_root, "Items", "items.json")
 
     with open(tech_path, "w", encoding="utf-8") as f:
         json.dump(techs, f, indent=2, ensure_ascii=False)

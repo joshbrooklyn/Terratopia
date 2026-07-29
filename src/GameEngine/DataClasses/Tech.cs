@@ -4,7 +4,10 @@ namespace GameEngine.DataClasses;
 
 public class Tech : IGameDataObject
 {
+    public static string SchemaResourceName => "GameEngine.Schemas.tech.schema.json";
+
     public string Id => TechId;
+    public required int SchemaVersion { get; init; }
     public string TechId { get; init; } = "";
     public string Name { get; init; } = "";
     public string JobClass { get; init; } = "";

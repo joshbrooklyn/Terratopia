@@ -1,8 +1,10 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Linq;
 using CombatEngine.Enums;
 using GameEngine.DataClasses;
+using Json.Schema;
 
 namespace GameEngine;
 
@@ -14,6 +16,8 @@ public static class ContentLoader
         DefaultIgnoreCondition      = JsonIgnoreCondition.WhenWritingNull,
         Converters                  = { new JsonStringEnumConverter() },
     };
+
+    private static readonly Dictionary<Type, JsonSchema> _schemaCache = new();
 
     public static List<Tech> LoadTechs()
     {
@@ -41,8 +45,9 @@ public static class ContentLoader
 
     public static List<Adventurer> LoadAdventurers() => LoadDirectory<Adventurer>("Adventurers");
 
-    private static List<T> LoadDirectory<T>(string subfolder)
+    private static List<T> LoadDirectory<T>(string subfolder) where T : IGameDataObject
     {
+        var schema = GetSchema<T>();
         var dir = Path.Combine(FindGameDataPath(), subfolder);
         var files = Directory.EnumerateFiles(dir, "*.json")
             .Where(f => !Path.GetFileName(f).Equals("NotImplemented.json", StringComparison.OrdinalIgnoreCase))
@@ -51,24 +56,50 @@ public static class ContentLoader
         var result = new List<T>();
         foreach (var file in files)
         {
-            var item = JsonSerializer.Deserialize<T>(File.ReadAllText(file), _options)
+            using var document = JsonDocument.Parse(File.ReadAllText(file));
+
+            var evaluation = schema.Evaluate(document.RootElement, new EvaluationOptions { OutputFormat = OutputFormat.List });
+            if (!evaluation.IsValid)
+            {
+                var errors = new[] { evaluation }.Concat(evaluation.Details ?? Enumerable.Empty<EvaluationResults>())
+                    .Where(d => d.Errors is { Count: > 0 })
+                    .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
+                throw new InvalidOperationException(
+                    $"{Path.GetFileName(file)} ({subfolder}) failed schema validation:\n{string.Join("\n", errors)}");
+            }
+
+            var item = document.RootElement.Deserialize<T>(_options)
                 ?? throw new InvalidOperationException($"{Path.GetFileName(file)} deserialized to null.");
+
             result.Add(item);
         }
 
         return result;
     }
 
+    private static JsonSchema GetSchema<T>() where T : IGameDataObject
+    {
+        if (_schemaCache.TryGetValue(typeof(T), out var cached))
+            return cached;
+
+        var resourceName = T.SchemaResourceName;
+        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"Embedded schema resource '{resourceName}' not found.");
+
+        var schema = JsonSchema.FromText(new StreamReader(stream).ReadToEnd());
+        _schemaCache[typeof(T)] = schema;
+        return schema;
+    }
+
     private static string FindGameDataPath()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            var candidate = Path.Combine(dir.FullName, "GameData");
-            if (Directory.Exists(candidate)) return candidate;
-            dir = dir.Parent;
-        }
-        throw new DirectoryNotFoundException(
-            $"GameData directory not found walking up from {AppContext.BaseDirectory}");
+        var path = Environment.GetEnvironmentVariable("TerratopiaGameDataPath");
+        if (string.IsNullOrEmpty(path))
+            throw new InvalidOperationException(
+                "Environment variable 'TerratopiaGameDataPath' is not set.");
+        if (!Directory.Exists(path))
+            throw new DirectoryNotFoundException(
+                $"GameData directory not found at path from TerratopiaGameDataPath: {path}");
+        return path;
     }
 }

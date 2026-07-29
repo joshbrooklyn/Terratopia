@@ -38,9 +38,10 @@
     ]
   },
   "scripts": {
+    "copy-schemas": "node ./scripts/copy-schemas.js",
     "generate-schemas": "node ./scripts/generate-passive-enum.js",
-    "compile": "npm run generate-schemas && tsc -p ./",
-    "watch": "npm run generate-schemas && tsc -w -p ./"
+    "compile": "npm run copy-schemas && npm run generate-schemas && tsc -p ./",
+    "watch": "npm run copy-schemas && npm run generate-schemas && tsc -w -p ./"
   },
   "devDependencies": {
     "@types/node": "^20.x",

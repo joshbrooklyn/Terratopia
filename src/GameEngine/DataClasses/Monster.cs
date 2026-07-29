@@ -2,7 +2,10 @@ namespace GameEngine.DataClasses;
 
 public class Monster : IGameDataObject
 {
+    public static string SchemaResourceName => "GameEngine.Schemas.monster.schema.json";
+
     public string Id => MonsterId;
+    public required int SchemaVersion { get; init; }
     public string MonsterId { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
     // Primary stats

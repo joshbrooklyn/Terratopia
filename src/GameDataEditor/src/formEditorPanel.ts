@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { findGameDataRoot, getCategoryDefinition, getCategoryFolder, loadAllCategories, loadCategoryItems, loadSchemaForCategory, JsonSchemaObject } from './gameDataLoader';
+import { findGameDataRoot, getCategoryDefinition, getCategoryFolder, getSchemaVersion, loadAllCategories, loadCategoryItems, loadSchemaForCategory, JsonSchemaObject } from './gameDataLoader';
 import { validateAgainstSchema } from './schemaValidation';
 
 type HostToWebviewMessage =
@@ -129,7 +129,8 @@ function handleNew(category: string): void {
 		postToWebview({ type: 'detail', filePath: null, category, name: '', error: `No schema found for category "${category}".` });
 		return;
 	}
-	postToWebview({ type: 'detail', filePath: null, category, name: '', schema, data: {}, isNew: true });
+	const data: Record<string, unknown> = { schemaVersion: getSchemaVersion(schema) };
+	postToWebview({ type: 'detail', filePath: null, category, name: '', schema, data, isNew: true });
 }
 
 function generateUniqueCopyId(baseId: string, existingIds: string[]): string {
@@ -165,6 +166,7 @@ function handleCopy(filePath: string, category: string): void {
 
 		const existingIds = currentGameDataRoot ? loadCategoryItems(currentGameDataRoot, category).map(item => item.id) : [];
 		const data: Record<string, unknown> = { ...parsed };
+		data.schemaVersion = getSchemaVersion(schema);
 		data[definition.nameField] = `${parsed[definition.nameField]} (Copy)`;
 		data[definition.idField] = generateUniqueCopyId(String(parsed[definition.idField]), existingIds);
 
@@ -200,6 +202,8 @@ function handleSave(filePath: string | null, category: string, data: Record<stri
 		postToWebview({ type: 'save-error', filePath, errors: [`No schema found for category "${category}".`] });
 		return;
 	}
+
+	data.schemaVersion = getSchemaVersion(schema);
 
 	const errors = validateAgainstSchema(schema, data);
 	if (errors.length > 0) {

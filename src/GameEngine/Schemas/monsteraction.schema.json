@@ -1,35 +1,46 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Item",
-  "description": "Terratopia item definition (src/GameEngine/DataClasses/Item.cs).",
+  "title": "MonsterAction",
+  "description": "Terratopia monster action definition (src/GameEngine/DataClasses/MonsterAction.cs)",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "itemId",
+    "schemaVersion",
+    "monsterActionId",
     "name",
-    "rarity",
+    "jobClass",
+    "tpCost",
+    "tier",
     "description",
     "validTargets",
     "livingOrDead"
   ],
   "properties": {
-    "itemId": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
+    },
+    "monsterActionId": {
       "type": "string",
-      "description": "Unique identifier for this item."
+      "description": "Unique identifier for this monster action."
     },
     "name": {
       "type": "string",
       "description": "Display name."
     },
-    "rarity": {
+    "jobClass": {
+      "type": "string",
+      "description": "Job class this action belongs to, e.g. \"BlackMage\", \"WhiteMage\", \"Rogue\", \"Fighter\"."
+    },
+    "tpCost": {
+      "type": "integer"
+    },
+    "tier": {
       "type": "integer"
     },
     "description": {
       "type": "string"
-    },
-    "numAttacks": {
-      "type": "integer",
-      "default": 1
     },
     "keywords": {
       "type": "array",
@@ -45,6 +56,10 @@
       },
       "uniqueItems": true
     },
+    "numTargets": {
+      "type": "integer",
+      "default": 1
+    },
     "targetingType": {
       "type": "string",
       "enum": ["Choose", "Random", "All", "Self"],
@@ -57,9 +72,6 @@
     "livingOrDead": {
       "type": "string",
       "enum": ["Living", "Dead", "Both"]
-    },
-    "allowMultipleAttackOnSameTarget": {
-      "type": "boolean"
     },
     "targetStatuses": {
       "type": "array",

@@ -4,7 +4,10 @@ namespace GameEngine.DataClasses;
 
 public class Item : IGameDataObject
 {
+    public static string SchemaResourceName => "GameEngine.Schemas.item.schema.json";
+
     public string Id => ItemId;
+    public required int SchemaVersion { get; init; }
     public string ItemId { get; init; } = "";
     public string Name { get; init; } = "";
     public int Rarity { get; init; }

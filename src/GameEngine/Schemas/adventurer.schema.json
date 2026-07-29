@@ -5,6 +5,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "schemaVersion",
     "adventurerId",
     "name",
     "maxHp",
@@ -17,6 +18,11 @@
     "canUseFightAction"
   ],
   "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
+    },
     "adventurerId": {
       "type": "string",
       "description": "Unique identifier for this adventurer."

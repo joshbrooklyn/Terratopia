@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Item",
+  "description": "Terratopia item definition (src/GameEngine/DataClasses/Item.cs).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "itemId",
+    "name",
+    "rarity",
+    "description",
+    "validTargets",
+    "livingOrDead"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
+    },
+    "itemId": {
+      "type": "string",
+      "description": "Unique identifier for this item."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name."
+    },
+    "rarity": {
+      "type": "integer"
+    },
+    "description": {
+      "type": "string"
+    },
+    "numAttacks": {
+      "type": "integer",
+      "default": 1
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "traits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "targetingType": {
+      "type": "string",
+      "enum": ["Choose", "Random", "All", "Self"],
+      "default": "Choose"
+    },
+    "validTargets": {
+      "type": "string",
+      "enum": ["Allies", "Enemies", "Both"]
+    },
+    "livingOrDead": {
+      "type": "string",
+      "enum": ["Living", "Dead", "Both"]
+    },
+    "allowMultipleAttackOnSameTarget": {
+      "type": "boolean"
+    },
+    "targetStatuses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "userStatuses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "directEffects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["effectType"],
+        "properties": {
+          "effectType": {
+            "type": "string",
+            "enum": ["Damage", "Heal"]
+          },
+          "element": {
+            "type": "string",
+            "enum": ["Fire", "Ice", "Lightning", "Void"]
+          },
+          "calcType": {
+            "type": "string",
+            "enum": ["StandardFormula", "FixedPower"],
+            "default": "StandardFormula"
+          },
+          "powerFactor": {
+            "type": "number",
+            "default": 1.0
+          }
+        }
+      },
+      "uniqueItems": true
+    }
+  }
+}

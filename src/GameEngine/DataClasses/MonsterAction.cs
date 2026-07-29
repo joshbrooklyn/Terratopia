@@ -4,7 +4,10 @@ namespace GameEngine.DataClasses;
 
 public class MonsterAction : IGameDataObject
 {
+    public static string SchemaResourceName => "GameEngine.Schemas.monsteraction.schema.json";
+
     public string Id => MonsterActionId;
+    public required int SchemaVersion { get; init; }
     public string MonsterActionId { get; init; } = "";
     public string Name { get; init; } = "";
     public string JobClass { get; init; } = "";

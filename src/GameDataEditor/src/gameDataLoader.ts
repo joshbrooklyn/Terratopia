@@ -25,6 +25,7 @@ export interface JsonSchemaProperty {
 	maximum?: number;
 	uniqueItems?: boolean;
 	default?: unknown;
+	const?: unknown;
 	description?: string;
 }
 
@@ -50,6 +51,15 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
 	{ category: 'Techs', folderName: 'Techs', idField: 'techId', nameField: 'name', schemaFile: 'tech.schema.json' },
 	{ category: 'Items', folderName: 'Items', idField: 'itemId', nameField: 'name', schemaFile: 'item.schema.json' },
 ];
+
+/** Reads the authoritative schemaVersion (encoded as a `const` on the schema) so callers never hardcode it. */
+export function getSchemaVersion(schema: JsonSchemaObject): number {
+	const version = schema.properties.schemaVersion?.const;
+	if (typeof version !== 'number') {
+		throw new Error('Schema is missing a numeric schemaVersion.const.');
+	}
+	return version;
+}
 
 export function getCategoryDefinition(category: string): CategoryDefinition | undefined {
 	return CATEGORY_DEFINITIONS.find(definition => definition.category === category);
@@ -86,21 +96,13 @@ export function loadSchemaForCategory(extensionUri: vscode.Uri, category: string
 }
 
 export function findGameDataRoot(): string | undefined {
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	if (!workspaceFolders || workspaceFolders.length === 0) {
+	const envPath = process.env.TerratopiaGameDataPath;
+	if (!envPath) {
 		return undefined;
 	}
-
-	let dir: string | undefined = workspaceFolders[0].uri.fsPath;
-	while (dir) {
-		const candidate = path.join(dir, 'GameData');
-		if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
-			return candidate;
-		}
-		const parent = path.dirname(dir);
-		dir = parent === dir ? undefined : parent;
+	if (fs.existsSync(envPath) && fs.statSync(envPath).isDirectory()) {
+		return envPath;
 	}
-
 	return undefined;
 }
 

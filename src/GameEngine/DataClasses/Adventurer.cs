@@ -3,7 +3,10 @@ namespace GameEngine.DataClasses;
 
 public class Adventurer : IGameDataObject
 {
+    public static string SchemaResourceName => "GameEngine.Schemas.adventurer.schema.json";
+
     public string Id => AdventurerId;
+    public required int SchemaVersion { get; init; }
     public string AdventurerId { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
 

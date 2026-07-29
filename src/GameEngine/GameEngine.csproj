@@ -7,11 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
     <PackageReference Include="Stateless" Version="5.20.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CombatEngine\CombatEngine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Schemas\*.schema.json" />
   </ItemGroup>
 
 </Project>
