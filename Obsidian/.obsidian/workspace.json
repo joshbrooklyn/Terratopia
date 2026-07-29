@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "list-of-combat-action-features-in-implementation-order.md",
+                "file": "keywords.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "list-of-combat-action-features-in-implementation-order"
+              "title": "keywords"
             }
           }
         ],
@@ -68,7 +68,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "implement",
+                "query": "keywords",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -201,9 +201,9 @@
   },
   "active": "c7cac2a67774f7a6",
   "lastOpenFiles": [
+    "list-of-combat-action-features-in-implementation-order.md",
     "characters.md",
     "combat-entities.md",
-    "list-of-combat-action-features-in-implementation-order.md",
     "keywords.md",
     "how-enemy-actions-are-determined.md",
     "combat-flow.md",

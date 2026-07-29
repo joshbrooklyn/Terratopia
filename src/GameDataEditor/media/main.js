@@ -21,6 +21,7 @@
 
 	const DISABLED_FIELDS = {
 		Techs: ['keywords', 'traits', 'targetStatuses', 'userStatuses'],
+		Items: ['traits'],
 		Adventurers: ['itemIds'],
 		Monsters: ['monsterActionIds'],
 	};

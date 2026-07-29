@@ -22,7 +22,7 @@ public class GameEngineClass
     private Dictionary<string, Monster> _enemyMonsterMap = new();
 
     public IReadOnlyList<Tech> AllTechs => _allTechs;
-    //public IReadOnlyList<Item> AllItems => _allItems;
+    public IReadOnlyList<Item> AllItems => _allItems;
     public IReadOnlyList<Monster> AllMonsters => _allMonsters;
     public IReadOnlyList<MonsterAction> AllMonsterActions => _allMonsterActions;
     public IReadOnlyList<Dungeon> AllDungeons => _allDungeons;
@@ -35,7 +35,7 @@ public class GameEngineClass
     {
         _gameFlowMachine = new GameFlowMachine();
         _allTechs = ContentLoader.LoadTechs();
-        //_allItems = ContentLoader.LoadItems();
+        _allItems = ContentLoader.LoadItems();
         _allMonsters = ContentLoader.LoadMonsters();
         _allMonsterActions = ContentLoader.LoadMonsterActions();
         _allDungeons = ContentLoader.LoadDungeons();
@@ -130,7 +130,7 @@ public class GameEngineClass
             0f, 0f, 0.5f, passives: m.Passives);
     }
 
-    public CombatCommand MakeCombatCommand(string actorId, string techId)
+    public CombatCommand MakeTechCommand(string actorId, string techId)
     {
         var tech = _allTechs.Lookup(techId);
 
@@ -158,6 +158,37 @@ public class GameEngineClass
             DirectEffects = directEffects,
             NumAttacks    = tech.NumAttacks,
             AllowMultipleAttackOnSameTarget = tech.AllowMultipleAttackOnSameTarget ?? false,
+        };
+    }
+
+    public CombatCommand MakeItemCommand(string actorId, string itemId)
+    {
+        var item = _allItems.Lookup(itemId);
+
+        var directEffects = item.DirectEffects.Select(e =>
+        {
+            if (e.EffectType == CombatDirectEffectType.Damage && e.Element is null)
+                throw new ArgumentException($"Item '{itemId}': Damage effect requires an Element.");
+
+            return new CombatDirectEffect
+            {
+                EffectType  = e.EffectType,
+                Element     = e.Element,
+                CalcType    = e.CalcType,
+                PowerFactor = e.PowerFactor,
+            };
+        }).ToList();
+
+        return new CombatCommand
+        {
+            ActorId       = actorId,
+            TargetingType = item.TargetingType,
+            ValidTargets  = item.ValidTargets,
+            LivingOrDead  = item.LivingOrDead,
+            TPCost        = 0,
+            DirectEffects = directEffects,
+            NumAttacks    = item.NumAttacks,
+            AllowMultipleAttackOnSameTarget = item.AllowMultipleAttackOnSameTarget ?? false,
         };
     }
 

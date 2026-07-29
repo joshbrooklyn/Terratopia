@@ -24,6 +24,10 @@
       {
         "fileMatch": "/GameData/Techs/*.json",
         "url": "./schemas/tech.schema.json"
+      },
+      {
+        "fileMatch": "/GameData/Items/*.json",
+        "url": "./schemas/item.schema.json"
       }
     ],
     "commands": [

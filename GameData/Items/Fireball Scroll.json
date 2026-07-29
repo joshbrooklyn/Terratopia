@@ -1,0 +1,24 @@
+{
+    "itemId": "fireball_scroll",
+    "name": "Fireball Scroll",
+    "rarity": 1,
+    "description": "50 Power atk vs 1 target",
+    "numAttacks": 1,
+    "keywords": [
+      "Single Use"
+    ],
+    "traits": [],
+    "targetingType": "Choose",
+    "validTargets": "Enemies",
+    "livingOrDead": "Living",
+    "targetStatuses": [],
+    "userStatuses": [],
+    "directEffects": [
+      {
+        "effectType": "Damage",
+        "element": "Fire",
+        "calcType": "FixedPower",
+        "powerFactor": 50.0
+      }
+    ]
+  }

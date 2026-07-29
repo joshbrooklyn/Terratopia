@@ -262,7 +262,9 @@ public class CombatEngineClass
         CombatEntity actor,
         CombatEntity target)
     {
-        double actionPower = actor.Power * cde.PowerFactor;
+        double actionPower = cde.CalcType == DamageCalcType.FixedPower
+            ? cde.PowerFactor
+            : actor.Power * cde.PowerFactor;
         double baseDamage = (actionPower * 2f) + (actor.Level * 5f);
 
         double rawDamage;

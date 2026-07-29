@@ -22,7 +22,7 @@ public partial class DataBrowser : Control
 
 		var cats = GetNode("VBoxContainer/HSplitContainer/CategoryPanel");
 		cats.GetNode<Button>("TechsButton").Pressed          += () => LoadCategory(GameEngineClass.Instance.AllTechs);
-		//cats.GetNode<Button>("ItemsButton").Pressed          += () => LoadCategory(GameEngineClass.Instance.AllItems);
+		cats.GetNode<Button>("ItemsButton").Pressed          += () => LoadCategory(GameEngineClass.Instance.AllItems);
 		cats.GetNode<Button>("MonstersButton").Pressed       += () => LoadCategory(GameEngineClass.Instance.AllMonsters);
 		cats.GetNode<Button>("MonsterActionsButton").Pressed += () => LoadCategory(GameEngineClass.Instance.AllMonsterActions);
 		cats.GetNode<Button>("DungeonsButton").Pressed       += () => LoadCategory(GameEngineClass.Instance.AllDungeons);

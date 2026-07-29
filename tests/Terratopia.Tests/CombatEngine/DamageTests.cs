@@ -22,7 +22,8 @@ public class DamageTests
     //            one round, ending combat regardless of how much damage the attacker dealt.
     private static (CombatEngineClass engine, CombatEntity attacker, CombatEntity counter)
         SetupCombat(int power, int level, float critChance, float critModifier,
-                    int targetDefense, double powerFactor = 1.0, Random? rng = null)
+                    int targetDefense, double powerFactor = 1.0, Random? rng = null,
+                    DamageCalcType calcType = DamageCalcType.StandardFormula)
     {
         var engine = new CombatEngineClass(rng ?? new Random(0));
 
@@ -59,7 +60,7 @@ public class DamageTests
                         new CombatDirectEffect
                         {
                             EffectType  = CombatDirectEffectType.Damage,
-                            CalcType    = DamageCalcType.StandardFormula,
+                            CalcType    = calcType,
                             PowerFactor = powerFactor,
                         },
                     ],
@@ -197,6 +198,74 @@ public class DamageTests
 
         Assert.NotNull(damageDealt);
         Assert.Equal(45, damageDealt.Value);
+    }
+
+    [Fact]
+    public void Damage_FixedPower_DoesNotScaleWithActorPower()
+    {
+        // What: verifies DamageCalcType.FixedPower uses the effect's PowerFactor directly as the
+        //       action power, ignoring the actor's own Power stat entirely — the point of the
+        //       calc type (e.g. Fireball Scroll's flat "50 power" hit regardless of who uses it).
+        // How:  Two setups with very different attacker Power (10 vs 200) but identical Level=1,
+        //       powerFactor=50, targetDefense=0, and CalcType=FixedPower. If Power were still
+        //       being multiplied in, the two runs would produce wildly different damage; instead
+        //       actionPower is fixed at powerFactor (50) for both, so baseDamage = 50*2 + 1*5 =
+        //       105 in both cases, and with targetDefense=0 nothing reduces it further — both
+        //       runs should deal exactly 105 damage.
+        var (engineLowPower, _, _) = SetupCombat(
+            power: 10, level: 1, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 0, powerFactor: 50, calcType: DamageCalcType.FixedPower);
+
+        int? lowPowerDamage = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") lowPowerDamage ??= dmg;
+        };
+        engineLowPower.BeginCombat();
+
+        var (engineHighPower, _, _) = SetupCombat(
+            power: 200, level: 1, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 0, powerFactor: 50, calcType: DamageCalcType.FixedPower);
+
+        int? highPowerDamage = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") highPowerDamage ??= dmg;
+        };
+        engineHighPower.BeginCombat();
+
+        Assert.NotNull(lowPowerDamage);
+        Assert.NotNull(highPowerDamage);
+        Assert.Equal(105, lowPowerDamage.Value);
+        Assert.Equal(lowPowerDamage.Value, highPowerDamage.Value);
+    }
+
+    [Fact]
+    public void Damage_FixedPower_StillScalesWithLevelAndDefense()
+    {
+        // What: verifies FixedPower only bypasses the actor's Power stat — it must NOT be
+        //       confused with a fully fixed-damage effect. The Level bonus and defense
+        //       mitigation terms in the formula are untouched and still apply normally.
+        // How:  SetupCombat with power=10 (irrelevant under FixedPower), powerFactor=50,
+        //       level=5, targetDefense=50. actionPower = powerFactor = 50 (Power ignored), so
+        //       baseDamage = 50*2 + 5*5 = 125 — higher than the Level=1 case, proving Level
+        //       still contributes. Defense then mitigates it the same way the standard-formula
+        //       tests confirm: rawDamage = 125/((50+128)/128) − 25 = 125*128/178 − 25 ≈ 64.89,
+        //       truncated to 64.
+        var (engine, _, _) = SetupCombat(
+            power: 10, level: 5, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 50, powerFactor: 50, calcType: DamageCalcType.FixedPower);
+
+        int? damageDealt = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") damageDealt ??= dmg;
+        };
+
+        engine.BeginCombat();
+
+        Assert.NotNull(damageDealt);
+        Assert.Equal(64, damageDealt.Value);
     }
 
     [Fact]

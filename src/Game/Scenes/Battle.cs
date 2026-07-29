@@ -175,7 +175,7 @@ public partial class Battle : Control
 	private void OnTechSelected(string actorId, string techId)
 	{
 		_actionModal.Hide();
-		var cmd = GameEngineClass.Instance.MakeCombatCommand(actorId, techId);
+		var cmd = GameEngineClass.Instance.MakeTechCommand(actorId, techId);
 		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
 
