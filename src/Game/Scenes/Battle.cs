@@ -168,6 +168,19 @@ public partial class Battle : Control
 			_techButtonContainer.AddChild(fightBtn);
 		}
 
+		foreach (var itemId in adventurer.ItemIds)
+		{
+			var item = GameEngineClass.Instance.AllItems.Lookup(itemId);
+			var btn  = new Button();
+			btn.Text = item.Name;
+
+			var capturedActorId = entityId;
+			var capturedItemId  = itemId;
+			btn.Pressed += () => OnItemSelected(capturedActorId, capturedItemId);
+
+			_techButtonContainer.AddChild(btn);
+		}
+
 		_actionModal.Title = adventurer.Name;
 		_actionModal.PopupCentered();
 	}
@@ -176,6 +189,13 @@ public partial class Battle : Control
 	{
 		_actionModal.Hide();
 		var cmd = GameEngineClass.Instance.MakeTechCommand(actorId, techId);
+		CombatEngineClass.Instance.SubmitCommand(cmd);
+	}
+
+	private void OnItemSelected(string actorId, string itemId)
+	{
+		_actionModal.Hide();
+		var cmd = GameEngineClass.Instance.MakeItemCommand(actorId, itemId);
 		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
 
