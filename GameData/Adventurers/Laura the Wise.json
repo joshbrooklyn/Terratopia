@@ -11,7 +11,11 @@
   "evasion": 0.05,
   "critChance": 0.05,
   "critModifier": 0.5,
-  "techsIds": ["fireblast"],
-  "itemIds": [],
+  "techsIds": [
+    "fireblast"
+  ],
+  "itemIds": [
+    "fireball_scroll"
+  ],
   "canUseFightAction": true
 }

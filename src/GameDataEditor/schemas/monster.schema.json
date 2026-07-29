@@ -55,6 +55,7 @@
       "items": {
         "type": "string"
       },
+      "uniqueItems": true,
       "description": "Ids of monster actions (GameData/MonsterActions) this monster can use."
     },
     "passives": {
@@ -65,6 +66,7 @@
           "LivingDead"
         ]
       },
+      "uniqueItems": true,
       "description": "Names of passive classes (src/CombatEngine/Passives) applied to this monster, e.g. \"LivingDead\". The enum is generated from PassiveRegistry.cs by `npm run generate-schemas` - do not hand-edit it."
     },
     "canUseFightAction": {

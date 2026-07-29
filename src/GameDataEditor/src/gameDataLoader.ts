@@ -23,6 +23,7 @@ export interface JsonSchemaProperty {
 	required?: string[];
 	minimum?: number;
 	maximum?: number;
+	uniqueItems?: boolean;
 	default?: unknown;
 	description?: string;
 }

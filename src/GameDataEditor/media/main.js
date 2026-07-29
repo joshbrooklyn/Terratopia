@@ -22,7 +22,7 @@
 	const DISABLED_FIELDS = {
 		Techs: ['keywords', 'traits', 'targetStatuses', 'userStatuses'],
 		Items: ['traits'],
-		Adventurers: ['itemIds'],
+		Adventurers: [],
 		Monsters: ['monsterActionIds'],
 	};
 
@@ -309,11 +309,27 @@
 						errors.push(...validatePropertyClient(itemSchema, item, itemPath));
 					}
 				});
+				if (propSchema.uniqueItems) {
+					errors.push(...findDuplicateItemsClient(value, path));
+				}
 				return errors;
 			}
 			default:
 				return [];
 		}
+	}
+
+	function findDuplicateItemsClient(value, path) {
+		const seen = new Set();
+		const errors = [];
+		value.forEach((item, index) => {
+			const key = JSON.stringify(item);
+			if (seen.has(key)) {
+				errors.push({ path: `${path}[${index}]`, message: 'Duplicate item is not allowed' });
+			}
+			seen.add(key);
+		});
+		return errors;
 	}
 
 	function validateObjectClient(schemaLike, data, pathPrefix) {

@@ -67,6 +67,7 @@
       "items": {
         "type": "string"
       },
+      "uniqueItems": true,
       "description": "Ids of techs (GameData/Techs) this adventurer knows."
     },
     "itemIds": {
@@ -74,6 +75,7 @@
       "items": {
         "type": "string"
       },
+      "uniqueItems": true,
       "description": "Ids of items (GameData/Items) this adventurer carries."
     },
     "canUseFightAction": {

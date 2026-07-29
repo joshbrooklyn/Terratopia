@@ -70,23 +70,34 @@ function postToWebview(message: HostToWebviewMessage): void {
 	currentPanel?.webview.postMessage(message);
 }
 
+const DYNAMIC_ENUM_FIELDS: Record<string, Record<string, string>> = {
+	Adventurers: {
+		techsIds: 'Techs',
+		itemIds: 'Items',
+	},
+};
+
 function getSchemaWithDynamicEnums(extensionUri: vscode.Uri, gameDataRoot: string | undefined, category: string): JsonSchemaObject | undefined {
 	const schema = loadSchemaForCategory(extensionUri, category);
-	if (!schema || category !== 'Adventurers' || !schema.properties.techsIds || !gameDataRoot) {
+	const fieldSources = DYNAMIC_ENUM_FIELDS[category];
+	if (!schema || !fieldSources || !gameDataRoot) {
 		return schema;
 	}
 
-	const techIds = loadCategoryItems(gameDataRoot, 'Techs').map(item => item.id).sort();
-	return {
-		...schema,
-		properties: {
-			...schema.properties,
-			techsIds: {
-				...schema.properties.techsIds,
-				items: { ...schema.properties.techsIds.items, enum: techIds },
-			},
-		},
-	};
+	const properties = { ...schema.properties };
+	for (const [fieldKey, sourceCategory] of Object.entries(fieldSources)) {
+		const fieldSchema = properties[fieldKey];
+		if (!fieldSchema) {
+			continue;
+		}
+		const ids = loadCategoryItems(gameDataRoot, sourceCategory).map(item => item.id).sort();
+		properties[fieldKey] = {
+			...fieldSchema,
+			items: { ...fieldSchema.items, enum: ids },
+		};
+	}
+
+	return { ...schema, properties };
 }
 
 function handleSelect(filePath: string, category: string): void {

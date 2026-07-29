@@ -85,11 +85,27 @@ function validateProperty(propSchema: JsonSchemaProperty, value: unknown, path: 
 					errors.push(...validateProperty(itemSchema, item, itemPath));
 				}
 			});
+			if (propSchema.uniqueItems) {
+				errors.push(...findDuplicateItems(value, path));
+			}
 			return errors;
 		}
 		default:
 			return [];
 	}
+}
+
+function findDuplicateItems(value: unknown[], path: string): ValidationError[] {
+	const seen = new Set<string>();
+	const errors: ValidationError[] = [];
+	value.forEach((item, index) => {
+		const key = JSON.stringify(item);
+		if (seen.has(key)) {
+			errors.push({ path: `${path}[${index}]`, message: 'Duplicate item is not allowed' });
+		}
+		seen.add(key);
+	});
+	return errors;
 }
 
 function validateRange(propSchema: JsonSchemaProperty, value: number, path: string): ValidationError[] {

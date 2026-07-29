@@ -48,13 +48,15 @@
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "uniqueItems": true
     },
     "traits": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "uniqueItems": true
     },
     "targetingType": {
       "type": "string",
@@ -77,13 +79,15 @@
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "uniqueItems": true
     },
     "userStatuses": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "uniqueItems": true
     },
     "directEffects": {
       "type": "array",
@@ -110,7 +114,8 @@
             "default": 1.0
           }
         }
-      }
+      },
+      "uniqueItems": true
     }
   }
 }
