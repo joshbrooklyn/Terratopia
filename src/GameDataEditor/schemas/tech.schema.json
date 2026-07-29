@@ -106,7 +106,7 @@
           },
           "calcType": {
             "type": "string",
-            "enum": ["StandardFormula"],
+            "enum": ["StandardFormula", "FixedPower"],
             "default": "StandardFormula"
           },
           "powerFactor": {
