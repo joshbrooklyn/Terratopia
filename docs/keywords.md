@@ -162,8 +162,9 @@ The four HP-threshold keywords (`Engage`, `Cruel`, `Empowered`, `Stoic`) are sta
 
 From `MultipleKeywordsTests.cs`: an action with base `PowerFactor = 0.8` (80%) tagged with both `Engage` and `Stoic`, where both conditions are met:
 
-- `Engage`'s raw bonus (0.5) is capped at `min(0.8, 0.5) = 0.5` → contributes +0.5.
-- `Stoic`'s raw bonus (0.5) is capped the same way → contributes +0.5.
+- The per-keyword cap is `min(0.8 * 2, 0.8 + 0.5) = min(1.6, 1.3) = 1.3`.
+- `Engage`'s raw bonus (0.5) is under that cap, so it's untouched → contributes +0.5.
+- `Stoic`'s raw bonus (0.5) is under the same cap → contributes +0.5.
 - `effectivePowerFactor = 0.8 + 0.5 + 0.5 = 1.8` (180%).
 
 And from `GrowthTests.cs`, showing the cap kicking in on a stacking keyword: with base `PowerFactor = 0.1`, the cap is `min(0.2, 0.6) = 0.2`. After three prior uses, `Growth`'s raw bonus would be `0.10 * 3 = 0.30`, but it's clipped to `0.2` — so the fourth use of that action deals the same damage as the third, not more.
