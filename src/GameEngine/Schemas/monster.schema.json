@@ -73,7 +73,7 @@
         ]
       },
       "uniqueItems": true,
-      "description": "Names of passive classes (src/CombatEngine/Passives) applied to this monster, e.g. \"LivingDead\". The enum is generated from PassiveRegistry.cs by `npm run generate-schemas` - do not hand-edit it."
+      "description": "Names of passive classes (src/CombatEngine/Passives) applied to this monster, e.g. \"LivingDead\". Hand-maintained against PassiveRegistry.cs's registered PassiveName constants — keep in sync by hand."
     },
     "canUseFightAction": {
       "type": "boolean"

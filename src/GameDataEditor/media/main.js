@@ -20,7 +20,7 @@
 	};
 
 	const DISABLED_FIELDS = {
-		Techs: ['keywords', 'traits', 'targetStatuses', 'userStatuses'],
+		Techs: ['traits', 'targetStatuses', 'userStatuses'],
 		Items: ['traits'],
 		Adventurers: [],
 		Monsters: ['monsterActionIds'],

@@ -70,6 +70,13 @@ function postToWebview(message: HostToWebviewMessage): void {
 	currentPanel?.webview.postMessage(message);
 }
 
+/** Refreshes the tree pane after an external change (e.g. the migration tool rewriting files on disk). */
+export function refreshFormEditorPanelIfOpen(): void {
+	if (currentPanel && currentGameDataRoot) {
+		postToWebview({ type: 'init', categories: loadAllCategories(currentGameDataRoot) });
+	}
+}
+
 const DYNAMIC_ENUM_FIELDS: Record<string, Record<string, string>> = {
 	Adventurers: {
 		techsIds: 'Techs',

@@ -2,7 +2,7 @@
 // this extension's schemas/ folder, which is what VS Code's jsonValidation
 // contribution and the Form Editor actually read from. GameEngine owns the
 // schemas; this extension only ever sees generated copies. Run via
-// `npm run copy-schemas` (wired into compile/watch, before generate-schemas).
+// `npm run copy-schemas` (wired into compile/watch).
 
 const fs = require('fs');
 const path = require('path');

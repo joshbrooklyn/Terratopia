@@ -41,6 +41,7 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.EntityDamaged += OnEntityDamaged;
 		CombatEventBus.EntityDeath += OnEntityDeath;
 		CombatEventBus.EntityRevived += OnEntityRevived;
+		CombatEventBus.KeywordApplied += OnKeywordApplied;
 	}
 
 	public override void _ExitTree()
@@ -49,6 +50,7 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.EntityDamaged -= OnEntityDamaged;
 		CombatEventBus.EntityDeath -= OnEntityDeath;
 		CombatEventBus.EntityRevived -= OnEntityRevived;
+		CombatEventBus.KeywordApplied -= OnKeywordApplied;
 	}
 
 	private void OnAttackEvaded(string attackerId, string attackerName, string targetId, string targetName)
@@ -85,6 +87,31 @@ public partial class CombatantCard : PanelContainer
 			Modulate = new Color(1f, 0.3f, 0.3f, 1f);
 			var flashTween = CreateTween();
 			flashTween.TweenProperty(this, "modulate", new Color(1, 1, 1, 1), 0.25f);
+		});
+	}
+
+	private void OnKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus)
+	{
+		if (targetId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			var label = new Label
+			{
+				Text = $"{keywordName} +{bonus:P0}",
+				Modulate = new Color(0.4f, 0.75f, 1f, 1f),
+				Position = Vector2.Zero,
+				MouseFilter = MouseFilterEnum.Ignore,
+				HorizontalAlignment = HorizontalAlignment.Center,
+				VerticalAlignment = VerticalAlignment.Top,
+			};
+			AddChild(label);
+
+			var tween = CreateTween();
+			tween.SetParallel(true);
+			tween.TweenProperty(label, "position:y", -20f, 0.8f);
+			tween.TweenProperty(label, "modulate:a", 0f, 0.8f);
+			tween.Finished += label.QueueFree;
 		});
 	}
 

@@ -156,6 +156,8 @@ public class GameEngineClass
             LivingOrDead  = tech.LivingOrDead,
             TPCost        = tech.TpCost,
             DirectEffects = directEffects,
+            Keywords      = tech.Keywords,
+            ActionId      = tech.TechId,
             NumAttacks    = tech.NumAttacks,
             AllowMultipleAttackOnSameTarget = tech.AllowMultipleAttackOnSameTarget ?? false,
         };
@@ -187,6 +189,8 @@ public class GameEngineClass
             LivingOrDead  = item.LivingOrDead,
             TPCost        = 0,
             DirectEffects = directEffects,
+            Keywords      = item.Keywords,
+            ActionId      = item.ItemId,
             NumAttacks    = item.NumAttacks,
             AllowMultipleAttackOnSameTarget = item.AllowMultipleAttackOnSameTarget ?? false,
         };
@@ -218,6 +222,8 @@ public class GameEngineClass
             LivingOrDead  = action.LivingOrDead,
             TPCost        = action.TpCost,
             DirectEffects = directEffects,
+            Keywords      = action.Keywords,
+            ActionId      = action.MonsterActionId,
         };
     }
 

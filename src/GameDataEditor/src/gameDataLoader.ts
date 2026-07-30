@@ -72,27 +72,31 @@ export function getCategoryFolder(gameDataRoot: string, category: string): strin
 
 const schemaCache = new Map<string, JsonSchemaObject>();
 
+export function loadSchemaByFileName(extensionUri: vscode.Uri, schemaFile: string): JsonSchemaObject | undefined {
+	const cached = schemaCache.get(schemaFile);
+	if (cached) {
+		return cached;
+	}
+
+	const schemaPath = path.join(extensionUri.fsPath, 'schemas', schemaFile);
+	try {
+		const raw = fs.readFileSync(schemaPath, 'utf8');
+		const parsed: JsonSchemaObject = JSON.parse(raw);
+		schemaCache.set(schemaFile, parsed);
+		return parsed;
+	} catch (err) {
+		console.warn(`GameData Editor: failed to load schema ${schemaPath}`, err);
+		return undefined;
+	}
+}
+
 export function loadSchemaForCategory(extensionUri: vscode.Uri, category: string): JsonSchemaObject | undefined {
 	const definition = getCategoryDefinition(category);
 	if (!definition) {
 		return undefined;
 	}
 
-	const cached = schemaCache.get(definition.schemaFile);
-	if (cached) {
-		return cached;
-	}
-
-	const schemaPath = path.join(extensionUri.fsPath, 'schemas', definition.schemaFile);
-	try {
-		const raw = fs.readFileSync(schemaPath, 'utf8');
-		const parsed: JsonSchemaObject = JSON.parse(raw);
-		schemaCache.set(definition.schemaFile, parsed);
-		return parsed;
-	} catch (err) {
-		console.warn(`GameData Editor: failed to load schema ${schemaPath}`, err);
-		return undefined;
-	}
+	return loadSchemaByFileName(extensionUri, definition.schemaFile);
 }
 
 export function findGameDataRoot(): string | undefined {

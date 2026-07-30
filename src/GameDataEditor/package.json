@@ -14,34 +14,41 @@
   "contributes": {
     "jsonValidation": [
       {
-        "fileMatch": "/GameData/Adventurers/*.json",
+        "fileMatch": "/Adventurers/*.json",
         "url": "./schemas/adventurer.schema.json"
       },
       {
-        "fileMatch": "/GameData/Monsters/*.json",
+        "fileMatch": "/Monsters/*.json",
         "url": "./schemas/monster.schema.json"
       },
       {
-        "fileMatch": "/GameData/Techs/*.json",
+        "fileMatch": "/Techs/*.json",
         "url": "./schemas/tech.schema.json"
       },
       {
-        "fileMatch": "/GameData/Items/*.json",
+        "fileMatch": "/Items/*.json",
         "url": "./schemas/item.schema.json"
+      },
+      {
+        "fileMatch": "/MonsterActions/*.json",
+        "url": "./schemas/monsteraction.schema.json"
       }
     ],
     "commands": [
       {
         "command": "gamedataEditor.openFormEditor",
         "title": "GameData: Open in Form Editor"
+      },
+      {
+        "command": "gamedataEditor.migrateGameData",
+        "title": "GameData: Scan & Migrate"
       }
     ]
   },
   "scripts": {
     "copy-schemas": "node ./scripts/copy-schemas.js",
-    "generate-schemas": "node ./scripts/generate-passive-enum.js",
-    "compile": "npm run copy-schemas && npm run generate-schemas && tsc -p ./",
-    "watch": "npm run copy-schemas && npm run generate-schemas && tsc -w -p ./"
+    "compile": "npm run copy-schemas && tsc -p ./",
+    "watch": "npm run copy-schemas && tsc -w -p ./"
   },
   "devDependencies": {
     "@types/node": "^20.x",

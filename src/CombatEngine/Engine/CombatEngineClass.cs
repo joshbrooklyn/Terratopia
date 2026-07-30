@@ -1,10 +1,11 @@
 using CombatEngine.DataClasses;
 using CombatEngine.Enums;
+using CombatEngine.Keywords;
 using CombatEngine.Passives;
 
 namespace CombatEngine.Engine;
 
-public class CombatEngineClass
+public class CombatEngineClass : IKeywordUsageStore
 {
     private static readonly Lazy<CombatEngineClass> _instance = new(() => new CombatEngineClass());
     public static CombatEngineClass Instance => _instance.Value;
@@ -14,8 +15,15 @@ public class CombatEngineClass
     private readonly List<CombatEntity> _allies  = new();
     private readonly List<CombatEntity> _enemies = new();
     private Dictionary<string, CombatEntity> _allEntities = new();
+    private readonly Dictionary<string, int> _keywordUsageCounts = new();
 
-    private int _roundNumber;    
+    private int _roundNumber;
+
+    int IKeywordUsageStore.Increment(string key) =>
+        _keywordUsageCounts[key] = _keywordUsageCounts.GetValueOrDefault(key) + 1;
+
+    int IKeywordUsageStore.GetCount(string key) =>
+        _keywordUsageCounts.GetValueOrDefault(key);
 
     private CombatEngineClass()
     {
@@ -73,6 +81,7 @@ public class CombatEngineClass
         _allies.Clear();
         _enemies.Clear();
         _allEntities.Clear();
+        _keywordUsageCounts.Clear();
         _roundNumber = 0;
         _combatFlowMachine = null!;
     }
@@ -142,11 +151,15 @@ public class CombatEngineClass
             CombatEventBus.RaiseEntityTpChanged(actor.EntityId, actor.Name, oldTp, actor.Tp);
         }
 
+        bool actorIsAlly = IsPlayerEntity(actor);
+        var activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
+        NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.ActionId);
+
         foreach (CombatDirectEffect CDE in cmd.DirectEffects)
         {
             foreach (var targetId in cmd.ChosenTargets)
             {
-                if (!_allEntities.TryGetValue(targetId, out var target) || target == null) 
+                if (!_allEntities.TryGetValue(targetId, out var target) || target == null)
                     throw new InvalidOperationException($"Target with ID {targetId} not found among combat entities.");
 
                 if (EvasionCheck(actor, target, cmd))
@@ -156,9 +169,12 @@ public class CombatEngineClass
 
                     CombatEventBus.RaiseAttackEvaded(actor.EntityId, actor.Name, target.EntityId, target.Name);
                     continue;
-                }               
+                }
 
-                int damage = CalculateDamage(CDE, actor, target);
+                double keywordBonus = ApplyKeywordBonuses(activeKeywords, CDE.PowerFactor, actor, target, actorIsAlly, cmd.ActionId);
+                double effectivePowerFactor = CDE.PowerFactor + keywordBonus;
+
+                int damage = CalculateDamage(CDE, actor, target, effectivePowerFactor);
 
                 bool isCrit = _rng.NextSingle() < actor.CritChance;
                 if (isCrit)
@@ -174,6 +190,38 @@ public class CombatEngineClass
                     HandleEntityDefeated(target);
             }
         }
+    }
+
+    // Fires once per active keyword, per command - before any target is touched. This is the
+    // hook stacking keywords (Growth, Teamwork) use to record that this action was used.
+    private void NotifyKeywordsUsed(List<PowerKeyword> activeKeywords, CombatEntity actor, bool actorIsAlly, string actionId)
+    {
+        foreach (var keyword in activeKeywords)
+            keyword.OnUsed(actor, actorIsAlly, actionId, this);
+    }
+
+    // Each active keyword's bonus is capped independently against this action's own base power
+    // factor, then the capped contributions are summed (not: sum first, then cap once) - see
+    // docs/keywords.md "Capping rules". Also raises KeywordApplied for each nonzero contribution.
+    private double ApplyKeywordBonuses(List<PowerKeyword> activeKeywords, double basePowerFactor, CombatEntity actor, CombatEntity target, bool actorIsAlly, string actionId)
+    {
+        if (activeKeywords.Count == 0)
+            return 0.0;
+
+        // <= 0 when base PowerFactor is 0, which naturally yields no bonus ("no effect if the
+        // base power modifier of the action is 0%").
+        double cap = Math.Min(basePowerFactor * 2, basePowerFactor + 0.5);
+
+        double totalBonus = 0.0;
+        foreach (var keyword in activeKeywords)
+        {
+            double raw = keyword.GetBonus(actor, target, actorIsAlly, actionId, this);
+            double applied = Math.Min(raw, cap);
+            if (applied > 0)
+                CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied);
+            totalBonus += applied;
+        }
+        return totalBonus;
     }
 
     private void HandleEntityDefeated(CombatEntity target)
@@ -260,11 +308,12 @@ public class CombatEngineClass
     private int CalculateDamage(
         CombatDirectEffect cde,
         CombatEntity actor,
-        CombatEntity target)
+        CombatEntity target,
+        double effectivePowerFactor)
     {
         double actionPower = cde.CalcType == DamageCalcType.FixedPower
-            ? cde.PowerFactor
-            : actor.Power * cde.PowerFactor;
+            ? effectivePowerFactor
+            : actor.Power * effectivePowerFactor;
         double baseDamage = (actionPower * 2f) + (actor.Level * 5f);
 
         double rawDamage;

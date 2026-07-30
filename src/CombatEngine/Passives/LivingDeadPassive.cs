@@ -10,8 +10,10 @@ public class LivingDeadPassive : DeathPassive
 
     public override bool TryPreventDeath(CombatEntity target)
     {
-        if (!target.ConsumedPassives.Add(Name))
+        bool alreadyTriggered = target.ConsumedPassives.Contains(Name);
+        if (alreadyTriggered)
             return false;
+        target.ConsumedPassives.Add(Name);
 
         int oldHp = target.Hp;
         target.Hp = 1;

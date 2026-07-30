@@ -18,7 +18,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 1,
+      "const": 2,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "monsterActionId": {
@@ -45,9 +45,11 @@
     "keywords": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "enum": ["Teamwork", "Engage", "Cruel", "Empowered", "Stoic", "Growth"]
       },
-      "uniqueItems": true
+      "uniqueItems": true,
+      "description": "Names of keyword classes (src/CombatEngine/Keywords) applied to this action, e.g. \"Engage\". Hand-maintained against PowerKeywordRegistry.cs's registered KeywordName constants — keep in sync by hand."
     },
     "traits": {
       "type": "array",

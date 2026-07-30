@@ -22,6 +22,7 @@ public static class CombatEventBus
     public static event Action<string, string, int, string, string, bool>? EntityDamaged; // targetId, targetName, amount, sourceId, sourceName, isCriticalHit
     public static event Action<string, string, int, string, string>? EntityHealed;     // targetId, targetName, amount, sourceId, sourceName
     public static event Action<string, string, string, string>? AttackEvaded;          // attackerId, attackerName, targetId, targetName
+    public static event Action<string, string, string, string, string, double>? KeywordApplied; // keywordName, actorId, actorName, targetId, targetName, bonus
 
     // Entity lifecycle
     public static event Action<string, string, int, int>? EntityHpChanged;     // entityId, entityName, oldHp, newHp
@@ -43,6 +44,7 @@ public static class CombatEventBus
     public static void RaiseEntityDamaged(string targetId, string targetName, int amount, string sourceId, string sourceName, bool isCriticalHit) => EntityDamaged?.Invoke(targetId, targetName, amount, sourceId, sourceName, isCriticalHit);
     public static void RaiseEntityHealed(string targetId, string targetName, int amount, string sourceId, string sourceName) => EntityHealed?.Invoke(targetId, targetName, amount, sourceId, sourceName);
     public static void RaiseAttackEvaded(string attackerId, string attackerName, string targetId, string targetName) => AttackEvaded?.Invoke(attackerId, attackerName, targetId, targetName);
+    public static void RaiseKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus) => KeywordApplied?.Invoke(keywordName, actorId, actorName, targetId, targetName, bonus);
     public static void RaiseEntityHpChanged(string entityId, string entityName, int oldHp, int newHp) => EntityHpChanged?.Invoke(entityId, entityName, oldHp, newHp);
     public static void RaiseEntityTpChanged(string entityId, string entityName, int oldTp, int newTp) => EntityTpChanged?.Invoke(entityId, entityName, oldTp, newTp);
     public static void RaiseEntityMaxHpChanged(string entityId, string entityName, int oldMaxHp, int newMaxHp) => EntityMaxHpChanged?.Invoke(entityId, entityName, oldMaxHp, newMaxHp);
@@ -64,6 +66,7 @@ public static class CombatEventBus
         EntityDamaged          = null;
         EntityHealed           = null;
         AttackEvaded           = null;
+        KeywordApplied         = null;
         EntityHpChanged        = null;
         EntityTpChanged        = null;
         EntityMaxHpChanged     = null;

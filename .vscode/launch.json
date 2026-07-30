@@ -12,6 +12,9 @@
             "program": "${env:GODOT4}",
             "args": [],
             "cwd": "${workspaceFolder}/src/Game",
+            "env": {
+                "TerratopiaGameDataPath": "${env:TerratopiaGameDataPath}"
+            },
             "stopAtEntry": false,
             "logging": {
                 "moduleLoad": false
