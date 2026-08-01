@@ -90,6 +90,18 @@ function validateProperty(propSchema: JsonSchemaProperty, value: unknown, path: 
 			}
 			return errors;
 		}
+		case 'object': {
+			if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+				return [{ path, message: 'Expected an object' }];
+			}
+			// Recursing into validateObject is what makes `additionalProperties: false` on a nested
+			// block (e.g. a CombatFunction's `parameters`) actually reject unknown fields.
+			return validateObject(
+				{ properties: propSchema.properties ?? {}, required: propSchema.required },
+				value as Record<string, unknown>,
+				path
+			);
+		}
 		default:
 			return [];
 	}

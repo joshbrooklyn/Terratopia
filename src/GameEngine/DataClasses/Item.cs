@@ -1,3 +1,4 @@
+using CombatEngine.DataClasses;
 using CombatEngine.Enums;
 
 namespace GameEngine.DataClasses;
@@ -19,15 +20,6 @@ public class Item : IGameDataObject
     public required ValidTarget ValidTargets { get; init; }
     public required LivingOrDead LivingOrDead { get; init; }
     public bool? AllowMultipleAttackOnSameTarget { get; init; }
-    public List<string> TargetStatuses { get; init; } = [];
-    public List<string> UserStatuses { get; init; } = [];
-    public List<ItemDirectEffect> DirectEffects { get; init; } = [];
-}
-
-public record ItemDirectEffect
-{
-    public CombatDirectEffectType EffectType  { get; init; }
-    public ElementType?           Element     { get; init; }
-    public DamageCalcType         CalcType    { get; init; } = DamageCalcType.StandardFormula;
-    public double                 PowerFactor { get; init; } = 1.0f;
+    public required string CombatFunction { get; init; }
+    public CombatFunctionParameters Parameters { get; init; } = new();
 }

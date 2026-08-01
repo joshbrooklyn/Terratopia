@@ -1,3 +1,4 @@
+using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
@@ -134,31 +135,18 @@ public class GameEngineClass
     {
         var tech = _allTechs.Lookup(techId);
 
-        var directEffects = tech.DirectEffects.Select(e =>
-        {
-            if (e.EffectType == CombatDirectEffectType.Damage && e.Element is null)
-                throw new ArgumentException($"Tech '{techId}': Damage effect requires an Element.");
-
-            return new CombatDirectEffect
-            {
-                EffectType  = e.EffectType,
-                Element     = e.Element,
-                CalcType    = e.CalcType,
-                PowerFactor = e.PowerFactor,
-            };
-        }).ToList();
-
         return new CombatCommand
         {
-            ActorId       = actorId,
-            TargetingType = tech.TargetingType,
-            ValidTargets  = tech.ValidTargets,
-            LivingOrDead  = tech.LivingOrDead,
-            TPCost        = tech.TpCost,
-            DirectEffects = directEffects,
-            Keywords      = tech.Keywords,
-            ActionId      = tech.TechId,
-            NumAttacks    = tech.NumAttacks,
+            ActorId        = actorId,
+            TargetingType  = tech.TargetingType,
+            ValidTargets   = tech.ValidTargets,
+            LivingOrDead   = tech.LivingOrDead,
+            TPCost         = tech.TpCost,
+            CombatFunction = tech.CombatFunction,
+            Parameters     = tech.Parameters,
+            Keywords       = tech.Keywords,
+            ActionId       = tech.TechId,
+            NumAttacks     = tech.NumAttacks,
             AllowMultipleAttackOnSameTarget = tech.AllowMultipleAttackOnSameTarget ?? false,
         };
     }
@@ -167,31 +155,18 @@ public class GameEngineClass
     {
         var item = _allItems.Lookup(itemId);
 
-        var directEffects = item.DirectEffects.Select(e =>
-        {
-            if (e.EffectType == CombatDirectEffectType.Damage && e.Element is null)
-                throw new ArgumentException($"Item '{itemId}': Damage effect requires an Element.");
-
-            return new CombatDirectEffect
-            {
-                EffectType  = e.EffectType,
-                Element     = e.Element,
-                CalcType    = e.CalcType,
-                PowerFactor = e.PowerFactor,
-            };
-        }).ToList();
-
         return new CombatCommand
         {
-            ActorId       = actorId,
-            TargetingType = item.TargetingType,
-            ValidTargets  = item.ValidTargets,
-            LivingOrDead  = item.LivingOrDead,
-            TPCost        = 0,
-            DirectEffects = directEffects,
-            Keywords      = item.Keywords,
-            ActionId      = item.ItemId,
-            NumAttacks    = item.NumAttacks,
+            ActorId        = actorId,
+            TargetingType  = item.TargetingType,
+            ValidTargets   = item.ValidTargets,
+            LivingOrDead   = item.LivingOrDead,
+            TPCost         = 0,
+            CombatFunction = item.CombatFunction,
+            Parameters     = item.Parameters,
+            Keywords       = item.Keywords,
+            ActionId       = item.ItemId,
+            NumAttacks     = item.NumAttacks,
             AllowMultipleAttackOnSameTarget = item.AllowMultipleAttackOnSameTarget ?? false,
         };
     }
@@ -200,30 +175,17 @@ public class GameEngineClass
     {
         var action = _allMonsterActions.Lookup(monsterActionId);
 
-        var directEffects = action.DirectEffects.Select(e =>
-        {
-            if (e.EffectType == CombatDirectEffectType.Damage && e.Element is null)
-                throw new ArgumentException($"MonsterAction '{monsterActionId}': Damage effect requires an Element.");
-
-            return new CombatDirectEffect
-            {
-                EffectType  = e.EffectType,
-                Element     = e.Element,
-                CalcType    = e.CalcType,
-                PowerFactor = e.PowerFactor,
-            };
-        }).ToList();
-
         return new CombatCommand
         {
-            ActorId       = actorId,
-            TargetingType = action.TargetingType,
-            ValidTargets  = action.ValidTargets,
-            LivingOrDead  = action.LivingOrDead,
-            TPCost        = action.TpCost,
-            DirectEffects = directEffects,
-            Keywords      = action.Keywords,
-            ActionId      = action.MonsterActionId,
+            ActorId        = actorId,
+            TargetingType  = action.TargetingType,
+            ValidTargets   = action.ValidTargets,
+            LivingOrDead   = action.LivingOrDead,
+            TPCost         = action.TpCost,
+            CombatFunction = action.CombatFunction,
+            Parameters     = action.Parameters,
+            Keywords       = action.Keywords,
+            ActionId       = action.MonsterActionId,
         };
     }
 
@@ -245,22 +207,20 @@ public class GameEngineClass
 
     public CombatCommand MakeFightCommand(string actorId)
     {
+        // No element - the basic attack is non-elemental (physical).
         return new CombatCommand
         {
-            ActorId       = actorId,
-            TargetingType = TargetingType.Choose,
-            ValidTargets  = ValidTarget.Enemies,
-            LivingOrDead  = LivingOrDead.Living,
-            TPCost        = 0,
-            DirectEffects =
-            [
-                new CombatDirectEffect
-                {
-                    EffectType  = CombatDirectEffectType.Damage,
-                    CalcType    = DamageCalcType.StandardFormula,
-                    PowerFactor = 1.0,
-                }
-            ],
+            ActorId        = actorId,
+            TargetingType  = TargetingType.Choose,
+            ValidTargets   = ValidTarget.Enemies,
+            LivingOrDead   = LivingOrDead.Living,
+            TPCost         = 0,
+            CombatFunction = BasicDamageFunction.FunctionName,
+            Parameters     = new CombatFunctionParameters
+            {
+                CalcType    = DamageCalcType.StandardFormula,
+                PowerFactor = 1.0,
+            },
         };
     }
 }

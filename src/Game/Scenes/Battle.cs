@@ -274,8 +274,9 @@ public partial class Battle : Control
 				entitiesById.TryGetValue(id, out var entity) ? entity.Name : id;
 
 			var targetNames = string.Join(", ", cmd.ChosenTargets.Select(ActorOrTargetName));
-			var effectSummary = string.Join(", ", cmd.DirectEffects.Select(e =>
-				e.Element.HasValue ? $"{e.EffectType} ({e.Element})" : e.EffectType.ToString()));
+			var effectSummary = cmd.Parameters.Element.HasValue
+				? $"{cmd.CombatFunction} ({cmd.Parameters.Element})"
+				: cmd.CombatFunction;
 
 			AddLogEntry($"{actorName} used {effectSummary} on {targetNames} (cost {cmd.TPCost} TP).");
 		});

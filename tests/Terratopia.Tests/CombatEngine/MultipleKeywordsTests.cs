@@ -1,4 +1,5 @@
 using CombatEngine;
+using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
@@ -56,7 +57,8 @@ public class MultipleKeywordsTests
                 LivingOrDead  = LivingOrDead.Living,
                 TPCost        = 0,
                 Keywords      = [EngageKeyword.KeywordName, StoicKeyword.KeywordName],
-                DirectEffects = [new CombatDirectEffect { EffectType = CombatDirectEffectType.Damage, CalcType = DamageCalcType.StandardFormula, PowerFactor = 0.8 }],
+                CombatFunction = BasicDamageFunction.FunctionName,
+                Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 0.8 },
             });
         };
 
@@ -120,7 +122,8 @@ public class MultipleKeywordsTests
                     TPCost        = 0,
                     ActionId      = "tech1",
                     Keywords      = [TeamworkKeyword.KeywordName, GrowthKeyword.KeywordName],
-                    DirectEffects = [new CombatDirectEffect { EffectType = CombatDirectEffectType.Damage, CalcType = DamageCalcType.StandardFormula, PowerFactor = 0.3 }],
+                    CombatFunction = BasicDamageFunction.FunctionName,
+                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 0.3 },
                 });
             }
             else
@@ -132,7 +135,8 @@ public class MultipleKeywordsTests
                     ValidTargets  = ValidTarget.Enemies,
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
-                    DirectEffects = [new CombatDirectEffect { EffectType = CombatDirectEffectType.Damage, CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 }],
+                    CombatFunction = BasicDamageFunction.FunctionName,
+                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
         };

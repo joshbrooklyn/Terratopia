@@ -1,4 +1,5 @@
 using CombatEngine;
+using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
@@ -55,7 +56,8 @@ public class TeamworkTests
                     ValidTargets  = ValidTarget.Enemies,
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
-                    DirectEffects = [new CombatDirectEffect { EffectType = CombatDirectEffectType.Damage, CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 }],
+                    CombatFunction = BasicDamageFunction.FunctionName,
+                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
                 return;
             }
@@ -69,7 +71,8 @@ public class TeamworkTests
                 LivingOrDead  = LivingOrDead.Living,
                 TPCost        = 0,
                 Keywords      = cfg.teamwork ? [TeamworkKeyword.KeywordName] : [],
-                DirectEffects = [new CombatDirectEffect { EffectType = CombatDirectEffectType.Damage, CalcType = DamageCalcType.StandardFormula, PowerFactor = cfg.powerFactor }],
+                CombatFunction = BasicDamageFunction.FunctionName,
+                Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = cfg.powerFactor },
             });
         };
 
@@ -256,7 +259,8 @@ public class TeamworkTests
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
                     Keywords      = [TeamworkKeyword.KeywordName],
-                    DirectEffects = [new CombatDirectEffect { EffectType = CombatDirectEffectType.Damage, CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 }],
+                    CombatFunction = BasicDamageFunction.FunctionName,
+                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
             else
@@ -269,7 +273,8 @@ public class TeamworkTests
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
                     Keywords      = [TeamworkKeyword.KeywordName],
-                    DirectEffects = [new CombatDirectEffect { EffectType = CombatDirectEffectType.Damage, CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 }],
+                    CombatFunction = BasicDamageFunction.FunctionName,
+                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
         };

@@ -24,11 +24,66 @@ function stripInvalidKeywords(data: Record<string, unknown>, schema: JsonSchemaO
 	return { notes: removed.map(k => `Removed invalid keyword "${k}"`) };
 }
 
+const BASIC_DAMAGE = 'BasicDamage';
+
+/**
+ * v2 → v3: replaces the `directEffects` array with a single `combatFunction` name plus a flat
+ * `parameters` object, and drops the never-implemented status fields.
+ *
+ * Only the shape the engine actually supported converts cleanly: exactly one Damage effect.
+ * Anything else — multiple effects, a Heal effect, no effects at all — is deliberately left
+ * untouched and un-bumped, so runMigrations reports `incomplete` and migrate.ts flags the file as
+ * needs-manual-fix rather than mangling it. There is no such data today; this is here so that if
+ * any appears it fails loudly.
+ */
+function directEffectsToCombatFunction(data: Record<string, unknown>): MigrationResult {
+	const effects = data.directEffects;
+
+	if (!Array.isArray(effects) || effects.length !== 1) {
+		const found = Array.isArray(effects) ? `${effects.length} entries` : 'no directEffects array';
+		return { notes: [`Cannot auto-migrate: expected exactly one directEffects entry, found ${found}. Author combatFunction + parameters by hand.`] };
+	}
+
+	const effect = effects[0] as Record<string, unknown>;
+	if (effect.effectType !== 'Damage') {
+		return { notes: [`Cannot auto-migrate: directEffects[0].effectType is "${effect.effectType}" — map it to the right CombatFunction (e.g. BasicHeal) by hand.`] };
+	}
+
+	const parameters: Record<string, unknown> = {};
+	for (const key of ['element', 'calcType', 'powerFactor']) {
+		if (effect[key] !== undefined) {
+			parameters[key] = effect[key];
+		}
+	}
+
+	delete data.directEffects;
+	data.combatFunction = BASIC_DAMAGE;
+	data.parameters = parameters;
+
+	const notes = [`Converted directEffects → combatFunction "${BASIC_DAMAGE}" with parameters ${JSON.stringify(parameters)}`];
+
+	// targetStatuses/userStatuses were never read by the engine and are dropped in v3; their future
+	// home is a CombatFunction parameter, not a top-level field.
+	for (const dead of ['targetStatuses', 'userStatuses']) {
+		const value = data[dead];
+		if (value === undefined) {
+			continue;
+		}
+		if (Array.isArray(value) && value.length > 0) {
+			notes.push(`Dropped non-empty "${dead}": ${JSON.stringify(value)} — statuses are not implemented; re-author under parameters when they are.`);
+		}
+		delete data[dead];
+	}
+
+	data.schemaVersion = 3;
+	return { notes };
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords },
-	'tech.schema.json': { 1: stripInvalidKeywords },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction },
 };
 
 export interface RunMigrationsResult {

@@ -1,4 +1,5 @@
 using CombatEngine;
+using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
@@ -45,15 +46,12 @@ public class LivingDeadTests
                 ValidTargets  = ValidTarget.Enemies,
                 LivingOrDead  = LivingOrDead.Living,
                 TPCost        = 0,
-                DirectEffects =
-                [
-                    new CombatDirectEffect
-                    {
-                        EffectType  = CombatDirectEffectType.Damage,
-                        CalcType    = DamageCalcType.StandardFormula,
-                        PowerFactor = 1.0,
-                    },
-                ],
+                CombatFunction = BasicDamageFunction.FunctionName,
+                Parameters     = new CombatFunctionParameters
+                {
+                    CalcType    = DamageCalcType.StandardFormula,
+                    PowerFactor = 1.0,
+                },
             });
         };
 

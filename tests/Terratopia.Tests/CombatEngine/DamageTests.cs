@@ -1,4 +1,5 @@
 using CombatEngine;
+using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
@@ -55,15 +56,12 @@ public class DamageTests
                     ValidTargets  = ValidTarget.Enemies,
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
-                    DirectEffects =
-                    [
-                        new CombatDirectEffect
-                        {
-                            EffectType  = CombatDirectEffectType.Damage,
-                            CalcType    = calcType,
-                            PowerFactor = powerFactor,
-                        },
-                    ],
+                    CombatFunction = BasicDamageFunction.FunctionName,
+                    Parameters     = new CombatFunctionParameters
+                    {
+                        CalcType    = calcType,
+                        PowerFactor = powerFactor,
+                    },
                 });
             }
             else
@@ -75,15 +73,12 @@ public class DamageTests
                     ValidTargets  = ValidTarget.Enemies,
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
-                    DirectEffects =
-                    [
-                        new CombatDirectEffect
-                        {
-                            EffectType  = CombatDirectEffectType.Damage,
-                            CalcType    = DamageCalcType.StandardFormula,
-                            PowerFactor = 1.0,
-                        },
-                    ],
+                    CombatFunction = BasicDamageFunction.FunctionName,
+                    Parameters     = new CombatFunctionParameters
+                    {
+                        CalcType    = DamageCalcType.StandardFormula,
+                        PowerFactor = 1.0,
+                    },
                 });
             }
         };
@@ -174,7 +169,7 @@ public class DamageTests
     [Fact]
     public void Damage_ScalesWithPowerFactor()
     {
-        // What: verifies a CombatDirectEffect's PowerFactor scales the attacker's effective
+        // What: verifies the PowerFactor parameter scales the attacker's effective
         //       power before the damage formula runs — e.g. a "2x power" skill should hit
         //       noticeably harder than a plain attack from the same attacker.
         // How:  SetupCombat is called with power=10 and powerFactor=2.0, which SetupCombat

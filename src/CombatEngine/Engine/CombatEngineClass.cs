@@ -1,3 +1,4 @@
+using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Enums;
 using CombatEngine.Keywords;
@@ -139,57 +140,36 @@ public class CombatEngineClass : IKeywordUsageStore
 
     private void ResolveAction(CombatCommand cmd)
     {
-        if (!_allEntities.TryGetValue(cmd.ActorId, out var actor) || actor == null) 
+        if (!_allEntities.TryGetValue(cmd.ActorId, out var actor) || actor == null)
             throw new InvalidOperationException($"Actor with ID {cmd.ActorId} not found among combat entities.");
 
+        var function = CombatFunctionRegistry.Resolve(cmd.CombatFunction);
 
-        // Deduct TP
-        if (cmd.TPCost > 0)
-        {
-            int oldTp = actor.Tp;
-            actor.Tp -= cmd.TPCost;
-            CombatEventBus.RaiseEntityTpChanged(actor.EntityId, actor.Name, oldTp, actor.Tp);
-        }
-
-        bool actorIsAlly = IsPlayerEntity(actor);
-        var activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
+        bool actorIsAlly    = IsPlayerEntity(actor);
+        var  activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
         NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.ActionId);
 
-        foreach (CombatDirectEffect CDE in cmd.DirectEffects)
+        function.Execute(new CombatFunctionContext
         {
-            foreach (var targetId in cmd.ChosenTargets)
-            {
-                if (!_allEntities.TryGetValue(targetId, out var target) || target == null)
-                    throw new InvalidOperationException($"Target with ID {targetId} not found among combat entities.");
-
-                if (EvasionCheck(actor, target, cmd))
-                {
-                    //Evasion reduces 25% on each successful attempt
-                    target.Evasion = Math.Max(0f, target.Evasion - 0.25f);
-
-                    CombatEventBus.RaiseAttackEvaded(actor.EntityId, actor.Name, target.EntityId, target.Name);
-                    continue;
-                }
-
-                double keywordBonus = ApplyKeywordBonuses(activeKeywords, CDE.PowerFactor, actor, target, actorIsAlly, cmd.ActionId);
-                double effectivePowerFactor = CDE.PowerFactor + keywordBonus;
-
-                int damage = CalculateDamage(CDE, actor, target, effectivePowerFactor);
-
-                bool isCrit = _rng.NextSingle() < actor.CritChance;
-                if (isCrit)
-                {
-                    damage = (int)(damage * (1.0f + actor.CritModifier));
-                }
-
-                int oldHp = target.Hp;
-                target.Hp = (int)Math.Max(0f, target.Hp - damage);
-                CombatEventBus.RaiseEntityDamaged(target.EntityId, target.Name, damage, actor.EntityId, actor.Name, isCrit);
-                CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
-                if (target.Hp == 0 && !target.IsDead)
-                    HandleEntityDefeated(target);
-            }
-        }
+            Command             = cmd,
+            Actor               = actor,
+            ActorIsAlly         = actorIsAlly,
+            Parameters          = cmd.Parameters,
+            Targets             = cmd.ChosenTargets.Select(GetEntity).ToList(),
+            AllEntities         = _allEntities,
+            GetEntity           = GetEntity,
+            Rng                 = _rng,
+            ResolveTpCost       = ()                => cmd.TPCost,
+            DeductTp            = DeductTp,
+            TryEvade            = TryEvade,
+            RollCrit            = a                 => _rng.NextSingle() < a.CritChance,
+            ApplyCritModifier   = (a, damage)       => (int)(damage * (1.0f + a.CritModifier)),
+            ApplyKeywordBonuses = (basePower, a, t) => ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.ActionId),
+            CalculateDamage     = CalculateDamage,
+            CalculateHealAmount = CalculateHealAmount,
+            ApplyDamage         = ApplyDamage,
+            ApplyHeal           = ApplyHeal,
+        });
     }
 
     // Fires once per active keyword, per command - before any target is touched. This is the
@@ -224,7 +204,7 @@ public class CombatEngineClass : IKeywordUsageStore
         return totalBonus;
     }
 
-    private void HandleEntityDefeated(CombatEntity target)
+    private static void HandleEntityDefeated(CombatEntity target)
     {
         foreach (var passive in PassiveRegistry.GetForTrigger<DeathPassive>(target.Passives, PassiveTrigger.OnDeath))
         {
@@ -300,21 +280,70 @@ public class CombatEngineClass : IKeywordUsageStore
         return result;
     }
 
-    private bool EvasionCheck(CombatEntity actor, CombatEntity target, CombatCommand cmd)
+    private CombatEntity GetEntity(string entityId) =>
+        _allEntities.TryGetValue(entityId, out var entity) && entity != null
+            ? entity
+            : throw new InvalidOperationException($"Target with ID {entityId} not found among combat entities.");
+
+    private static void DeductTp(CombatEntity actor, int amount)
     {
-        return _rng.NextSingle() < target.Evasion;
+        if (amount <= 0)
+            return;
+
+        int oldTp = actor.Tp;
+        actor.Tp -= amount;
+        CombatEventBus.RaiseEntityTpChanged(actor.EntityId, actor.Name, oldTp, actor.Tp);
     }
 
-    private int CalculateDamage(
-        CombatDirectEffect cde,
-        CombatEntity actor,
-        CombatEntity target,
-        double effectivePowerFactor)
+    // True when the attack is evaded. Evasion decays 25% on each successful dodge.
+    private bool TryEvade(CombatEntity actor, CombatEntity target)
     {
-        double actionPower = cde.CalcType == DamageCalcType.FixedPower
+        if (_rng.NextSingle() >= target.Evasion)
+            return false;
+
+        target.Evasion = Math.Max(0f, target.Evasion - 0.25f);
+        CombatEventBus.RaiseAttackEvaded(actor.EntityId, actor.Name, target.EntityId, target.Name);
+        return true;
+    }
+
+    private static void ApplyDamage(CombatEntity actor, CombatEntity target, int damage, bool isCrit)
+    {
+        int oldHp = target.Hp;
+        target.Hp = (int)Math.Max(0f, target.Hp - damage);
+        CombatEventBus.RaiseEntityDamaged(target.EntityId, target.Name, damage, actor.EntityId, actor.Name, isCrit);
+        CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
+        if (target.Hp == 0 && !target.IsDead)
+            HandleEntityDefeated(target);
+    }
+
+    // Healing never revives - a dead target is skipped outright, and Hp is capped at MaxHp.
+    private static void ApplyHeal(CombatEntity actor, CombatEntity target, int amount)
+    {
+        if (target.IsDead || amount <= 0)
+            return;
+
+        int oldHp = target.Hp;
+        target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
+        CombatEventBus.RaiseEntityHealed(target.EntityId, target.Name, target.Hp - oldHp, actor.EntityId, actor.Name);
+        CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
+    }
+
+    // The shared half of the formula: action power scaled by calc type, doubled, plus level bump.
+    private static double CalculateBaseAmount(CombatEntity actor, double effectivePowerFactor, DamageCalcType calcType)
+    {
+        double actionPower = calcType == DamageCalcType.FixedPower
             ? effectivePowerFactor
             : actor.Power * effectivePowerFactor;
-        double baseDamage = (actionPower * 2f) + (actor.Level * 5f);
+        return (actionPower * 2f) + (actor.Level * 5f);
+    }
+
+    private static int CalculateDamage(
+        CombatEntity   actor,
+        CombatEntity   target,
+        double         effectivePowerFactor,
+        DamageCalcType calcType)
+    {
+        double baseDamage = CalculateBaseAmount(actor, effectivePowerFactor, calcType);
 
         double rawDamage;
         rawDamage = (baseDamage / ((target.Defense + 128f) / 128f)) - (target.Defense / 2f);
@@ -322,7 +351,11 @@ public class CombatEngineClass : IKeywordUsageStore
         int damage = (int)Math.Max(0f, rawDamage);
 
         return damage;
-    }    
+    }
+
+    // Same formula as damage, minus the target's Defense divisor - healing ignores defense.
+    private static int CalculateHealAmount(CombatEntity actor, double effectivePowerFactor, DamageCalcType calcType) =>
+        (int)Math.Max(0f, CalculateBaseAmount(actor, effectivePowerFactor, calcType));
 
     private bool EvaluateWinCondition()
     {

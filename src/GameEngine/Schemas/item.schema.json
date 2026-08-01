@@ -11,12 +11,13 @@
     "rarity",
     "description",
     "validTargets",
-    "livingOrDead"
+    "livingOrDead",
+    "combatFunction"
   ],
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 2,
+      "const": 3,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "itemId": {
@@ -69,47 +70,33 @@
     "allowMultipleAttackOnSameTarget": {
       "type": "boolean"
     },
-    "targetStatuses": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
+    "combatFunction": {
+      "type": "string",
+      "enum": ["BasicDamage", "BasicHeal", "NoOp"],
+      "description": "Name of the CombatFunction class (src/CombatEngine/CombatFunctions) that resolves this entire action - damage, healing, statuses, bespoke effects. Hand-maintained against CombatFunctionRegistry.cs's registered FunctionName constants - keep in sync by hand. An unregistered name throws at combat time."
     },
-    "userStatuses": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
-    },
-    "directEffects": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["effectType"],
-        "properties": {
-          "effectType": {
-            "type": "string",
-            "enum": ["Damage", "Heal"]
-          },
-          "element": {
-            "type": "string",
-            "enum": ["Fire", "Ice", "Lightning", "Void"]
-          },
-          "calcType": {
-            "type": "string",
-            "enum": ["StandardFormula", "FixedPower"],
-            "default": "StandardFormula"
-          },
-          "powerFactor": {
-            "type": "number",
-            "default": 1.0
-          }
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Closed, hand-maintained superset of every parameter any CombatFunction reads (mirrors CombatFunctionParameters.cs). Every field is optional here; each function validates the ones it requires and defaults the rest.",
+      "properties": {
+        "element": {
+          "type": "string",
+          "enum": ["Fire", "Ice", "Lightning", "Void"],
+          "description": "BasicDamage: optional. Omit for a non-elemental (physical) hit."
+        },
+        "calcType": {
+          "type": "string",
+          "enum": ["StandardFormula", "FixedPower"],
+          "default": "StandardFormula",
+          "description": "BasicDamage/BasicHeal: optional. FixedPower uses powerFactor as the raw action power, ignoring the actor's Power stat."
+        },
+        "powerFactor": {
+          "type": "number",
+          "default": 1.0,
+          "description": "BasicDamage/BasicHeal: optional, defaults to 1.0."
         }
-      },
-      "uniqueItems": true
+      }
     }
   }
 }

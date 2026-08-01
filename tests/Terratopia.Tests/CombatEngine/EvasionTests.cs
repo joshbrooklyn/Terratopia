@@ -1,4 +1,5 @@
 using CombatEngine;
+using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
@@ -24,15 +25,12 @@ public class EvasionTests
         ValidTargets  = ValidTarget.Enemies,
         LivingOrDead  = LivingOrDead.Living,
         TPCost        = 0,
-        DirectEffects =
-        [
-            new CombatDirectEffect
-            {
-                EffectType  = CombatDirectEffectType.Damage,
-                CalcType    = DamageCalcType.StandardFormula,
-                PowerFactor = 1.0,
-            }
-        ],
+        CombatFunction = BasicDamageFunction.FunctionName,
+        Parameters     = new CombatFunctionParameters
+        {
+            CalcType    = DamageCalcType.StandardFormula,
+            PowerFactor = 1.0,
+        },
     };
 
     // Creates a fresh (non-singleton) engine with a controlled RNG.
@@ -40,7 +38,7 @@ public class EvasionTests
     // Attacker → _enemies (isAlly = false → enemy branch of WaitingForTurn, targets _allies[0] = defender).
     // A WaitingForTurn subscription is wired so each side's turn is handled:
     //   defender's turn is a no-op (TargetingType.Single has no case in ExpandAutoTargets →
-    //   ChosenTargets stays null, but DirectEffects = [] means ResolveAction never reads it anyway);
+    //   ChosenTargets stays null, but NoOp means ResolveAction never reads it anyway);
     //   attacker's turn always submits MakeMeleeCommand(attacker).
     // Subscribe to other CombatEventBus events AFTER this method returns, before BeginCombat.
     private static (CombatEngineClass engine, CombatEntity attacker, CombatEntity defender)
@@ -78,7 +76,7 @@ public class EvasionTests
                     TargetingType = TargetingType.Self,
                     ValidTargets  = ValidTarget.Allies,
                     LivingOrDead  = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 });
             }
             else

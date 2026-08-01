@@ -120,6 +120,20 @@ function handleSelect(filePath: string, category: string): void {
 			postToWebview({ type: 'detail', filePath, category, name: parsed.name ?? filePath, error: `No schema found for category "${category}".` });
 			return;
 		}
+		// Refuse to open a file older than the current schema. initStateFromSchema keeps only keys the
+		// schema still declares, so a stale file's removed fields would be dropped from the in-memory
+		// state and then handleSave would stamp the current schemaVersion over the top - silently
+		// discarding data the migration was supposed to convert.
+		const fileVersion = typeof parsed.schemaVersion === 'number' ? parsed.schemaVersion : 0;
+		const schemaVersion = getSchemaVersion(schema);
+		if (fileVersion < schemaVersion) {
+			postToWebview({
+				type: 'detail', filePath, category, name: parsed.name ?? filePath,
+				error: `This file is schemaVersion ${fileVersion} but the schema is now ${schemaVersion}. Run "GameData: Scan & Migrate" before editing it.`,
+			});
+			return;
+		}
+
 		postToWebview({ type: 'detail', filePath, category, name: parsed.name ?? filePath, schema, data: parsed, isNew: false });
 	} catch (err) {
 		postToWebview({ type: 'detail', filePath, category, name: filePath, error: `Failed to read file: ${err}` });

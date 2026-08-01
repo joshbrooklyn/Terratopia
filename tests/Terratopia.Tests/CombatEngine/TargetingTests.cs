@@ -1,4 +1,5 @@
 using CombatEngine;
+using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
@@ -22,18 +23,14 @@ public class TargetingTests
         power: power, defense: 0, speed: speed,
         evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
 
-    private static CombatDirectEffect DamageEffect() => new()
-    {
-        EffectType  = CombatDirectEffectType.Damage,
-        CalcType    = DamageCalcType.StandardFormula,
-        PowerFactor = 1.0,
-    };
-
+    // Built purely to query GetValidTargets — it is never resolved, so the CombatFunction is
+    // irrelevant here and NoOp keeps it honest.
     private static CombatCommand TargetQuery(string actorId, ValidTarget validTargets, LivingOrDead livingOrDead) => new()
     {
-        ActorId      = actorId,
-        ValidTargets = validTargets,
-        LivingOrDead = livingOrDead,
+        ActorId        = actorId,
+        ValidTargets   = validTargets,
+        LivingOrDead   = livingOrDead,
+        CombatFunction = NoOpFunction.FunctionName,
     };
 
     // ---------------------------------------------------------------
@@ -259,7 +256,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Self,
                     ValidTargets = ValidTarget.Allies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 });
             }
             else
@@ -268,7 +265,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Random,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [DamageEffect()],
+                    CombatFunction = BasicDamageFunction.FunctionName,
                 };
                 engine.SubmitCommand(cmd);
                 enemyCmds.Add(cmd);
@@ -312,7 +309,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Self,
                     ValidTargets = ValidTarget.Allies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 });
             }
             else
@@ -321,7 +318,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Random,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [DamageEffect()],
+                    CombatFunction = BasicDamageFunction.FunctionName,
                 };
                 engine.SubmitCommand(cmd);
                 enemyCmds.Add(cmd);
@@ -373,7 +370,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.All,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [DamageEffect()],
+                    CombatFunction = BasicDamageFunction.FunctionName,
                 };
                 engine.SubmitCommand(cmd);
                 capturedCmd ??= cmd;
@@ -384,7 +381,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Self,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 });
             }
         };
@@ -424,7 +421,7 @@ public class TargetingTests
                     ActorId = entityId, TargetingType = TargetingType.Self,
                     ValidTargets = ValidTarget.Enemies, // deliberately "wrong" pool — Self must ignore it
                     LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 };
                 engine.SubmitCommand(cmd);
                 capturedCmd ??= cmd;
@@ -435,7 +432,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Random,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [DamageEffect()],
+                    CombatFunction = BasicDamageFunction.FunctionName,
                 });
             }
         };
@@ -467,7 +464,7 @@ public class TargetingTests
                     ActorId = entityId, TargetingType = TargetingType.Random,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
                     NumAttacks = numAttacks, AllowMultipleAttackOnSameTarget = allowMultiple,
-                    DirectEffects = [], // only ChosenTargets selection is under test here
+                    CombatFunction = NoOpFunction.FunctionName, // only ChosenTargets selection is under test here
                 };
                 engine.SubmitCommand(cmd);
                 capturedCmd ??= cmd;
@@ -479,7 +476,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Random,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [DamageEffect()],
+                    CombatFunction = BasicDamageFunction.FunctionName,
                 });
             }
             else
@@ -488,7 +485,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Self,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 });
             }
         };
@@ -593,7 +590,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Choose,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [DamageEffect()],
+                    CombatFunction = BasicDamageFunction.FunctionName,
                 });
             }
             else
@@ -602,7 +599,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Self,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 });
             }
         };
@@ -650,7 +647,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Choose,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [DamageEffect()],
+                    CombatFunction = BasicDamageFunction.FunctionName,
                 });
             }
             else
@@ -659,7 +656,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Self,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 });
             }
         };
@@ -697,7 +694,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Choose,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    NumAttacks = 2, DirectEffects = [DamageEffect()],
+                    NumAttacks = 2, CombatFunction = BasicDamageFunction.FunctionName,
                 });
             }
             else
@@ -706,7 +703,7 @@ public class TargetingTests
                 {
                     ActorId = entityId, TargetingType = TargetingType.Self,
                     ValidTargets = ValidTarget.Enemies, LivingOrDead = LivingOrDead.Living,
-                    DirectEffects = [],
+                    CombatFunction = NoOpFunction.FunctionName,
                 });
             }
         };

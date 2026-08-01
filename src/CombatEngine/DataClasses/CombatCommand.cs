@@ -11,7 +11,14 @@ public class CombatCommand
     public int TPCost { get; init; }
     public int NumAttacks { get; init; } = 1;
     public bool AllowMultipleAttackOnSameTarget { get; init; } = false;
-    public List<CombatDirectEffect> DirectEffects { get; init; } = [];
+
+    // Resolved to a live CombatFunction instance via CombatFunctionRegistry at execution time,
+    // the same way Keywords resolve through PowerKeywordRegistry. Unknown names throw.
+    public required string CombatFunction { get; init; }
+
+    // Flat bag the resolved CombatFunction reads its inputs from. Always non-null; the function
+    // decides which fields it requires.
+    public CombatFunctionParameters Parameters { get; init; } = new();
 
     // Resolved into live PowerKeyword instances via PowerKeywordRegistry when this command
     // is executed - see docs/keywords.md.

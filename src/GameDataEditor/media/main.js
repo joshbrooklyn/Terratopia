@@ -20,7 +20,7 @@
 	};
 
 	const DISABLED_FIELDS = {
-		Techs: ['traits', 'targetStatuses', 'userStatuses'],
+		Techs: ['traits'],
 		Items: ['traits'],
 		Adventurers: [],
 		Monsters: ['monsterActionIds'],
@@ -201,6 +201,9 @@
 				} else {
 					state[key] = arr.slice();
 				}
+			} else if (propSchema.type === 'object' && propSchema.properties) {
+				const nestedSchemaLike = { properties: propSchema.properties, required: propSchema.required || [] };
+				state[key] = initStateFromSchema(nestedSchemaLike, src[key]);
 			} else {
 				state[key] = src[key] !== undefined ? src[key] : propSchema.default;
 			}
@@ -225,6 +228,9 @@
 				} else {
 					result[key] = arr.slice();
 				}
+			} else if (propSchema.type === 'object' && propSchema.properties) {
+				const nestedSchemaLike = { properties: propSchema.properties, required: propSchema.required || [] };
+				result[key] = serializeObject(nestedSchemaLike, value || {}, undefined);
 			} else {
 				if (value === undefined || value === '') {
 					continue;
@@ -313,6 +319,16 @@
 					errors.push(...findDuplicateItemsClient(value, path));
 				}
 				return errors;
+			}
+			case 'object': {
+				if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+					return [{ path, message: 'Expected an object' }];
+				}
+				return validateObjectClient(
+					{ properties: propSchema.properties || {}, required: propSchema.required },
+					value,
+					path
+				);
 			}
 			default:
 				return [];
@@ -425,6 +441,9 @@
 			row.title = `${humanizeFieldName(key)} not implemented in game yet`;
 		}
 
+		if (propSchema.type === 'object' && propSchema.properties) {
+			return renderObjectField(row, key, propSchema, required, state, disabled, fieldPath);
+		}
 		if (propSchema.type === 'array' && propSchema.items && propSchema.items.type === 'object') {
 			return renderObjectListField(row, key, propSchema, required, state, disabled, fieldPath);
 		}
@@ -593,6 +612,30 @@
 			renderForm();
 		});
 		row.appendChild(addBtn);
+
+		return row;
+	}
+
+	// A single nested object (e.g. a CombatFunction's `parameters`). Renders as one fixed fieldset
+	// of the object's own fields - the same body renderObjectListField uses per array entry, minus
+	// the add/remove buttons, since the object is always present rather than a list.
+	function renderObjectField(row, key, propSchema, required, state, disabled, fieldPath) {
+		row.classList.add('array-row');
+
+		const label = document.createElement('label');
+		label.textContent = key + (required ? ' *' : '');
+		row.appendChild(label);
+		appendDisabledNote(row, key, disabled);
+
+		const nestedSchemaLike = { properties: propSchema.properties || {}, required: propSchema.required || [] };
+		if (typeof state[key] !== 'object' || state[key] === null || Array.isArray(state[key])) {
+			state[key] = initStateFromSchema(nestedSchemaLike, {});
+		}
+
+		const fieldset = document.createElement('fieldset');
+		fieldset.className = 'array-group';
+		renderFieldsInto(fieldset, nestedSchemaLike, state[key], undefined, fieldPath);
+		row.appendChild(fieldset);
 
 		return row;
 	}
