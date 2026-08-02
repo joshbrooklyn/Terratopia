@@ -1,7 +1,7 @@
 using CombatEngine.DataClasses;
 using CombatEngine.Keywords;
 
-namespace Terratopia.Tests.CombatEngine;
+namespace Terratopia.Tests.CombatEngine.Internal;
 
 [Collection("CombatEngineSerial")]
 public class GrowthKeywordTests

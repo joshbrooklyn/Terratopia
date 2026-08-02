@@ -4,7 +4,7 @@ using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
 
-namespace Terratopia.Tests.CombatEngine;
+namespace Terratopia.Tests.CombatEngine.PublicInterface;
 
 [Collection("CombatEngineSerial")]
 public class TargetingTests
@@ -23,19 +23,54 @@ public class TargetingTests
         power: power, defense: 0, speed: speed,
         evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
 
-    // Built purely to query GetValidTargets — it is never resolved, so the CombatFunction is
-    // irrelevant here and NoOp keeps it honest.
-    private static CombatCommand TargetQuery(string actorId, ValidTarget validTargets, LivingOrDead livingOrDead) => new()
+    // Drives a single Choose command from "actorId" through the public flow and returns the
+    // valid-target id pool straight off TargetSelectionRequested — CombatFlowMachine builds that
+    // event's validTargetIds by calling the same (internal) GetValidTargets the actor's command
+    // would resolve against, so this is the public-interface equivalent of querying it directly.
+    // Every other roster member just passes with a harmless self-targeted NoOp, so whichever
+    // turn order the (unseeded-for-this-purpose) RNG picks, the flow always pauses here the
+    // moment it's actorId's turn — no entity ever takes damage, so there's no risk of combat
+    // ending before that happens.
+    private static IReadOnlyList<string> CaptureChooseValidIds(
+        string actorId, ValidTarget validTargets, LivingOrDead livingOrDead,
+        IReadOnlyList<CombatEntity> allies, IReadOnlyList<CombatEntity> enemies)
     {
-        ActorId        = actorId,
-        ValidTargets   = validTargets,
-        LivingOrDead   = livingOrDead,
-        CombatFunction = NoOpFunction.FunctionName,
-    };
+        var engine = new CombatEngineClass(new Random(0));
+        engine.InitCombat(allies: allies, enemies: enemies);
+
+        IReadOnlyList<string>? capturedIds = null;
+        CombatEventBus.TargetSelectionRequested += (_, _, _, validIds, _, _, _) => capturedIds ??= validIds;
+
+        CombatEventBus.WaitingForTurn += (entityId, _, _, _) =>
+        {
+            if (entityId != actorId)
+            {
+                engine.SubmitCommand(new CombatCommand
+                {
+                    ActorId = entityId, TargetingType = TargetingType.Self,
+                    ValidTargets = ValidTarget.Allies, LivingOrDead = LivingOrDead.Living,
+                    CombatFunction = NoOpFunction.FunctionName,
+                });
+                return;
+            }
+
+            engine.SubmitCommand(new CombatCommand
+            {
+                ActorId = actorId, TargetingType = TargetingType.Choose,
+                ValidTargets = validTargets, LivingOrDead = livingOrDead,
+                CombatFunction = NoOpFunction.FunctionName,
+            });
+        };
+
+        engine.BeginCombat();
+        return capturedIds!;
+    }
 
     // ---------------------------------------------------------------
-    // GetValidTargets: pool selection by ValidTarget (no BeginCombat needed —
-    // this is a pure query against the state InitCombat already set up).
+    // GetValidTargets: pool selection by ValidTarget/LivingOrDead, observed through the public
+    // Choose flow instead of calling the internal GetValidTargets method directly (contrast with
+    // Internal/TargetingQueryTests.cs, which keeps the one case — a non-player querying actor —
+    // that has no public equivalent, since TargetSelectionRequested never fires for AI actors).
     // ---------------------------------------------------------------
 
     [Fact]
@@ -43,44 +78,18 @@ public class TargetingTests
     {
         // What: verifies that querying ValidTarget.Enemies for a player-side actor returns the
         //       enemy roster, not the actor's own allies.
-        // How:  InitCombat sets up one ally and two enemies. Calling GetValidTargets with a
-        //       query for "ally" and ValidTarget.Enemies should map to the actor's opposing
-        //       side, which for a player actor is the enemies list. No BeginCombat is needed
-        //       here since GetValidTargets is a pure query over the entity lists InitCombat
-        //       already populated. The test asserts the returned entity IDs are exactly
-        //       ["enemy1", "enemy2"], in the order they were added.
-        var engine = new CombatEngineClass(new Random(0));
+        // How:  One ally and two enemies. The ally submits a Choose command for
+        //       ValidTarget.Enemies + LivingOrDead.Living; the pool CombatFlowMachine offers
+        //       through TargetSelectionRequested should be exactly ["enemy1", "enemy2"], in the
+        //       order they were added.
         var ally   = MakeEntity("ally", speed: 10);
         var enemy1 = MakeEntity("enemy1", speed: 10);
         var enemy2 = MakeEntity("enemy2", speed: 10);
-        engine.InitCombat(allies: [ally], enemies: [enemy1, enemy2]);
 
-        var targets = engine.GetValidTargets(TargetQuery("ally", ValidTarget.Enemies, LivingOrDead.Living));
+        var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Living,
+            allies: [ally], enemies: [enemy1, enemy2]);
 
-        Assert.Equal(["enemy1", "enemy2"], targets.Select(e => e.EntityId));
-    }
-
-    [Fact]
-    public void GetValidTargets_Enemies_FromEnemyActor_ReturnsAllies()
-    {
-        // What: verifies that ValidTarget.Enemies is relative to the querying actor's own
-        //       side, not an absolute label — an enemy-side actor's "Enemies" pool should be
-        //       the player's allies, mirroring GetValidTargets_Enemies_FromPlayerActor above.
-        // How:  InitCombat sets up two allies and one enemy. Calling GetValidTargets with a
-        //       query for "enemy" (which IsPlayerEntity will classify as not a player actor)
-        //       and ValidTarget.Enemies should resolve to the opposite side from the enemy's
-        //       perspective, i.e. the allies list. The test asserts the returned IDs are
-        //       exactly ["ally1", "ally2"], proving the pool selection flips based on which
-        //       side the actor belongs to.
-        var engine = new CombatEngineClass(new Random(0));
-        var ally1 = MakeEntity("ally1", speed: 10);
-        var ally2 = MakeEntity("ally2", speed: 10);
-        var enemy = MakeEntity("enemy", speed: 10);
-        engine.InitCombat(allies: [ally1, ally2], enemies: [enemy]);
-
-        var targets = engine.GetValidTargets(TargetQuery("enemy", ValidTarget.Enemies, LivingOrDead.Living));
-
-        Assert.Equal(["ally1", "ally2"], targets.Select(e => e.EntityId));
+        Assert.Equal(["enemy1", "enemy2"], validIds);
     }
 
     [Fact]
@@ -88,20 +97,18 @@ public class TargetingTests
     {
         // What: verifies ValidTarget.Allies returns the actor's own side (including the actor
         //       itself) and excludes the opposing side entirely.
-        // How:  InitCombat sets up two allies and one enemy. Calling GetValidTargets with a
-        //       query for "ally1" and ValidTarget.Allies should map to the allies list, which
-        //       includes "ally1" itself alongside "ally2" — self-targeting is allowed under
-        //       the Allies pool. The test asserts the result is exactly ["ally1", "ally2"],
-        //       with the enemy nowhere in the returned set.
-        var engine = new CombatEngineClass(new Random(0));
+        // How:  Two allies and one enemy. "ally1" submits a Choose command for
+        //       ValidTarget.Allies + LivingOrDead.Living; the offered pool should be exactly
+        //       ["ally1", "ally2"] — self-targeting is allowed under the Allies pool — with the
+        //       enemy nowhere in it.
         var ally1 = MakeEntity("ally1", speed: 10);
         var ally2 = MakeEntity("ally2", speed: 10);
         var enemy = MakeEntity("enemy", speed: 10);
-        engine.InitCombat(allies: [ally1, ally2], enemies: [enemy]);
 
-        var targets = engine.GetValidTargets(TargetQuery("ally1", ValidTarget.Allies, LivingOrDead.Living));
+        var validIds = CaptureChooseValidIds("ally1", ValidTarget.Allies, LivingOrDead.Living,
+            allies: [ally1, ally2], enemies: [enemy]);
 
-        Assert.Equal(["ally1", "ally2"], targets.Select(e => e.EntityId));
+        Assert.Equal(["ally1", "ally2"], validIds);
     }
 
     [Fact]
@@ -109,44 +116,37 @@ public class TargetingTests
     {
         // What: verifies ValidTarget.Both merges allies and enemies into a single pool,
         //       ignoring the side distinction entirely.
-        // How:  InitCombat sets up one ally and one enemy. Calling GetValidTargets with
-        //       ValidTarget.Both should pull from _allEntities.Values directly (every entity
-        //       in the fight), rather than filtering by side at all. The test asserts the
-        //       returned IDs include both "ally" and "enemy".
-        var engine = new CombatEngineClass(new Random(0));
+        // How:  One ally and one enemy. The ally submits a Choose command for
+        //       ValidTarget.Both + LivingOrDead.Living; the offered pool should include both
+        //       "ally" and "enemy".
         var ally  = MakeEntity("ally", speed: 10);
         var enemy = MakeEntity("enemy", speed: 10);
-        engine.InitCombat(allies: [ally], enemies: [enemy]);
 
-        var targets = engine.GetValidTargets(TargetQuery("ally", ValidTarget.Both, LivingOrDead.Living));
+        var validIds = CaptureChooseValidIds("ally", ValidTarget.Both, LivingOrDead.Living,
+            allies: [ally], enemies: [enemy]);
 
-        Assert.Equal(["ally", "enemy"], targets.Select(e => e.EntityId));
+        Assert.Equal(["ally", "enemy"], validIds);
     }
-
-    // ---------------------------------------------------------------
-    // GetValidTargets: filtering by LivingOrDead
-    // ---------------------------------------------------------------
 
     [Fact]
     public void GetValidTargets_Living_ExcludesDeadEntities()
     {
         // What: verifies that LivingOrDead.Living filters out any entity flagged as dead,
         //       leaving only entities still able to act as valid targets.
-        // How:  InitCombat sets up an ally and two enemies, one of which has IsDead manually
-        //       set to true before combat starts (simulating a pre-existing corpse rather than
-        //       something the engine killed). Querying with LivingOrDead.Living should apply
-        //       the `pool.Where(e => !e.IsDead)` filter, dropping "deadEnemy" from the result.
-        //       The test asserts only "livingEnemy" comes back.
-        var engine = new CombatEngineClass(new Random(0));
+        // How:  One ally and two enemies, one of which has IsDead manually set to true before
+        //       combat starts (simulating a pre-existing corpse rather than something the
+        //       engine killed — the public interface offers no other way to arrange a
+        //       pre-dead entity). The ally's Choose command for ValidTarget.Enemies +
+        //       LivingOrDead.Living should offer only "livingEnemy".
         var ally        = MakeEntity("ally", speed: 10);
         var deadEnemy   = MakeEntity("deadEnemy", speed: 10);
         deadEnemy.IsDead = true;
         var livingEnemy = MakeEntity("livingEnemy", speed: 10);
-        engine.InitCombat(allies: [ally], enemies: [deadEnemy, livingEnemy]);
 
-        var targets = engine.GetValidTargets(TargetQuery("ally", ValidTarget.Enemies, LivingOrDead.Living));
+        var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Living,
+            allies: [ally], enemies: [deadEnemy, livingEnemy]);
 
-        Assert.Equal(["livingEnemy"], targets.Select(e => e.EntityId));
+        Assert.Equal(["livingEnemy"], validIds);
     }
 
     [Fact]
@@ -154,20 +154,18 @@ public class TargetingTests
     {
         // What: verifies the inverse filter — LivingOrDead.Dead should return only entities
         //       flagged as dead, useful for effects like resurrection that must target corpses.
-        // How:  Same setup as GetValidTargets_Living_ExcludesDeadEntities (one dead enemy, one
-        //       living enemy), but this time the query uses LivingOrDead.Dead, which applies
-        //       `pool.Where(e => e.IsDead)` instead. The test asserts only "deadEnemy" is
-        //       returned, with the living enemy excluded.
-        var engine = new CombatEngineClass(new Random(0));
+        // How:  Same one-dead/one-living enemy setup as GetValidTargets_Living_ExcludesDeadEntities,
+        //       but the ally's Choose command uses LivingOrDead.Dead instead, so the offered
+        //       pool should be exactly ["deadEnemy"].
         var ally        = MakeEntity("ally", speed: 10);
         var deadEnemy   = MakeEntity("deadEnemy", speed: 10);
         deadEnemy.IsDead = true;
         var livingEnemy = MakeEntity("livingEnemy", speed: 10);
-        engine.InitCombat(allies: [ally], enemies: [deadEnemy, livingEnemy]);
 
-        var targets = engine.GetValidTargets(TargetQuery("ally", ValidTarget.Enemies, LivingOrDead.Dead));
+        var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Dead,
+            allies: [ally], enemies: [deadEnemy, livingEnemy]);
 
-        Assert.Equal(["deadEnemy"], targets.Select(e => e.EntityId));
+        Assert.Equal(["deadEnemy"], validIds);
     }
 
     [Fact]
@@ -175,43 +173,37 @@ public class TargetingTests
     {
         // What: verifies LivingOrDead.Both bypasses the death-state filter entirely, returning
         //       every entity in the ValidTarget pool regardless of whether it's alive or dead.
-        // How:  Same one-dead/one-living enemy setup as the two tests above, but the query uses
-        //       LivingOrDead.Both, which maps to `pool.ToList()` with no Where filter applied
-        //       at all. The test asserts both "deadEnemy" and "livingEnemy" come back together,
-        //       confirming the death-state filter is skipped rather than matching both branches
-        //       independently.
-        var engine = new CombatEngineClass(new Random(0));
+        // How:  Same one-dead/one-living enemy setup, but the ally's Choose command uses
+        //       LivingOrDead.Both, so the offered pool should include both "deadEnemy" and
+        //       "livingEnemy" together.
         var ally        = MakeEntity("ally", speed: 10);
         var deadEnemy   = MakeEntity("deadEnemy", speed: 10);
         deadEnemy.IsDead = true;
         var livingEnemy = MakeEntity("livingEnemy", speed: 10);
-        engine.InitCombat(allies: [ally], enemies: [deadEnemy, livingEnemy]);
 
-        var targets = engine.GetValidTargets(TargetQuery("ally", ValidTarget.Enemies, LivingOrDead.Both));
+        var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Both,
+            allies: [ally], enemies: [deadEnemy, livingEnemy]);
 
-        Assert.Equal(["deadEnemy", "livingEnemy"], targets.Select(e => e.EntityId));
+        Assert.Equal(["deadEnemy", "livingEnemy"], validIds);
     }
 
     [Fact]
     public void GetValidTargets_AllEnemiesDead_ReturnsEmptyWithoutThrowing()
     {
         // What: verifies an edge case — when every entity in the requested pool is dead (or
-        //       otherwise excluded), GetValidTargets returns an empty list rather than
-        //       throwing or returning null.
-        // How:  InitCombat sets up an ally and a single enemy that is already dead. Querying
-        //       for ValidTarget.Enemies + LivingOrDead.Living filters that lone enemy out,
-        //       leaving nothing in the pool. The test asserts the result is empty (not null,
-        //       not an exception), which matters because callers like AssignRandomAiTarget
-        //       index into this list without a null-check.
-        var engine   = new CombatEngineClass(new Random(0));
+        //       otherwise excluded), the offered pool is empty rather than the flow throwing
+        //       or omitting the TargetSelectionRequested event entirely.
+        // How:  One ally and a single already-dead enemy. The ally's Choose command for
+        //       ValidTarget.Enemies + LivingOrDead.Living should still raise
+        //       TargetSelectionRequested, just with an empty valid-id list.
         var ally     = MakeEntity("ally", speed: 10);
         var deadOnly = MakeEntity("deadOnly", speed: 10);
         deadOnly.IsDead = true;
-        engine.InitCombat(allies: [ally], enemies: [deadOnly]);
 
-        var targets = engine.GetValidTargets(TargetQuery("ally", ValidTarget.Enemies, LivingOrDead.Living));
+        var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Living,
+            allies: [ally], enemies: [deadOnly]);
 
-        Assert.Empty(targets);
+        Assert.Empty(validIds);
     }
 
     // ---------------------------------------------------------------
@@ -580,7 +572,7 @@ public class TargetingTests
             request ??= (actorId, type, validIds, numAttacks);
 
         bool actionResolved = false;
-        CombatEventBus.ActionResolved += (_, _) => actionResolved = true;
+        CombatEventBus.ActionResolved += (_, _, _) => actionResolved = true;
 
         CombatEventBus.WaitingForTurn += (entityId, _, _, isAlly) =>
         {

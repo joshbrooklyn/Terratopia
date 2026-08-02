@@ -76,7 +76,7 @@ public class CombatEngineClass : IKeywordUsageStore
         _combatFlowMachine.Start();
     }
 
-    public void Reset()
+    private void Reset()
     {
         CombatEventBus.Reset();
         _allies.Clear();
@@ -99,16 +99,16 @@ public class CombatEngineClass : IKeywordUsageStore
         CombatEventBus.RaiseRoundEnded(_roundNumber);
     }
     private bool IsPlayerEntity(CombatEntity entity) => _allies.Contains(entity);
-    public IReadOnlyList<CombatEntity> GetLivingEntities() =>
-        _allEntities.Values.Where(e => !e.IsDead).ToList();           
+    internal IReadOnlyList<CombatEntity> GetLivingEntities() =>
+        _allEntities.Values.Where(e => !e.IsDead).ToList();
 
-    public IReadOnlyList<CombatEntity> GetLivingAllies() =>
+    private IReadOnlyList<CombatEntity> GetLivingAllies() =>
         _allies.Where(e => !e.IsDead).ToList();
 
-    public IReadOnlyList<CombatEntity> GetLivingEnemies() =>
+    private IReadOnlyList<CombatEntity> GetLivingEnemies() =>
         _enemies.Where(e => !e.IsDead).ToList();
 
-    public IReadOnlyList<CombatEntity> GetValidTargets(CombatCommand cmd)
+    internal IReadOnlyList<CombatEntity> GetValidTargets(CombatCommand cmd)
     {
         var actor = _allEntities[cmd.ActorId];
         bool actorIsPlayer = IsPlayerEntity(actor);
@@ -149,13 +149,15 @@ public class CombatEngineClass : IKeywordUsageStore
         var  activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
         NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.ActionId);
 
+        var targets = cmd.ChosenTargets.Select(GetEntity).ToList();
+
         function.Execute(new CombatFunctionContext
         {
             Command             = cmd,
             Actor               = actor,
             ActorIsAlly         = actorIsAlly,
             Parameters          = cmd.Parameters,
-            Targets             = cmd.ChosenTargets.Select(GetEntity).ToList(),
+            Targets             = targets,
             AllEntities         = _allEntities,
             GetEntity           = GetEntity,
             Rng                 = _rng,
@@ -170,6 +172,8 @@ public class CombatEngineClass : IKeywordUsageStore
             ApplyDamage         = ApplyDamage,
             ApplyHeal           = ApplyHeal,
         });
+
+        CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
     }
 
     // Fires once per active keyword, per command - before any target is touched. This is the

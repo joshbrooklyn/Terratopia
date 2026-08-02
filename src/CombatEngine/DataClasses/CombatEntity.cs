@@ -15,26 +15,26 @@ public class CombatEntity
         Passives = passives?.ToList() ?? new();
     }
 
-    public string EntityId { get; internal set; } = string.Empty;
-    public string Name { get; internal set; } = string.Empty;
+    internal string EntityId { get; set; } = string.Empty;
+    internal string Name { get; set; } = string.Empty;
 
     // Primary stats
-    public int Level { get; internal set; }
-    public int MaxHp { get; internal set; }
-    public int Hp { get; internal set; }
-    public int MaxTp { get; internal set; }     // adventurers only; 0 for enemies
-    public int Tp { get; internal set; }
-    public int Power { get; internal set; }
-    public int Defense { get; internal set; }
-    public int Speed { get; internal set; }
+    internal int Level { get; set; }
+    internal int MaxHp { get; set; }
+    internal int Hp { get; set; }
+    internal int MaxTp { get; set; }     // adventurers only; 0 for enemies
+    internal int Tp { get; set; }
+    internal int Power { get; set; }
+    internal int Defense { get; set; }
+    internal int Speed { get; set; }
 
     // Secondary stats
-    public float Evasion { get; internal set; }
+    internal float Evasion { get; set; }
 
-    public bool IsDead { get; internal set; } = false ;
-    public float CritChance { get; internal set; }
-    public float CritModifier { get; internal set; } = 0.5f;   // default +50% on crit
+    internal bool IsDead { get; set; } = false ;
+    internal float CritChance { get; set; }
+    internal float CritModifier { get; set; } = 0.5f;   // default +50% on crit
 
-    public List<string> Passives { get; internal set; } = new();
-    public HashSet<string> ConsumedPassives { get; } = new();
+    internal List<string> Passives { get; set; } = new();
+    internal HashSet<string> ConsumedPassives { get; } = new();
 }

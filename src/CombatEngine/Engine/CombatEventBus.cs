@@ -16,7 +16,7 @@ public static class CombatEventBus
 
     // Action resolution
     public static event Action<CombatCommand, string, string>? ActionRejected; // command, actorName, reason
-    public static event Action<CombatCommand, string>? ActionResolved;         // command, actorName
+    public static event Action<CombatCommand, string, IReadOnlyList<string>>? ActionResolved; // command, actorName, targetNames
 
     // Effects
     public static event Action<string, string, int, string, string, bool>? EntityDamaged; // targetId, targetName, amount, sourceId, sourceName, isCriticalHit
@@ -40,7 +40,7 @@ public static class CombatEventBus
     public static void RaiseTargetSelectionRequested(string actorId, string actorName, TargetingType targetingType, IReadOnlyList<string> validTargetIds, IReadOnlyList<string> validTargetNames, int numAttacks, bool allowMultipleAttackOnSameTarget) => TargetSelectionRequested?.Invoke(actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget);
     public static void RaiseCombatOver(bool playerWon)           => CombatOver?.Invoke(playerWon);
     public static void RaiseActionRejected(CombatCommand c, string actorName, string reason) => ActionRejected?.Invoke(c, actorName, reason);
-    public static void RaiseActionResolved(CombatCommand c, string actorName) => ActionResolved?.Invoke(c, actorName);
+    public static void RaiseActionResolved(CombatCommand c, string actorName, IReadOnlyList<string> targetNames) => ActionResolved?.Invoke(c, actorName, targetNames);
     public static void RaiseEntityDamaged(string targetId, string targetName, int amount, string sourceId, string sourceName, bool isCriticalHit) => EntityDamaged?.Invoke(targetId, targetName, amount, sourceId, sourceName, isCriticalHit);
     public static void RaiseEntityHealed(string targetId, string targetName, int amount, string sourceId, string sourceName) => EntityHealed?.Invoke(targetId, targetName, amount, sourceId, sourceName);
     public static void RaiseAttackEvaded(string attackerId, string attackerName, string targetId, string targetName) => AttackEvaded?.Invoke(attackerId, attackerName, targetId, targetName);

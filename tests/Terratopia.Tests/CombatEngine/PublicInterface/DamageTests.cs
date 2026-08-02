@@ -4,7 +4,7 @@ using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
 
-namespace Terratopia.Tests.CombatEngine;
+namespace Terratopia.Tests.CombatEngine.PublicInterface;
 
 [Collection("CombatEngineSerial")]
 public class DamageTests

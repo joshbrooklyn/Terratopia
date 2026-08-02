@@ -28,11 +28,6 @@ public void BeginCombat()
 ```
 Starts the combat flow (first round, first turn) after `InitCombat` has been called.
 
-```csharp
-public void Reset()
-```
-Clears all rosters and combat state and resets `CombatEventBus`. Leaves the instance ready for a fresh `InitCombat` call.
-
 ### Submitting a turn's command
 
 ```csharp
@@ -45,20 +40,6 @@ public void SubmitTargets(List<string> chosenTargetIds)
 ```
 Supplies target entity IDs once the flow machine has requested target selection for the pending command (ally turns only — enemy turns always get a single random target assigned automatically).
 
-### Queries
-
-```csharp
-public IReadOnlyList<CombatEntity> GetLivingEntities()
-public IReadOnlyList<CombatEntity> GetLivingAllies()
-public IReadOnlyList<CombatEntity> GetLivingEnemies()
-```
-Snapshots (new lists) of entities with `IsDead == false`, filtered to all combatants, allies only, or enemies only.
-
-```csharp
-public IReadOnlyList<CombatEntity> GetValidTargets(CombatCommand cmd)
-```
-Resolves the legal target pool for a command: side (`cmd.ValidTargets`, relative to whether the actor is a player-side entity) crossed with living/dead state (`cmd.LivingOrDead`).
-
 ### Consuming engine output
 
 The engine does not return results from actions — it reports everything through `CombatEventBus` (see below). Callers should subscribe to the relevant events after `InitCombat` and before `BeginCombat`.
@@ -67,7 +48,7 @@ The engine does not return results from actions — it reports everything throug
 
 ### `CombatEventBus` (`CombatEngine`)
 
-Static event bus; the engine's only channel for reporting what happened. All events use IDs/names/primitives, never live `CombatEntity` references. `CombatEventBus.Reset()` clears all subscribers and is called automatically by `InitCombat` and `Reset`.
+Static event bus; the engine's only channel for reporting what happened. All events use IDs/names/primitives, never live `CombatEntity` references. `CombatEventBus.Reset()` clears all subscribers and is called automatically by `InitCombat`.
 
 | Event | Signature | Payload |
 |---|---|---|
@@ -79,21 +60,21 @@ Static event bus; the engine's only channel for reporting what happened. All eve
 | `TargetSelectionRequested` | `Action<string, string, TargetingType, IReadOnlyList<string>, IReadOnlyList<string>, int, bool>` | actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget — `numAttacks` is already capped to the valid-target pool size when repeats aren't allowed |
 | `CombatOver` | `Action<bool>` | playerWon |
 | `ActionRejected` | `Action<CombatCommand, string, string>` | command, actorName, reason |
-| `ActionResolved` | `Action<CombatCommand, string>` | command, actorName |
+| `ActionResolved` | `Action<CombatCommand, string, IReadOnlyList<string>>` | command, actorName, targetNames |
 | `EntityDamaged` | `Action<string, string, int, string, string, bool>` | targetId, targetName, amount, sourceId, sourceName, isCriticalHit |
 | `EntityHealed` | `Action<string, string, int, string, string>` | targetId, targetName, amount, sourceId, sourceName |
 | `AttackEvaded` | `Action<string, string, string, string>` | attackerId, attackerName, targetId, targetName |
+| `KeywordApplied` | `Action<string, string, string, string, string, double>` | keywordName, actorId, actorName, targetId, targetName, bonus |
 | `EntityHpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldHp, newHp |
 | `EntityTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldTp, newTp |
 | `EntityMaxHpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxHp, newMaxHp |
 | `EntityMaxTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxTp, newMaxTp |
 | `EntityDeath` | `Action<string, string>` | entityId, entityName |
+| `EntityRevived` | `Action<string, string>` | entityId, entityName |
 
 ### `CombatEntity` (`CombatEngine.DataClasses`)
 
-Mutable combat participant passed into `InitCombat`. Public constructor takes the full stat block (`entityId, name, level, maxHp, hp, maxTp, tp, power, defense, speed, evasion, critChance, critModifier`). All properties are publicly readable but only internally settable — callers construct instances and read state, the engine mutates them during combat.
-
-Key properties: `EntityId`, `Name`, `Level`, `MaxHp`, `Hp`, `MaxTp`/`Tp` (0 for enemies), `Power`, `Defense`, `Speed`, `Evasion`, `CritChance`, `CritModifier`, `IsDead`.
+Mutable combat participant passed into `InitCombat`. Public constructor takes the full stat block (`entityId, name, level, maxHp, hp, maxTp, tp, power, defense, speed, evasion, critChance, critModifier`). All properties are `internal` — callers construct instances to hand to `InitCombat` but cannot read state back off them afterward; the engine owns and mutates them during combat and reports everything through `CombatEventBus` instead.
 
 ### `CombatCommand` (`CombatEngine.DataClasses`)
 

@@ -216,12 +216,13 @@ public partial class Battle : Control
 		_pendingNumAttacks = numAttacks;
 		_pendingAllowMultipleAttackOnSameTarget = allowMultipleAttackOnSameTarget;
 
-		var entitiesById = CombatEngineClass.Instance.GetLivingEntities().ToDictionary(e => e.EntityId);
+		var namesById = validTargetIds.Zip(validTargetNames, (id, name) => (id, name))
+			.ToDictionary(p => p.id, p => p.name);
 
 		foreach (var targetId in validTargetIds)
 		{
 			var btn = new Button();
-			btn.Text = entitiesById.TryGetValue(targetId, out var entity) ? entity.Name : targetId;
+			btn.Text = namesById.TryGetValue(targetId, out var name) ? name : targetId;
 
 			var capturedTargetId = targetId;
 			btn.Pressed += () => OnTargetChosen(capturedTargetId);
@@ -265,20 +266,14 @@ public partial class Battle : Control
 	private void OnEntityRevived(string entityId, string entityName) =>
 		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} was revived!"));
 
-	private void OnActionResolved(CombatCommand cmd, string actorName) =>
+	private void OnActionResolved(CombatCommand cmd, string actorName, IReadOnlyList<string> targetNames) =>
 		UiEventQueue.Enqueue(() =>
 		{
-			var entitiesById = CombatEngineClass.Instance.GetLivingEntities().ToDictionary(e => e.EntityId);
-
-			string ActorOrTargetName(string id) =>
-				entitiesById.TryGetValue(id, out var entity) ? entity.Name : id;
-
-			var targetNames = string.Join(", ", cmd.ChosenTargets.Select(ActorOrTargetName));
 			var effectSummary = cmd.Parameters.Element.HasValue
 				? $"{cmd.CombatFunction} ({cmd.Parameters.Element})"
 				: cmd.CombatFunction;
 
-			AddLogEntry($"{actorName} used {effectSummary} on {targetNames} (cost {cmd.TPCost} TP).");
+			AddLogEntry($"{actorName} used {effectSummary} on {string.Join(", ", targetNames)} (cost {cmd.TPCost} TP).");
 		});
 
 	private void OnCombatOver(bool playerWon) =>

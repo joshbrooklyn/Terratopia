@@ -141,7 +141,6 @@ namespace CombatEngine.Engine
                 .OnEntry(() =>
                 {
                     _resolveAction(_pendingCommand!);
-                    CombatEventBus.RaiseActionResolved(_pendingCommand!, _currentEntity!.Name);
                     _machine.Fire(CombatFlowTrigger.ActionResolved);
                 });
 

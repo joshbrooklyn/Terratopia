@@ -5,7 +5,7 @@ using CombatEngine.Engine;
 using CombatEngine.Enums;
 using CombatEngine.Keywords;
 
-namespace Terratopia.Tests.CombatEngine;
+namespace Terratopia.Tests.CombatEngine.PublicInterface;
 
 [Collection("CombatEngineSerial")]
 public class MultipleKeywordsTests
