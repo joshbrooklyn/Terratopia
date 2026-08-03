@@ -1,4 +1,5 @@
 using CombatEngine.DataClasses;
+using CombatEngine.Engine;
 
 namespace CombatEngine.Keywords;
 
@@ -17,7 +18,9 @@ public class GrowthKeyword : PowerKeyword
     {
         int usesIncludingThisOne = store.GetCount(UsageKey(actor.EntityId, actionId)); // OnUsed already counted this use
         int priorUses = Math.Max(0, usesIncludingThisOne - 1);
-        return 0.10 * priorUses;
+        double bonus = 0.10 * priorUses;
+        Logger.Debug($"[keyword] Growth: {actor.Name} priorUses={priorUses} -> bonus={bonus:F2}");
+        return bonus;
     }
 
     private static string UsageKey(string actorId, string actionId) => $"growth:{actorId}:{actionId}";

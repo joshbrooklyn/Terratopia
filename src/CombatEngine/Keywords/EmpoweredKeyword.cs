@@ -1,4 +1,5 @@
 using CombatEngine.DataClasses;
+using CombatEngine.Engine;
 
 namespace CombatEngine.Keywords;
 
@@ -11,6 +12,11 @@ public class EmpoweredKeyword : PowerKeyword
     public override string Name => KeywordName;
 
     // +50% when the actor is healthy (at or above 75% of their own max HP).
-    public override double GetBonus(CombatEntity actor, CombatEntity target, bool actorIsAlly, string actionId, IKeywordUsageStore store) =>
-        actor.Hp >= Threshold * actor.MaxHp ? Bonus : 0.0;
+    public override double GetBonus(CombatEntity actor, CombatEntity target, bool actorIsAlly, string actionId, IKeywordUsageStore store)
+    {
+        bool triggered = actor.Hp >= Threshold * actor.MaxHp;
+        double bonus = triggered ? Bonus : 0.0;
+        Logger.Debug($"[keyword] Empowered: {actor.Name} hp={actor.Hp} threshold={Threshold * actor.MaxHp:F1} -> bonus={bonus:F2}");
+        return bonus;
+    }
 }

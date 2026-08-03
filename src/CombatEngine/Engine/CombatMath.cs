@@ -15,7 +15,9 @@ internal static class CombatMath
         double actionPower = calcType == DamageCalcType.FixedPower
             ? effectivePowerFactor
             : actor.Power * effectivePowerFactor;
-        return (actionPower * 2f) + (actor.Level * 5f);
+        double baseAmount = (actionPower * 2f) + (actor.Level * 5f);
+        Logger.Debug($"[math] CalculateBaseAmount: {actor.Name} calcType={calcType} actionPower={actionPower:F2} -> baseAmount={baseAmount:F2}");
+        return baseAmount;
     }
 
     internal static int CalculateDamage(
@@ -31,10 +33,16 @@ internal static class CombatMath
 
         int damage = (int)Math.Max(0f, rawDamage);
 
+        Logger.Debug($"[math] CalculateDamage: {actor.Name} -> {target.Name} baseDamage={baseDamage:F2} defense={target.Defense:F2} rawDamage={rawDamage:F2} -> damage={damage}");
+
         return damage;
     }
 
     // Same formula as damage, minus the target's Defense divisor - healing ignores defense.
-    internal static int CalculateHealAmount(CombatEntity actor, double effectivePowerFactor, DamageCalcType calcType) =>
-        (int)Math.Max(0f, CalculateBaseAmount(actor, effectivePowerFactor, calcType));
+    internal static int CalculateHealAmount(CombatEntity actor, double effectivePowerFactor, DamageCalcType calcType)
+    {
+        int amount = (int)Math.Max(0f, CalculateBaseAmount(actor, effectivePowerFactor, calcType));
+        Logger.Debug($"[math] CalculateHealAmount: {actor.Name} -> amount={amount}");
+        return amount;
+    }
 }

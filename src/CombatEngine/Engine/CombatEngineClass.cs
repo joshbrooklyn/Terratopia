@@ -126,8 +126,8 @@ public class CombatEngineClass
             ResolveTpCost       = ()                => cmd.TPCost,
             DeductTp            = DeductTp,
             TryEvade            = TryEvade,
-            RollCrit            = a                 => _rng.NextSingle() < a.CritChance,
-            ApplyCritModifier   = (a, damage)       => (int)(damage * (1.0f + a.CritModifier)),
+            RollCrit            = RollCrit,
+            ApplyCritModifier   = ApplyCritModifier,
             ApplyKeywordBonuses = (basePower, a, t) => _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.ActionId),
             CalculateDamage     = CombatMath.CalculateDamage,
             CalculateHealAmount = CombatMath.CalculateHealAmount,
@@ -153,28 +153,53 @@ public class CombatEngineClass
     private static void DeductTp(CombatEntity actor, int amount)
     {
         if (amount <= 0)
+        {
+            Logger.Debug($"[combat] DeductTp: {actor.Name} amount={amount} -> skipped (non-positive)");
             return;
+        }
 
         int oldTp = actor.Tp;
         actor.Tp -= amount;
+        Logger.Debug($"[combat] DeductTp: {actor.Name} oldTp={oldTp} amount={amount} -> newTp={actor.Tp}");
         CombatEventBus.RaiseEntityTpChanged(actor.EntityId, actor.Name, oldTp, actor.Tp);
     }
 
     // True when the attack is evaded. Evasion decays 25% on each successful dodge.
     private bool TryEvade(CombatEntity actor, CombatEntity target)
     {
-        if (_rng.NextSingle() >= target.Evasion)
+        float roll = _rng.NextSingle();
+        if (roll >= target.Evasion)
+        {
+            Logger.Debug($"[combat] TryEvade: {target.Name} roll={roll:F3} vs evasion={target.Evasion:F3} -> not evaded");
             return false;
+        }
 
         target.Evasion = Math.Max(0f, target.Evasion - 0.25f);
+        Logger.Debug($"[combat] TryEvade: {target.Name} roll={roll:F3} vs evasion={target.Evasion + 0.25f:F3} -> evaded, evasion decayed to {target.Evasion:F3}");
         CombatEventBus.RaiseAttackEvaded(actor.EntityId, actor.Name, target.EntityId, target.Name);
         return true;
+    }
+
+    private bool RollCrit(CombatEntity a)
+    {
+        float roll = _rng.NextSingle();
+        bool isCrit = roll < a.CritChance;
+        Logger.Debug($"[combat] RollCrit: {a.Name} roll={roll:F3} vs critChance={a.CritChance:F3} -> {(isCrit ? "crit" : "no crit")}");
+        return isCrit;
+    }
+
+    private static int ApplyCritModifier(CombatEntity a, int damage)
+    {
+        int result = (int)(damage * (1.0f + a.CritModifier));
+        Logger.Debug($"[combat] ApplyCritModifier: {a.Name} damage={damage} critModifier={a.CritModifier:F3} -> {result}");
+        return result;
     }
 
     private static void ApplyDamage(CombatEntity actor, CombatEntity target, int damage, bool isCrit)
     {
         int oldHp = target.Hp;
         target.Hp = (int)Math.Max(0f, target.Hp - damage);
+        Logger.Debug($"[combat] ApplyDamage: {actor.Name} -> {target.Name} oldHp={oldHp} damage={damage} isCrit={isCrit} -> newHp={target.Hp}");
         CombatEventBus.RaiseEntityDamaged(target.EntityId, target.Name, damage, actor.EntityId, actor.Name, isCrit);
         CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
         if (target.Hp == 0 && !target.IsDead)
@@ -185,10 +210,14 @@ public class CombatEngineClass
     private static void ApplyHeal(CombatEntity actor, CombatEntity target, int amount)
     {
         if (target.IsDead || amount <= 0)
+        {
+            Logger.Debug($"[combat] ApplyHeal: {actor.Name} -> {target.Name} amount={amount} isDead={target.IsDead} -> skipped");
             return;
+        }
 
         int oldHp = target.Hp;
         target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
+        Logger.Debug($"[combat] ApplyHeal: {actor.Name} -> {target.Name} oldHp={oldHp} amount={amount} -> newHp={target.Hp}");
         CombatEventBus.RaiseEntityHealed(target.EntityId, target.Name, target.Hp - oldHp, actor.EntityId, actor.Name);
         CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
     }

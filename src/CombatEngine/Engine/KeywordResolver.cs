@@ -37,16 +37,19 @@ internal sealed class KeywordResolver : IKeywordUsageStore
         // <= 0 when base PowerFactor is 0, which naturally yields no bonus ("no effect if the
         // base power modifier of the action is 0%").
         double cap = Math.Min(basePowerFactor * 2, basePowerFactor + 0.5);
+        Logger.Debug($"[keyword] ApplyKeywordBonuses: {actor.Name} -> {target.Name} basePowerFactor={basePowerFactor:F3} cap={cap:F3}");
 
         double totalBonus = 0.0;
         foreach (var keyword in activeKeywords)
         {
             double raw = keyword.GetBonus(actor, target, actorIsAlly, actionId, this);
             double applied = Math.Min(raw, cap);
+            Logger.Debug($"[keyword] {keyword.Name}: raw={raw:F3} applied={applied:F3}");
             if (applied > 0)
                 CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied);
             totalBonus += applied;
         }
+        Logger.Debug($"[keyword] ApplyKeywordBonuses: {actor.Name} -> {target.Name} totalBonus={totalBonus:F3}");
         return totalBonus;
     }
 }
