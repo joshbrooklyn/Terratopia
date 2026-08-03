@@ -264,6 +264,70 @@ public class DamageTests
     }
 
     [Fact]
+    public void Damage_FixedDamage_DoesNotScaleWithActorPowerOrLevel()
+    {
+        // What: verifies DamageCalcType.FixedDamage uses the effect's PowerFactor directly as the
+        //       entire base amount, ignoring both the actor's Power stat and Level entirely —
+        //       unlike FixedPower, which still factors in Level.
+        // How:  Two setups with very different attacker Power (10 vs 200) and Level (1 vs 20),
+        //       powerFactor=50, targetDefense=0, and CalcType=FixedDamage. baseAmount is fixed at
+        //       powerFactor (50) for both, and with targetDefense=0 nothing reduces it further —
+        //       both runs should deal exactly 50 damage.
+        var (engineLowStats, _, _) = SetupCombat(
+            power: 10, level: 1, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 0, powerFactor: 50, calcType: DamageCalcType.FixedDamage);
+
+        int? lowStatsDamage = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") lowStatsDamage ??= dmg;
+        };
+        engineLowStats.BeginCombat();
+
+        var (engineHighStats, _, _) = SetupCombat(
+            power: 200, level: 20, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 0, powerFactor: 50, calcType: DamageCalcType.FixedDamage);
+
+        int? highStatsDamage = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") highStatsDamage ??= dmg;
+        };
+        engineHighStats.BeginCombat();
+
+        Assert.NotNull(lowStatsDamage);
+        Assert.NotNull(highStatsDamage);
+        Assert.Equal(50, lowStatsDamage.Value);
+        Assert.Equal(lowStatsDamage.Value, highStatsDamage.Value);
+    }
+
+    [Fact]
+    public void Damage_FixedDamage_StillMitigatedByDefense()
+    {
+        // What: verifies FixedDamage only bypasses the actor's Power and Level — the target's
+        //       Defense still mitigates the hit through the normal formula.
+        // How:  SetupCombat with power=10 and level=5 (both irrelevant under FixedDamage),
+        //       powerFactor=50, targetDefense=50. baseDamage = powerFactor = 50 (Power and Level
+        //       ignored). Defense then mitigates it the same way the standard-formula tests
+        //       confirm: rawDamage = 50/((50+128)/128) − 25 = 50*128/178 − 25 ≈ 10.96,
+        //       truncated to 10.
+        var (engine, _, _) = SetupCombat(
+            power: 10, level: 5, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 50, powerFactor: 50, calcType: DamageCalcType.FixedDamage);
+
+        int? damageDealt = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") damageDealt ??= dmg;
+        };
+
+        engine.BeginCombat();
+
+        Assert.NotNull(damageDealt);
+        Assert.Equal(10, damageDealt.Value);
+    }
+
+    [Fact]
     public void Damage_ScalesWithLevel()
     {
         // What: verifies the attacker's level contributes to damage independently of power —

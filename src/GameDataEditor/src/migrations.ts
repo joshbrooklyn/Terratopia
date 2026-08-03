@@ -89,11 +89,22 @@ function addMaxUses(data: Record<string, unknown>): MigrationResult {
 	return { notes: ['Set maxUses to 1 — edit any item that should have more.'] };
 }
 
+/** v3 → v4 (tech/monsteraction) and v4 → v5 (item): widens the calcType enum with FixedDamage. Existing data's shape is unaffected, so this just bumps the version number. */
+function bumpToV4(data: Record<string, unknown>): MigrationResult {
+	data.schemaVersion = 4;
+	return { notes: [] };
+}
+
+function bumpToV5(data: Record<string, unknown>): MigrationResult {
+	data.schemaVersion = 5;
+	return { notes: [] };
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses },
-	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5 },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4 },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4 },
 };
 
 export interface RunMigrationsResult {

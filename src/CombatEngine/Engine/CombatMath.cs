@@ -15,7 +15,9 @@ internal static class CombatMath
         double actionPower = calcType == DamageCalcType.FixedPower
             ? effectivePowerFactor
             : actor.Power * effectivePowerFactor;
-        double baseAmount = (actionPower * 2f) + (actor.Level * 5f);
+        double baseAmount = calcType == DamageCalcType.FixedDamage
+            ? effectivePowerFactor
+            : (actionPower * 2f) + (actor.Level * 5f);
         Logger.Debug($"[math] CalculateBaseAmount: {actor.Name} calcType={calcType} actionPower={actionPower:F2} -> baseAmount={baseAmount:F2}");
         return baseAmount;
     }

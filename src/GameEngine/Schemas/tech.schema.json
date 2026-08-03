@@ -20,7 +20,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 3,
+      "const": 4,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "techId": {
@@ -101,9 +101,9 @@
         },
         "calcType": {
           "type": "string",
-          "enum": ["StandardFormula", "FixedPower"],
+          "enum": ["StandardFormula", "FixedPower", "FixedDamage"],
           "default": "StandardFormula",
-          "description": "BasicDamage/BasicHeal: optional. FixedPower uses powerFactor as the raw action power, ignoring the actor's Power stat."
+          "description": "BasicDamage/BasicHeal: optional. FixedPower uses powerFactor as the raw action power (still scaled by Level and mitigated by Defense), ignoring the actor's Power stat. FixedDamage uses powerFactor as the entire base amount, ignoring both Power and Level; Defense still mitigates it normally."
         },
         "powerFactor": {
           "type": "number",

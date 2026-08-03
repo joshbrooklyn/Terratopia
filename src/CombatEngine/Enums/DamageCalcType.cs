@@ -5,4 +5,5 @@ public enum DamageCalcType
 {
     StandardFormula,
     FixedPower,
+    FixedDamage,
 }
