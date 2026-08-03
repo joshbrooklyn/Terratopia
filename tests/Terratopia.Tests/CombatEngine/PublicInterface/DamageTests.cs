@@ -328,6 +328,71 @@ public class DamageTests
     }
 
     [Fact]
+    public void Damage_PercentOfMax_DoesNotScaleWithActorPowerOrLevel()
+    {
+        // What: verifies DamageOrHealCalcType.PercentOfMax uses the effect's PowerFactor as a
+        //       fraction of the target's MaxHp as the entire base amount, ignoring both the
+        //       actor's Power stat and Level entirely.
+        // How:  Two setups with very different attacker Power (10 vs 200) and Level (1 vs 20),
+        //       powerFactor=0.05 (5%), targetDefense=0, and CalcType=PercentOfMax. counter's
+        //       MaxHp is 1000, so baseAmount = 0.05 * 1000 = 50 for both, and with
+        //       targetDefense=0 nothing reduces it further — both runs should deal exactly 50
+        //       damage.
+        var (engineLowStats, _, _) = SetupCombat(
+            power: 10, level: 1, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 0, powerFactor: 0.05, calcType: DamageOrHealCalcType.PercentOfMax);
+
+        int? lowStatsDamage = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") lowStatsDamage ??= dmg;
+        };
+        engineLowStats.BeginCombat();
+
+        var (engineHighStats, _, _) = SetupCombat(
+            power: 200, level: 20, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 0, powerFactor: 0.05, calcType: DamageOrHealCalcType.PercentOfMax);
+
+        int? highStatsDamage = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") highStatsDamage ??= dmg;
+        };
+        engineHighStats.BeginCombat();
+
+        Assert.NotNull(lowStatsDamage);
+        Assert.NotNull(highStatsDamage);
+        Assert.Equal(50, lowStatsDamage.Value);
+        Assert.Equal(lowStatsDamage.Value, highStatsDamage.Value);
+    }
+
+    [Fact]
+    public void Damage_PercentOfMax_StillMitigatedByDefense()
+    {
+        // What: verifies PercentOfMax only bypasses the actor's Power and Level — the target's
+        //       Defense still mitigates the hit through the normal formula.
+        // How:  SetupCombat with power=10 and level=5 (both irrelevant under PercentOfMax),
+        //       powerFactor=0.05, targetDefense=50. counter's MaxHp is 1000, so
+        //       baseDamage = 0.05 * 1000 = 50 (Power and Level ignored). Defense then mitigates
+        //       it the same way the FixedAmount case confirms:
+        //       rawDamage = 50/((50+128)/128) − 25 = 50*128/178 − 25 ≈ 10.96, truncated to 10.
+        var (engine, _, _) = SetupCombat(
+            power: 10, level: 5, critChance: 0.0f, critModifier: 0.0f,
+            targetDefense: 50, powerFactor: 0.05, calcType: DamageOrHealCalcType.PercentOfMax);
+
+        int? damageDealt = null;
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        {
+            if (targetId == "counter") damageDealt ??= dmg;
+        };
+
+        engine.BeginCombat();
+
+        Assert.NotNull(damageDealt);
+        Assert.Equal(10, damageDealt.Value);
+    }
+
+    [Fact]
     public void Damage_ScalesWithLevel()
     {
         // What: verifies the attacker's level contributes to damage independently of power —

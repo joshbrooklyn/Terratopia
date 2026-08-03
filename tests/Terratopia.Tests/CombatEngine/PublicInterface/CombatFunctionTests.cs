@@ -256,6 +256,49 @@ public class CombatFunctionTests
     }
 
     [Fact]
+    public void BasicHeal_PercentOfMax_UsesTargetsMaxHp_NotActors()
+    {
+        // What: verifies DamageOrHealCalcType.PercentOfMax bases the healed amount on the HEALED
+        //       target's MaxHp, not the caster's — CalculateHealAmount takes a target parameter
+        //       specifically so this works even though the actor is the one whose Power/Level
+        //       would normally matter.
+        // How:  "ally" (MaxHp=100, the caster) heals "friend" (MaxHp=500) for powerFactor=0.1
+        //       (10%). If PercentOfMax used the caster's own MaxHp the amount would be 10; using
+        //       the target's MaxHp it is 50. friend starts at 100/500 HP so the heal doesn't cap.
+        var friend = new CombatEntity(
+            entityId: "friend", name: "Friend", level: 1,
+            maxHp: 500, hp: 100, maxTp: 0, tp: 0,
+            power: 0, defense: 0, speed: 1,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+
+        var opening = new CombatCommand
+        {
+            ActorId        = "ally",
+            TargetingType  = TargetingType.Choose,
+            ValidTargets   = ValidTarget.Allies,
+            LivingOrDead   = LivingOrDead.Living,
+            CombatFunction = BasicHealFunction.FunctionName,
+            Parameters     = new CombatFunctionParameters { PowerFactor = 0.1, CalcType = DamageOrHealCalcType.PercentOfMax },
+        };
+
+        var (engine, _, _) = SetupCombat(
+            opening,
+            extraAllies: [friend],
+            onTargetSelectionRequested: e => e.SubmitTargets(["friend"]));
+
+        int? healedAmount = null;
+        CombatEventBus.EntityHealed += (entityId, _, amount, _, _) =>
+        {
+            if (entityId == "friend") healedAmount ??= amount;
+        };
+
+        engine.BeginCombat();
+
+        Assert.Equal(50, healedAmount);
+        Assert.Equal(150, friend.Hp);
+    }
+
+    [Fact]
     public void BasicHeal_ConsumesNoRandomness()
     {
         // What: verifies BasicHeal draws nothing from the engine's RNG, so introducing a heal into

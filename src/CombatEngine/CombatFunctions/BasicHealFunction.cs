@@ -30,7 +30,7 @@ public class BasicHealFunction : CombatFunction
             double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
             double effectivePowerFactor = basePowerFactor + keywordBonus;
 
-            ctx.ApplyHeal(ctx.Actor, target, ctx.CalculateHealAmount(ctx.Actor, effectivePowerFactor, calcType));
+            ctx.ApplyHeal(ctx.Actor, target, ctx.CalculateHealAmount(ctx.Actor, target, effectivePowerFactor, calcType));
         }
     }
 }

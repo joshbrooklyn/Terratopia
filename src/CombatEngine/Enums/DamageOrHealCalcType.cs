@@ -6,4 +6,5 @@ public enum DamageOrHealCalcType
     StandardFormula,
     FixedPower,
     FixedAmount,
+    PercentOfMax,
 }

@@ -100,7 +100,7 @@ A single effect within a command: `CombatDirectEffectType EffectType`, `ElementT
 - `LivingOrDead`: `Living`, `Dead`, `Both`
 - `TargetingType`: `Choose`, `Random`, `All`, `Self`
 - `CombatDirectEffectType`: `Damage`, `Heal`
-- `DamageOrHealCalcType`: `StandardFormula`, `FixedPower`, `FixedAmount` — see [damage-or-heal-calc-type.md](damage-or-heal-calc-type.md)
+- `DamageOrHealCalcType`: `StandardFormula`, `FixedPower`, `FixedAmount`, `PercentOfMax` — see [damage-or-heal-calc-type.md](damage-or-heal-calc-type.md)
 - `ElementType`: `Fire`, `Ice`, `Lightning`, `Void`
 
 ## Typical usage

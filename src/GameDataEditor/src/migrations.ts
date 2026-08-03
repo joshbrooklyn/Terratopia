@@ -100,11 +100,17 @@ function bumpToV5(data: Record<string, unknown>): MigrationResult {
 	return { notes: [] };
 }
 
+/** v5 → v6 (item): widens the calcType enum with PercentOfMax. Existing data's shape is unaffected, so this just bumps the version number. */
+function bumpToV6(data: Record<string, unknown>): MigrationResult {
+	data.schemaVersion = 6;
+	return { notes: [] };
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5 },
-	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4 },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4 },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6 },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5 },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5 },
 };
 
 export interface RunMigrationsResult {

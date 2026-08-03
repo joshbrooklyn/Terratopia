@@ -10,8 +10,15 @@ namespace CombatEngine.Engine;
 internal static class CombatMath
 {
     // The shared half of the formula: action power scaled by calc type, doubled, plus level bump.
-    private static double CalculateBaseAmount(CombatEntity actor, double effectivePowerFactor, DamageOrHealCalcType calcType)
+    private static double CalculateBaseAmount(CombatEntity actor, CombatEntity target, double effectivePowerFactor, DamageOrHealCalcType calcType)
     {
+        if (calcType == DamageOrHealCalcType.PercentOfMax)
+        {
+            double percentAmount = effectivePowerFactor * target.MaxHp;
+            Logger.Debug($"[math] CalculateBaseAmount: {actor.Name} calcType={calcType} target={target.Name} targetMaxHp={target.MaxHp} -> baseAmount={percentAmount:F2}");
+            return percentAmount;
+        }
+
         double actionPower = calcType == DamageOrHealCalcType.FixedPower
             ? effectivePowerFactor
             : actor.Power * effectivePowerFactor;
@@ -28,7 +35,7 @@ internal static class CombatMath
         double               effectivePowerFactor,
         DamageOrHealCalcType calcType)
     {
-        double baseDamage = CalculateBaseAmount(actor, effectivePowerFactor, calcType);
+        double baseDamage = CalculateBaseAmount(actor, target, effectivePowerFactor, calcType);
 
         double rawDamage;
         rawDamage = (baseDamage / ((target.Defense + 128f) / 128f)) - (target.Defense / 2f);
@@ -41,10 +48,10 @@ internal static class CombatMath
     }
 
     // Same formula as damage, minus the target's Defense divisor - healing ignores defense.
-    internal static int CalculateHealAmount(CombatEntity actor, double effectivePowerFactor, DamageOrHealCalcType calcType)
+    internal static int CalculateHealAmount(CombatEntity actor, CombatEntity target, double effectivePowerFactor, DamageOrHealCalcType calcType)
     {
-        int amount = (int)Math.Max(0f, CalculateBaseAmount(actor, effectivePowerFactor, calcType));
-        Logger.Debug($"[math] CalculateHealAmount: {actor.Name} -> amount={amount}");
+        int amount = (int)Math.Max(0f, CalculateBaseAmount(actor, target, effectivePowerFactor, calcType));
+        Logger.Debug($"[math] CalculateHealAmount: {actor.Name} -> {target.Name} amount={amount}");
         return amount;
     }
 }

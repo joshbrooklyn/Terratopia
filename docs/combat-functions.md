@@ -273,7 +273,7 @@ The fields currently available to read in `ctx.Parameters`, in
 | Field | Type | Conveys |
 |---|---|---|
 | `Element` | `ElementType?` | Which element (`Fire`, `Ice`, `Lightning`, `Void`) the action is associated with. `null` means non-elemental (physical). |
-| `CalcType` | `DamageOrHealCalcType?` | Whether `PowerFactor` is a multiplier on the actor's `Power` stat (`StandardFormula`), a flat power value that still scales with Level and is mitigated by Defense (`FixedPower`), or the entire base amount outright — skipping both Power and Level, though Defense still mitigates it (`FixedAmount`). |
+| `CalcType` | `DamageOrHealCalcType?` | Whether `PowerFactor` is a multiplier on the actor's `Power` stat (`StandardFormula`), a flat power value that still scales with Level and is mitigated by Defense (`FixedPower`), the entire base amount outright — skipping both Power and Level, though Defense still mitigates it (`FixedAmount`), or a fraction of the target's MaxHp used as the entire base amount, again skipping Power and Level (`PercentOfMax`). |
 | `PowerFactor` | `double?` | The action's base power modifier — the number that scales into a damage or heal amount before keyword bonuses are added. |
 
 ## Reference: `CombatFunctionContext`

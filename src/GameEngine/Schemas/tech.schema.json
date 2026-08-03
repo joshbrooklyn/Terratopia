@@ -20,7 +20,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 4,
+      "const": 5,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "techId": {
@@ -101,9 +101,9 @@
         },
         "calcType": {
           "type": "string",
-          "enum": ["StandardFormula", "FixedPower", "FixedAmount"],
+          "enum": ["StandardFormula", "FixedPower", "FixedAmount", "PercentOfMax"],
           "default": "StandardFormula",
-          "description": "BasicDamage/BasicHeal: optional. FixedPower uses powerFactor as the raw action power (still scaled by Level and mitigated by Defense), ignoring the actor's Power stat. FixedAmount uses powerFactor as the entire base amount, ignoring both Power and Level; Defense still mitigates it normally."
+          "description": "BasicDamage/BasicHeal: optional. FixedPower uses powerFactor as the raw action power (still scaled by Level and mitigated by Defense), ignoring the actor's Power stat. FixedAmount uses powerFactor as the entire base amount, ignoring both Power and Level; Defense still mitigates it normally. PercentOfMax uses powerFactor as a fraction of the target's MaxHp (e.g. 0.2 = 20%) as the entire base amount, ignoring Power and Level; Defense still mitigates it normally for BasicDamage."
         },
         "powerFactor": {
           "type": "number",
