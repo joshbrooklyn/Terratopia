@@ -170,9 +170,11 @@ public partial class Battle : Control
 
 		foreach (var itemId in adventurer.ItemIds)
 		{
-			var item = GameEngineClass.Instance.AllItems.Lookup(itemId);
-			var btn  = new Button();
-			btn.Text = item.Name;
+			var item      = GameEngineClass.Instance.AllItems.Lookup(itemId);
+			int remaining = GameEngineClass.Instance.GetRemainingItemUses(entityId, itemId);
+			var btn       = new Button();
+			btn.Text     = $"{item.Name}  ({remaining}/{item.MaxUses})";
+			btn.Disabled = remaining <= 0;
 
 			var capturedActorId = entityId;
 			var capturedItemId  = itemId;
@@ -195,7 +197,7 @@ public partial class Battle : Control
 	private void OnItemSelected(string actorId, string itemId)
 	{
 		_actionModal.Hide();
-		var cmd = GameEngineClass.Instance.MakeItemCommand(actorId, itemId);
+		var cmd = GameEngineClass.Instance.UseItem(actorId, itemId);
 		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
 

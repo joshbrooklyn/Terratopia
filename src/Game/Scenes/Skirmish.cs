@@ -175,6 +175,8 @@ public partial class Skirmish : Control
 			.Select(s => (s.Id, s.Level))
 			.ToList();
 
+		GameEngineClass.Instance.StartRun();
+
 		GameEventBus.StateChanged -= OnStateChanged;
 		GetTree().ChangeSceneToFile("res://Scenes/Battle.tscn");
 	}

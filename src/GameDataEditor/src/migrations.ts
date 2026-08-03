@@ -79,9 +79,19 @@ function directEffectsToCombatFunction(data: Record<string, unknown>): Migration
 	return { notes };
 }
 
+/**
+ * v3 → v4: backfills the new required `maxUses`. Defaults to 1, matching Obsidian/keywords.md's
+ * "(almost) all Items have the single use keyword" — edit any item that should have more by hand.
+ */
+function addMaxUses(data: Record<string, unknown>): MigrationResult {
+	data.maxUses = 1;
+	data.schemaVersion = 4;
+	return { notes: ['Set maxUses to 1 — edit any item that should have more.'] };
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses },
 	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction },
 	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction },
 };

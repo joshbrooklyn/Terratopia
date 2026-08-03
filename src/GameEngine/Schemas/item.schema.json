@@ -10,6 +10,7 @@
     "name",
     "rarity",
     "description",
+    "maxUses",
     "validTargets",
     "livingOrDead",
     "combatFunction"
@@ -17,7 +18,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 3,
+      "const": 4,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "itemId": {
@@ -33,6 +34,11 @@
     },
     "description": {
       "type": "string"
+    },
+    "maxUses": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total times this item can be used in a single run. Decremented per use; refilled at run start."
     },
     "numAttacks": {
       "type": "integer",

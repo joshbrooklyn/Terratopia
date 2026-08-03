@@ -21,6 +21,7 @@ public class GameEngineClass
     private List<Dungeon> _allDungeons = new();
     private List<Adventurer> _allAdventurers = new();
     private Dictionary<string, Monster> _enemyMonsterMap = new();
+    private readonly RunInventory _runInventory = new();
 
     public IReadOnlyList<Tech> AllTechs => _allTechs;
     public IReadOnlyList<Item> AllItems => _allItems;
@@ -49,6 +50,17 @@ public class GameEngineClass
 
     public void StartSkirmish() => _gameFlowMachine.StartSkirmish();
     public void EndSkirmish()   => _gameFlowMachine.EndSkirmish();
+
+    // Refills every selected adventurer's item uses. Called once the party is locked in, since
+    // StartSkirmish fires from the main menu before SelectedAdventurerSlots is populated. Move
+    // this to the real run-start boundary when runs are implemented.
+    public void StartRun() =>
+        _runInventory.StartRun(
+            SelectedAdventurerSlots.Select(slot => AllAdventurers.Lookup(slot.Id)),
+            _allItems.Lookup);
+
+    public int GetRemainingItemUses(string adventurerId, string itemId) =>
+        _runInventory.GetRemaining(adventurerId, itemId);
 
     public CombatStartData InitSkirmishCombat()
     {
@@ -151,8 +163,14 @@ public class GameEngineClass
         };
     }
 
-    public CombatCommand MakeItemCommand(string actorId, string itemId)
+    // Consumes one use and returns the command. Named UseItem rather than MakeItemCommand because
+    // it mutates run state - there is no cancel path in CombatFlowMachine, so a command that gets
+    // built always resolves.
+    public CombatCommand UseItem(string actorId, string itemId)
     {
+        if (!_runInventory.TryConsume(actorId, itemId))
+            throw new InvalidOperationException($"Item '{itemId}' has no uses remaining for '{actorId}'.");
+
         var item = _allItems.Lookup(itemId);
 
         return new CombatCommand

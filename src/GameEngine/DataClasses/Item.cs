@@ -13,6 +13,7 @@ public class Item : IGameDataObject
     public string Name { get; init; } = "";
     public int Rarity { get; init; }
     public string Description { get; init; } = "";
+    public required int MaxUses { get; init; }
     public int NumAttacks { get; init; } = 1;
     public List<string> Keywords { get; init; } = [];
     public List<string> Traits { get; init; } = [];
