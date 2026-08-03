@@ -6,25 +6,17 @@ using CombatEngine.Passives;
 
 namespace CombatEngine.Engine;
 
-public class CombatEngineClass : IKeywordUsageStore
+public class CombatEngineClass
 {
     private static readonly Lazy<CombatEngineClass> _instance = new(() => new CombatEngineClass());
     public static CombatEngineClass Instance => _instance.Value;
     private readonly Random _rng;
     private readonly TurnOrderManager _turnOrder;
     private CombatFlowMachine _combatFlowMachine = null!;
-    private readonly List<CombatEntity> _allies  = new();
-    private readonly List<CombatEntity> _enemies = new();
-    private Dictionary<string, CombatEntity> _allEntities = new();
-    private readonly Dictionary<string, int> _keywordUsageCounts = new();
+    private CombatRoster      _roster            = null!;
+    private KeywordResolver   _keywords          = null!;
 
     private int _roundNumber;
-
-    int IKeywordUsageStore.Increment(string key) =>
-        _keywordUsageCounts[key] = _keywordUsageCounts.GetValueOrDefault(key) + 1;
-
-    int IKeywordUsageStore.GetCount(string key) =>
-        _keywordUsageCounts.GetValueOrDefault(key);
 
     private CombatEngineClass()
     {
@@ -46,22 +38,21 @@ public class CombatEngineClass : IKeywordUsageStore
         CombatEventBus.Reset();
         this.Reset();
 
-        _allies.AddRange(allies);
-        _enemies.AddRange(enemies);
-        _allEntities = _allies.Concat(_enemies).ToDictionary(e => e.EntityId);
+        _roster   = new CombatRoster(allies, enemies, _rng);
+        _keywords = new KeywordResolver();
 
         _combatFlowMachine = new CombatFlowMachine(
-            isPlayerEntity:           IsPlayerEntity,
+            isPlayerEntity:           _roster.IsPlayerEntity,
             resolveAction:            ResolveAction,
             buildRound:               BuildRound,
             doRoundEnd:               DoRoundEnd,
             isRoundOver:              IsRoundOver,
             evaluateWinCondition:     EvaluateWinCondition,
-            getValidTargets:          GetValidTargets,
-            expandAutoTargets:        ExpandAutoTargets,
-            assignAiTarget:           AssignRandomAiTarget,
+            getValidTargets:          _roster.GetValidTargets,
+            expandAutoTargets:        _roster.ExpandAutoTargets,
+            assignAiTarget:           _roster.AssignRandomAiTarget,
             nextTurn:                 NextTurn,
-            resolvePickCount:         ResolveRequiredPickCount
+            resolvePickCount:         CombatRoster.ResolveRequiredPickCount
         );
     }
 
@@ -76,21 +67,24 @@ public class CombatEngineClass : IKeywordUsageStore
         _combatFlowMachine.Start();
     }
 
+    // The roster and keyword counters are rebuilt outright by InitCombat rather than cleared, so
+    // Reset only has to drop the previous encounter's collaborators.
     private void Reset()
     {
         CombatEventBus.Reset();
-        _allies.Clear();
-        _enemies.Clear();
-        _allEntities.Clear();
-        _keywordUsageCounts.Clear();
-        _roundNumber = 0;
+        _roundNumber       = 0;
+        _roster            = null!;
+        _keywords          = null!;
         _combatFlowMachine = null!;
     }
+
+    internal IReadOnlyList<CombatEntity> GetValidTargets(CombatCommand cmd) =>
+        _roster.GetValidTargets(cmd);
 
     private void BuildRound()
     {
         _roundNumber++;
-        _turnOrder.BuildRound(GetLivingEntities());
+        _turnOrder.BuildRound(_roster.GetLivingEntities());
         CombatEventBus.RaiseRoundStarted(_roundNumber, _turnOrder.CurrentTurnOrderIds, _turnOrder.CurrentTurnOrderNames);
     }
 
@@ -98,38 +92,6 @@ public class CombatEngineClass : IKeywordUsageStore
     {
         CombatEventBus.RaiseRoundEnded(_roundNumber);
     }
-    private bool IsPlayerEntity(CombatEntity entity) => _allies.Contains(entity);
-    internal IReadOnlyList<CombatEntity> GetLivingEntities() =>
-        _allEntities.Values.Where(e => !e.IsDead).ToList();
-
-    private IReadOnlyList<CombatEntity> GetLivingAllies() =>
-        _allies.Where(e => !e.IsDead).ToList();
-
-    private IReadOnlyList<CombatEntity> GetLivingEnemies() =>
-        _enemies.Where(e => !e.IsDead).ToList();
-
-    internal IReadOnlyList<CombatEntity> GetValidTargets(CombatCommand cmd)
-    {
-        var actor = _allEntities[cmd.ActorId];
-        bool actorIsPlayer = IsPlayerEntity(actor);
-
-        IEnumerable<CombatEntity> pool = cmd.ValidTargets switch
-        {
-            ValidTarget.Allies  => actorIsPlayer ? _allies  : _enemies,
-            ValidTarget.Enemies => actorIsPlayer ? _enemies : _allies,
-            ValidTarget.Both    => _allEntities.Values,
-            _ => throw new ArgumentOutOfRangeException(nameof(cmd)),
-        };
-
-        return cmd.LivingOrDead switch
-        {
-            LivingOrDead.Living => pool.Where(e => !e.IsDead).ToList(),
-            LivingOrDead.Dead   => pool.Where(e => e.IsDead).ToList(),
-            LivingOrDead.Both   => pool.ToList(),
-            _ => throw new ArgumentOutOfRangeException(nameof(cmd)),
-        };
-    }
-
 
     private CombatEntity? NextTurn()
     {
@@ -140,16 +102,16 @@ public class CombatEngineClass : IKeywordUsageStore
 
     private void ResolveAction(CombatCommand cmd)
     {
-        if (!_allEntities.TryGetValue(cmd.ActorId, out var actor) || actor == null)
+        if (!_roster.AllEntities.TryGetValue(cmd.ActorId, out var actor) || actor == null)
             throw new InvalidOperationException($"Actor with ID {cmd.ActorId} not found among combat entities.");
 
         var function = CombatFunctionRegistry.Resolve(cmd.CombatFunction);
 
-        bool actorIsAlly    = IsPlayerEntity(actor);
+        bool actorIsAlly    = _roster.IsPlayerEntity(actor);
         var  activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
-        NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.ActionId);
+        _keywords.NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.ActionId);
 
-        var targets = cmd.ChosenTargets.Select(GetEntity).ToList();
+        var targets = cmd.ChosenTargets.Select(_roster.GetEntity).ToList();
 
         function.Execute(new CombatFunctionContext
         {
@@ -158,54 +120,22 @@ public class CombatEngineClass : IKeywordUsageStore
             ActorIsAlly         = actorIsAlly,
             Parameters          = cmd.Parameters,
             Targets             = targets,
-            AllEntities         = _allEntities,
-            GetEntity           = GetEntity,
+            AllEntities         = _roster.AllEntities,
+            GetEntity           = _roster.GetEntity,
             Rng                 = _rng,
             ResolveTpCost       = ()                => cmd.TPCost,
             DeductTp            = DeductTp,
             TryEvade            = TryEvade,
             RollCrit            = a                 => _rng.NextSingle() < a.CritChance,
             ApplyCritModifier   = (a, damage)       => (int)(damage * (1.0f + a.CritModifier)),
-            ApplyKeywordBonuses = (basePower, a, t) => ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.ActionId),
-            CalculateDamage     = CalculateDamage,
-            CalculateHealAmount = CalculateHealAmount,
+            ApplyKeywordBonuses = (basePower, a, t) => _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.ActionId),
+            CalculateDamage     = CombatMath.CalculateDamage,
+            CalculateHealAmount = CombatMath.CalculateHealAmount,
             ApplyDamage         = ApplyDamage,
             ApplyHeal           = ApplyHeal,
         });
 
         CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
-    }
-
-    // Fires once per active keyword, per command - before any target is touched. This is the
-    // hook stacking keywords (Growth, Teamwork) use to record that this action was used.
-    private void NotifyKeywordsUsed(List<PowerKeyword> activeKeywords, CombatEntity actor, bool actorIsAlly, string actionId)
-    {
-        foreach (var keyword in activeKeywords)
-            keyword.OnUsed(actor, actorIsAlly, actionId, this);
-    }
-
-    // Each active keyword's bonus is capped independently against this action's own base power
-    // factor, then the capped contributions are summed (not: sum first, then cap once) - see
-    // docs/keywords.md "Capping rules". Also raises KeywordApplied for each nonzero contribution.
-    private double ApplyKeywordBonuses(List<PowerKeyword> activeKeywords, double basePowerFactor, CombatEntity actor, CombatEntity target, bool actorIsAlly, string actionId)
-    {
-        if (activeKeywords.Count == 0)
-            return 0.0;
-
-        // <= 0 when base PowerFactor is 0, which naturally yields no bonus ("no effect if the
-        // base power modifier of the action is 0%").
-        double cap = Math.Min(basePowerFactor * 2, basePowerFactor + 0.5);
-
-        double totalBonus = 0.0;
-        foreach (var keyword in activeKeywords)
-        {
-            double raw = keyword.GetBonus(actor, target, actorIsAlly, actionId, this);
-            double applied = Math.Min(raw, cap);
-            if (applied > 0)
-                CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied);
-            totalBonus += applied;
-        }
-        return totalBonus;
     }
 
     private static void HandleEntityDefeated(CombatEntity target)
@@ -219,75 +149,6 @@ public class CombatEngineClass : IKeywordUsageStore
         target.IsDead = true;
         CombatEventBus.RaiseEntityDeath(target.EntityId, target.Name);
     }
-
-    private void AssignRandomAiTarget(CombatCommand cmd)
-    {
-        var pool = GetValidTargets(cmd);
-        cmd.ChosenTargets = new List<string> { pool[_rng.Next(pool.Count)].EntityId };
-    }
-
-    private void ExpandAutoTargets(CombatCommand cmd)
-    {
-        switch (cmd.TargetingType)
-        {
-            case TargetingType.All:
-            {
-                bool actorIsPlayer = IsPlayerEntity(_allEntities[cmd.ActorId]);
-                IEnumerable<CombatEntity> allPool = cmd.ValidTargets switch
-                {
-                    ValidTarget.Allies  => actorIsPlayer ? GetLivingAllies()  : GetLivingEnemies(),
-                    ValidTarget.Enemies => actorIsPlayer ? GetLivingEnemies() : GetLivingAllies(),
-                    ValidTarget.Both    => GetLivingEntities(),
-                    _ => throw new ArgumentOutOfRangeException(nameof(cmd)),
-                };
-                cmd.ChosenTargets = allPool.Select(e => e.EntityId).ToList();
-                break;
-            }
-            case TargetingType.Self:
-                cmd.ChosenTargets = new List<string> { cmd.ActorId };
-                break;
-            case TargetingType.Random:
-            {
-                var pool = IsPlayerEntity(_allEntities[cmd.ActorId])
-                    ? GetLivingEnemies()
-                    : GetLivingAllies();
-                int picks = ResolveRequiredPickCount(cmd.NumAttacks, cmd.AllowMultipleAttackOnSameTarget, pool.Count);
-                cmd.ChosenTargets = cmd.AllowMultipleAttackOnSameTarget
-                    ? PickWithReplacement(pool, picks, _rng)
-                    : PickDistinctWithoutReplacement(pool, picks, _rng);
-                break;
-            }
-        }
-    }
-
-    private static int ResolveRequiredPickCount(int numAttacks, bool allowMultipleAttackOnSameTarget, int poolSize) =>
-        allowMultipleAttackOnSameTarget ? numAttacks : Math.Min(numAttacks, poolSize);
-
-    private static List<string> PickWithReplacement(IReadOnlyList<CombatEntity> pool, int count, Random rng)
-    {
-        var result = new List<string>(count);
-        for (int i = 0; i < count; i++)
-            result.Add(pool[rng.Next(pool.Count)].EntityId);
-        return result;
-    }
-
-    private static List<string> PickDistinctWithoutReplacement(IReadOnlyList<CombatEntity> pool, int count, Random rng)
-    {
-        var remaining = pool.ToList();
-        var result = new List<string>(count);
-        for (int i = 0; i < count; i++)
-        {
-            int idx = rng.Next(remaining.Count);
-            result.Add(remaining[idx].EntityId);
-            remaining.RemoveAt(idx);
-        }
-        return result;
-    }
-
-    private CombatEntity GetEntity(string entityId) =>
-        _allEntities.TryGetValue(entityId, out var entity) && entity != null
-            ? entity
-            : throw new InvalidOperationException($"Target with ID {entityId} not found among combat entities.");
 
     private static void DeductTp(CombatEntity actor, int amount)
     {
@@ -332,39 +193,10 @@ public class CombatEngineClass : IKeywordUsageStore
         CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
     }
 
-    // The shared half of the formula: action power scaled by calc type, doubled, plus level bump.
-    private static double CalculateBaseAmount(CombatEntity actor, double effectivePowerFactor, DamageCalcType calcType)
-    {
-        double actionPower = calcType == DamageCalcType.FixedPower
-            ? effectivePowerFactor
-            : actor.Power * effectivePowerFactor;
-        return (actionPower * 2f) + (actor.Level * 5f);
-    }
-
-    private static int CalculateDamage(
-        CombatEntity   actor,
-        CombatEntity   target,
-        double         effectivePowerFactor,
-        DamageCalcType calcType)
-    {
-        double baseDamage = CalculateBaseAmount(actor, effectivePowerFactor, calcType);
-
-        double rawDamage;
-        rawDamage = (baseDamage / ((target.Defense + 128f) / 128f)) - (target.Defense / 2f);
-
-        int damage = (int)Math.Max(0f, rawDamage);
-
-        return damage;
-    }
-
-    // Same formula as damage, minus the target's Defense divisor - healing ignores defense.
-    private static int CalculateHealAmount(CombatEntity actor, double effectivePowerFactor, DamageCalcType calcType) =>
-        (int)Math.Max(0f, CalculateBaseAmount(actor, effectivePowerFactor, calcType));
-
     private bool EvaluateWinCondition()
     {
-        var livingAllies  = GetLivingAllies();
-        var livingEnemies = GetLivingEnemies();
+        var livingAllies  = _roster.GetLivingAllies();
+        var livingEnemies = _roster.GetLivingEnemies();
 
         if (livingAllies.Count > 0 && livingEnemies.Count > 0)
             return false;

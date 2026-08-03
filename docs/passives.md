@@ -102,15 +102,17 @@ public static class PassiveRegistry
 
 ## Trigger point
 
-Passives currently fire from exactly one place: `CombatEngineClass.HandleEntityDefeated`, called from `ResolveAction` right after a hit brings a target to 0 HP:
+Passives currently fire from exactly one place: `CombatEngineClass.HandleEntityDefeated`, called from `CombatEngineClass.ApplyDamage` right after a hit brings a target to 0 HP:
 
 ```csharp
 if (target.Hp == 0 && !target.IsDead)
     HandleEntityDefeated(target);
 ```
 
+`ApplyDamage` is the engine's standard damage-application step, handed to every `CombatFunction` through `CombatFunctionContext.ApplyDamage` — so any function that deals damage through the context gets death handling for free. A bespoke function that wrote `target.Hp` directly instead would bypass passives entirely.
+
 ```csharp
-private void HandleEntityDefeated(CombatEntity target)
+private static void HandleEntityDefeated(CombatEntity target)
 {
     foreach (var passive in PassiveRegistry.GetForTrigger<DeathPassive>(target.Passives, PassiveTrigger.OnDeath))
     {

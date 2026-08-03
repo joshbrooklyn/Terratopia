@@ -40,7 +40,7 @@ public interface IKeywordUsageStore
 }
 ```
 
-A simple named-counter store. `CombatEngineClass` implements this interface itself, backed by a `Dictionary<string, int> _keywordUsageCounts` that is cleared in `Reset()` — so usage counts are scoped to a single combat encounter, not persisted across fights.
+A simple named-counter store. `KeywordResolver` (`CombatEngine.Engine`) implements this interface itself, backed by a `Dictionary<string, int> _usageCounts`. `CombatEngineClass.InitCombat` builds a fresh `KeywordResolver` per encounter — so usage counts are scoped to a single combat encounter, not persisted across fights.
 
 ### `PowerKeywordRegistry`
 
@@ -86,51 +86,76 @@ Keyword names are pure data. The flow from game data to damage math:
    public List<string> Keywords { get; init; } = [];
    public string ActionId { get; init; } = string.Empty;
    ```
-5. **`CombatEngineClass.ResolveAction`** resolves and applies the keywords when the command is actually executed (see next section). `CombatEngineClass` implements `IKeywordUsageStore` itself, so it *is* the usage-counter store passed to every keyword call.
+5. **`CombatEngineClass.ResolveAction`** resolves the keywords when the command is actually executed, then hands both the `OnUsed` notification and the capped bonus summation to `KeywordResolver` (see next section). `KeywordResolver` implements `IKeywordUsageStore` itself, so it *is* the usage-counter store passed to every keyword call.
 
 ## Resolution order per action
 
-Inside `ResolveAction(CombatCommand cmd)`:
+Resolution is split across three places: `CombatEngineClass.ResolveAction` resolves the keyword list and fires `OnUsed`, the `CombatFunction` decides *when* (and whether) bonuses apply, and `KeywordResolver.ApplyKeywordBonuses` does the capping and summation.
+
+**1. `CombatEngineClass.ResolveAction`** — once per command:
 
 ```csharp
-bool actorIsAlly = IsPlayerEntity(actor);
-var activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
-foreach (var keyword in activeKeywords)
-    keyword.OnUsed(actor, actorIsAlly, cmd.ActionId, this);
+bool actorIsAlly    = _roster.IsPlayerEntity(actor);
+var  activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
+_keywords.NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.ActionId);
 
-foreach (CombatDirectEffect CDE in cmd.DirectEffects)
+function.Execute(new CombatFunctionContext
 {
-    foreach (var targetId in cmd.ChosenTargets)
-    {
-        // ... evasion check; on evade, skip this target entirely, no bonus applied ...
+    // ... other injected steps ...
+    ApplyKeywordBonuses = (basePower, a, t) =>
+        _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.ActionId),
+});
+```
 
-        double effectivePowerFactor = CDE.PowerFactor;
-        if (activeKeywords.Count > 0)
-        {
-            double cap = Math.Min(CDE.PowerFactor * 2, CDE.PowerFactor + 0.5);
-            foreach (var keyword in activeKeywords)
-            {
-                double raw = keyword.GetBonus(actor, target, actorIsAlly, cmd.ActionId, this);
-                effectivePowerFactor += Math.Min(raw, cap);
-            }
-        }
+`activeKeywords` is captured by the closure, so the function never sees the keyword list at all — only a `(basePowerFactor, actor, target) => bonus` callback.
 
-        int damage = CalculateDamage(CDE, actor, target, effectivePowerFactor);
-        // ... crit, HP reduction, death handling ...
-    }
+**2. The `CombatFunction`** — once per target. `BasicDamageFunction` applies it like this:
+
+```csharp
+double basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;   // 1.0
+
+foreach (var target in ctx.Targets)
+{
+    if (ctx.TryEvade(ctx.Actor, target))
+        continue;                       // evaded: no bonus applied, no KeywordApplied event
+
+    double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
+    double effectivePowerFactor = basePowerFactor + keywordBonus;
+
+    int damage = ctx.CalculateDamage(ctx.Actor, target, effectivePowerFactor, calcType);
+    // ... crit, ApplyDamage, death handling ...
 }
+```
+
+This is the seam where a bespoke function diverges: simply not calling `ctx.ApplyKeywordBonuses` makes an action ignore keywords entirely.
+
+**3. `KeywordResolver.ApplyKeywordBonuses`** — caps each contribution, then sums:
+
+```csharp
+double cap = Math.Min(basePowerFactor * 2, basePowerFactor + 0.5);
+
+double totalBonus = 0.0;
+foreach (var keyword in activeKeywords)
+{
+    double raw     = keyword.GetBonus(actor, target, actorIsAlly, actionId, this);
+    double applied = Math.Min(raw, cap);
+    if (applied > 0)
+        CombatEventBus.RaiseKeywordApplied(/* ... */, applied);
+    totalBonus += applied;
+}
+return totalBonus;
 ```
 
 Step by step:
 
 1. **Resolve once.** `cmd.Keywords` (strings) → `activeKeywords` (live instances), once per command — not once per target.
-2. **`OnUsed` fires once per keyword, per command.** This happens before any damage math, and regardless of how many targets or effects the command has. This is the hook stacking keywords use to bump their counters.
-3. **`GetBonus` fires once per keyword, per (effect, target) pair**, and is independently capped at `min(CDE.PowerFactor * 2, CDE.PowerFactor + 0.5)` before being added into `effectivePowerFactor`. Each keyword's contribution is capped *separately*, then the capped contributions are **summed** — see the worked example below.
-4. **`effectivePowerFactor` feeds `CalculateDamage`**, which is otherwise unaware of keywords.
+2. **`OnUsed` fires once per keyword, per command.** This happens before the `CombatFunction` runs at all, and regardless of how many targets the command has. This is the hook stacking keywords use to bump their counters.
+3. **`GetBonus` fires once per keyword, per entry in `ctx.Targets`**, and is independently capped at `min(basePowerFactor * 2, basePowerFactor + 0.5)`. Each keyword's contribution is capped *separately*, then the capped contributions are **summed** — see the worked example below. Note that `ctx.Targets` preserves duplicates (`NumAttacks` with `AllowMultipleAttackOnSameTarget` can repeat a target), so a keyword can contribute more than once against the same entity.
+4. **`effectivePowerFactor` feeds `CalculateDamage`** (`CombatMath`), which is otherwise unaware of keywords.
 
 ## Event bus notification
 
-Every time a keyword's capped contribution is greater than zero, `ResolveAction` also calls `CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied)`, where `applied` is the same capped bonus (`Math.Min(raw, cap)`) that fed `effectivePowerFactor`. This fires once per (keyword, target) pair, same granularity as `GetBonus` itself — a command with multiple effects or targets can raise it multiple times per keyword. A keyword whose condition isn't met (bonus of 0, e.g. `Cruel` against a healthy target) never raises the event. UI (`CombatantCard.cs`) and other listeners subscribe to `CombatEventBus.KeywordApplied` the same way they subscribe to `EntityDamaged`/`AttackEvaded`.
+Every time a keyword's capped contribution is greater than zero, `KeywordResolver.ApplyKeywordBonuses` also calls `CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied)`, where `applied` is the same capped bonus (`Math.Min(raw, cap)`) that fed `effectivePowerFactor`. This fires once per (keyword, target) pair, same granularity as `GetBonus` itself — a command with multiple effects or targets can raise it multiple times per keyword. A keyword whose condition isn't met (bonus of 0, e.g. `Cruel` against a healthy target) never raises the event. UI (`CombatantCard.cs`) and other listeners subscribe to `CombatEventBus.KeywordApplied` the same way they subscribe to `EntityDamaged`/`AttackEvaded`.
 
 ## Capping rules
 
