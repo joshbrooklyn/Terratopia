@@ -48,7 +48,7 @@ public class GrowthTests
                     ActionId      = "tech1",
                     Keywords      = [GrowthKeyword.KeywordName],
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = powerFactor },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = powerFactor },
                 });
             }
             else
@@ -61,7 +61,7 @@ public class GrowthTests
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
         };

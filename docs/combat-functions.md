@@ -40,8 +40,8 @@ public class LifeDrainFunction : CombatFunction
             ?? throw new InvalidOperationException(
                 $"LifeDrain ('{ctx.Command.ActionId}'): parameters.drainPercent is required.");
 
-        double         basePowerFactor = ctx.Parameters.PowerFactor ?? 1.0;
-        DamageCalcType calcType        = ctx.Parameters.CalcType    ?? DamageCalcType.StandardFormula;
+        double               basePowerFactor = ctx.Parameters.PowerFactor ?? 1.0;
+        DamageOrHealCalcType calcType        = ctx.Parameters.CalcType    ?? DamageOrHealCalcType.StandardFormula;
 
         ctx.DeductTpCost();
 
@@ -53,7 +53,7 @@ public class LifeDrainFunction : CombatFunction
             double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
             double effectivePowerFactor = basePowerFactor + keywordBonus;
 
-            int  damage = ctx.CalculateDamage(ctx.Actor, target, effectivePowerFactor, calcType);
+            int  damage = ctx.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
             bool isCrit = ctx.RollCrit(ctx.Actor);
             if (isCrit)
                 damage = ctx.ApplyCritModifier(ctx.Actor, damage);
@@ -72,7 +72,7 @@ Points specific to writing your own, not just this example:
   `InvalidOperationException` and naming `ctx.Command.ActionId` — the schema can't express
   per-function requirements, so this is the only place they're enforced.
 - Reuse `CombatFunctionContext`'s injected delegates (`TryEvade`, `RollCrit`,
-  `ApplyKeywordBonuses`, `CalculateDamage`/`CalculateHealAmount`, `ApplyDamage`/`ApplyHeal`,
+  `ApplyKeywordBonuses`, `CalculateDamageAmount`/`CalculateHealAmount`, `ApplyDamage`/`ApplyHeal`,
   `DeductTp`) wherever your function's behavior matches the standard action. Skip whichever ones
   don't apply — e.g. a self-buff wouldn't call `TryEvade` or `RollCrit` at all.
 - Keep the class stateless — the registry hands out one shared instance.
@@ -100,9 +100,9 @@ Edit `src/CombatEngine/CombatFunctions/CombatFunctionRegistry.cs`:
 ```diff
  public class CombatFunctionParameters
  {
-     public ElementType?    Element     { get; init; }
-     public DamageCalcType? CalcType    { get; init; }
-     public double?         PowerFactor { get; init; }
+     public ElementType?          Element     { get; init; }
+     public DamageOrHealCalcType? CalcType    { get; init; }
+     public double?               PowerFactor { get; init; }
 +    public double?         DrainPercent { get; init; }
  }
 ```
@@ -273,7 +273,7 @@ The fields currently available to read in `ctx.Parameters`, in
 | Field | Type | Conveys |
 |---|---|---|
 | `Element` | `ElementType?` | Which element (`Fire`, `Ice`, `Lightning`, `Void`) the action is associated with. `null` means non-elemental (physical). |
-| `CalcType` | `DamageCalcType?` | Whether `PowerFactor` is a multiplier on the actor's `Power` stat (`StandardFormula`), a flat power value that still scales with Level and is mitigated by Defense (`FixedPower`), or the entire base amount outright — skipping both Power and Level, though Defense still mitigates it (`FixedDamage`). |
+| `CalcType` | `DamageOrHealCalcType?` | Whether `PowerFactor` is a multiplier on the actor's `Power` stat (`StandardFormula`), a flat power value that still scales with Level and is mitigated by Defense (`FixedPower`), or the entire base amount outright — skipping both Power and Level, though Defense still mitigates it (`FixedAmount`). |
 | `PowerFactor` | `double?` | The action's base power modifier — the number that scales into a damage or heal amount before keyword bonuses are added. |
 
 ## Reference: `CombatFunctionContext`
@@ -298,7 +298,7 @@ Everything available on `ctx` inside `Execute`, in
 | `RollCrit(actor)` | Whether the actor's next hit lands as a critical hit. |
 | `ApplyCritModifier(actor, amount)` | The amount after the actor's critical-hit bonus is applied. |
 | `ApplyKeywordBonuses(basePowerFactor, actor, target)` | The extra power the action's keywords contribute against the given target. |
-| `CalculateDamage(actor, target, powerFactor, calcType)` | The damage an attack deals. |
+| `CalculateDamageAmount(actor, target, powerFactor, calcType)` | The damage an attack deals. |
 | `CalculateHealAmount(actor, powerFactor, calcType)` | The amount an action heals for. |
 | `ApplyDamage(actor, target, amount, isCrit)` | Applies a damage amount to a target. |
 | `ApplyHeal(actor, target, amount)` | Applies a heal amount to a target. |

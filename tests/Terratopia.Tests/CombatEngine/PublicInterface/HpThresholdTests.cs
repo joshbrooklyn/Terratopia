@@ -73,7 +73,7 @@ public class HpThresholdTests
                     LivingOrDead   = LivingOrDead.Living,
                     Keywords       = [keyword],
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters     = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                    Parameters     = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
                 return;
             }
@@ -87,7 +87,7 @@ public class HpThresholdTests
                 ValidTargets   = ValidTarget.Enemies,
                 LivingOrDead   = LivingOrDead.Living,
                 CombatFunction = BasicDamageFunction.FunctionName,
-                Parameters     = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 100.0 },
+                Parameters     = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 100.0 },
             });
         };
 

@@ -17,8 +17,8 @@ public class BasicHealFunction : CombatFunction
 
     public override void Execute(CombatFunctionContext ctx)
     {
-        double         basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;
-        DamageCalcType calcType        = ctx.Parameters.CalcType    ?? DamageCalcType.StandardFormula;
+        double               basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;
+        DamageOrHealCalcType calcType        = ctx.Parameters.CalcType    ?? DamageOrHealCalcType.StandardFormula;
 
         ctx.DeductTpCost();
 

@@ -15,7 +15,7 @@ namespace CombatEngine.DataClasses;
 // a schemaVersion bump + a migration step.
 public class CombatFunctionParameters
 {
-    public ElementType?    Element     { get; init; }
-    public DamageCalcType? CalcType    { get; init; }
-    public double?         PowerFactor { get; init; }
+    public ElementType?          Element     { get; init; }
+    public DamageOrHealCalcType? CalcType    { get; init; }
+    public double?               PowerFactor { get; init; }
 }

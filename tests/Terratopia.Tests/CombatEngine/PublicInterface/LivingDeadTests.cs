@@ -49,7 +49,7 @@ public class LivingDeadTests
                 CombatFunction = BasicDamageFunction.FunctionName,
                 Parameters     = new CombatFunctionParameters
                 {
-                    CalcType    = DamageCalcType.StandardFormula,
+                    CalcType    = DamageOrHealCalcType.StandardFormula,
                     PowerFactor = 1.0,
                 },
             });

@@ -45,8 +45,8 @@ public sealed class CombatFunctionContext
     // KeywordApplied per contributing keyword. Consumes no randomness.
     public required Func<double, CombatEntity, CombatEntity, double> ApplyKeywordBonuses { get; init; }
 
-    public required Func<CombatEntity, CombatEntity, double, DamageCalcType, int> CalculateDamage     { get; init; }
-    public required Func<CombatEntity, double, DamageCalcType, int>               CalculateHealAmount { get; init; }
+    public required Func<CombatEntity, CombatEntity, double, DamageOrHealCalcType, int> CalculateDamageAmount { get; init; }
+    public required Func<CombatEntity, double, DamageOrHealCalcType, int>               CalculateHealAmount   { get; init; }
 
     // Writes Hp, raises EntityDamaged + EntityHpChanged, and runs death passives if Hp hit 0.
     public required Action<CombatEntity, CombatEntity, int, bool> ApplyDamage { get; init; }

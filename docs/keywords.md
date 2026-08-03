@@ -122,7 +122,7 @@ foreach (var target in ctx.Targets)
     double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
     double effectivePowerFactor = basePowerFactor + keywordBonus;
 
-    int damage = ctx.CalculateDamage(ctx.Actor, target, effectivePowerFactor, calcType);
+    int damage = ctx.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
     // ... crit, ApplyDamage, death handling ...
 }
 ```
@@ -151,7 +151,7 @@ Step by step:
 1. **Resolve once.** `cmd.Keywords` (strings) → `activeKeywords` (live instances), once per command — not once per target.
 2. **`OnUsed` fires once per keyword, per command.** This happens before the `CombatFunction` runs at all, and regardless of how many targets the command has. This is the hook stacking keywords use to bump their counters.
 3. **`GetBonus` fires once per keyword, per entry in `ctx.Targets`**, and is independently capped at `min(basePowerFactor * 2, basePowerFactor + 0.5)`. Each keyword's contribution is capped *separately*, then the capped contributions are **summed** — see the worked example below. Note that `ctx.Targets` preserves duplicates (`NumAttacks` with `AllowMultipleAttackOnSameTarget` can repeat a target), so a keyword can contribute more than once against the same entity.
-4. **`effectivePowerFactor` feeds `CalculateDamage`** (`CombatMath`), which is otherwise unaware of keywords.
+4. **`effectivePowerFactor` feeds `CalculateDamageAmount`** (`CombatMath`), which is otherwise unaware of keywords.
 
 ## Event bus notification
 

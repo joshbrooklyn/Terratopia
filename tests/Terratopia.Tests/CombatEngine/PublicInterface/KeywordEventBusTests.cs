@@ -52,7 +52,7 @@ public class KeywordEventBusTests
                 TPCost        = 0,
                 Keywords      = [EngageKeyword.KeywordName],
                 CombatFunction = BasicDamageFunction.FunctionName,
-                Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
             });
         };
 
@@ -107,7 +107,7 @@ public class KeywordEventBusTests
                 TPCost        = 0,
                 Keywords      = [CruelKeyword.KeywordName],
                 CombatFunction = BasicDamageFunction.FunctionName,
-                Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
             });
         };
 
@@ -164,7 +164,7 @@ public class KeywordEventBusTests
                 TPCost        = 0,
                 Keywords      = [EngageKeyword.KeywordName, StoicKeyword.KeywordName],
                 CombatFunction = BasicDamageFunction.FunctionName,
-                Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 0.8 },
+                Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 0.8 },
             });
         };
 
@@ -223,7 +223,7 @@ public class KeywordEventBusTests
                     ActionId      = "tech1",
                     Keywords      = [GrowthKeyword.KeywordName],
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
             else
@@ -236,7 +236,7 @@ public class KeywordEventBusTests
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
         };

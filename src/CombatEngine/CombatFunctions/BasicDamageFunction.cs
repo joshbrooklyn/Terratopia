@@ -17,8 +17,8 @@ public class BasicDamageFunction : CombatFunction
     {
         // Element doesn't feed the formula yet - it's what the UI reports and what elemental
         // resistances will key off. A null element means non-elemental (physical).
-        double         basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;
-        DamageCalcType calcType        = ctx.Parameters.CalcType    ?? DamageCalcType.StandardFormula;
+        double               basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;
+        DamageOrHealCalcType calcType        = ctx.Parameters.CalcType    ?? DamageOrHealCalcType.StandardFormula;
 
         ctx.DeductTpCost();
 
@@ -30,7 +30,7 @@ public class BasicDamageFunction : CombatFunction
             double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
             double effectivePowerFactor = basePowerFactor + keywordBonus;
 
-            int  damage = ctx.CalculateDamage(ctx.Actor, target, effectivePowerFactor, calcType);
+            int  damage = ctx.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
             bool isCrit = ctx.RollCrit(ctx.Actor);
             if (isCrit)
                 damage = ctx.ApplyCritModifier(ctx.Actor, damage);

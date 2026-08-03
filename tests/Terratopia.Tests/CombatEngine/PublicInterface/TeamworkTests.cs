@@ -57,7 +57,7 @@ public class TeamworkTests
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
                 return;
             }
@@ -72,7 +72,7 @@ public class TeamworkTests
                 TPCost        = 0,
                 Keywords      = cfg.teamwork ? [TeamworkKeyword.KeywordName] : [],
                 CombatFunction = BasicDamageFunction.FunctionName,
-                Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = cfg.powerFactor },
+                Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = cfg.powerFactor },
             });
         };
 
@@ -260,7 +260,7 @@ public class TeamworkTests
                     TPCost        = 0,
                     Keywords      = [TeamworkKeyword.KeywordName],
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
             else
@@ -274,7 +274,7 @@ public class TeamworkTests
                     TPCost        = 0,
                     Keywords      = [TeamworkKeyword.KeywordName],
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
         };

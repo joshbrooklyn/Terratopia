@@ -93,9 +93,9 @@
         },
         "calcType": {
           "type": "string",
-          "enum": ["StandardFormula", "FixedPower", "FixedDamage"],
+          "enum": ["StandardFormula", "FixedPower", "FixedAmount"],
           "default": "StandardFormula",
-          "description": "BasicDamage/BasicHeal: optional. FixedPower uses powerFactor as the raw action power (still scaled by Level and mitigated by Defense), ignoring the actor's Power stat. FixedDamage uses powerFactor as the entire base amount, ignoring both Power and Level; Defense still mitigates it normally."
+          "description": "BasicDamage/BasicHeal: optional. FixedPower uses powerFactor as the raw action power (still scaled by Level and mitigated by Defense), ignoring the actor's Power stat. FixedAmount uses powerFactor as the entire base amount, ignoring both Power and Level; Defense still mitigates it normally."
         },
         "powerFactor": {
           "type": "number",

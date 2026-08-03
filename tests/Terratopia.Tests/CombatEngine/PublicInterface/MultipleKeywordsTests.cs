@@ -58,7 +58,7 @@ public class MultipleKeywordsTests
                 TPCost        = 0,
                 Keywords      = [EngageKeyword.KeywordName, StoicKeyword.KeywordName],
                 CombatFunction = BasicDamageFunction.FunctionName,
-                Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 0.8 },
+                Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 0.8 },
             });
         };
 
@@ -123,7 +123,7 @@ public class MultipleKeywordsTests
                     ActionId      = "tech1",
                     Keywords      = [TeamworkKeyword.KeywordName, GrowthKeyword.KeywordName],
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 0.3 },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 0.3 },
                 });
             }
             else
@@ -136,7 +136,7 @@ public class MultipleKeywordsTests
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
                     CombatFunction = BasicDamageFunction.FunctionName,
-                    Parameters = new CombatFunctionParameters { CalcType = DamageCalcType.StandardFormula, PowerFactor = 1.0 },
+                    Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 1.0 },
                 });
             }
         };
