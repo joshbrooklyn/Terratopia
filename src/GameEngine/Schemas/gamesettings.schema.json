@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSettings",
+  "description": "Terratopia combat balance settings, the single GameData/GameSettings.json file (src/GameEngine/DataClasses/GameSettings.cs). Sourced into CombatEngine.Engine.CombatBalance at startup.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "damageFormula",
+    "defaultPowerFactor",
+    "critBaseMultiplier",
+    "evasionDecayAmount",
+    "keywordCap",
+    "turnOrder",
+    "keywords",
+    "livingDeadReviveHp"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
+    },
+    "damageFormula": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["powerMultiplier", "levelMultiplier", "defenseMitigationConstant", "defenseFlatDivisor"],
+      "description": "CombatMath.CalculateBaseAmount/CalculateDamageAmount: Base = (ActionPower * powerMultiplier) + (Level * levelMultiplier); Damage = (Base / ((Defense + defenseMitigationConstant) / defenseMitigationConstant)) - (Defense / defenseFlatDivisor).",
+      "properties": {
+        "powerMultiplier": { "type": "number" },
+        "levelMultiplier": { "type": "number" },
+        "defenseMitigationConstant": { "type": "number" },
+        "defenseFlatDivisor": { "type": "number" }
+      }
+    },
+    "defaultPowerFactor": {
+      "type": "number",
+      "description": "BasicDamageFunction/BasicHealFunction: fallback power factor when an action's parameters.powerFactor is omitted."
+    },
+    "critBaseMultiplier": {
+      "type": "number",
+      "description": "CombatEngineClass.ApplyCritModifier: Damage = OriginalDamage * (critBaseMultiplier + CritModifier)."
+    },
+    "evasionDecayAmount": {
+      "type": "number",
+      "description": "CombatEntity.RegisterEvasion: amount subtracted from Evasion after each successful dodge."
+    },
+    "keywordCap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["multiplier", "additive"],
+      "description": "KeywordResolver.ApplyKeywordBonuses: per-action keyword bonus cap = min(basePowerFactor * multiplier, basePowerFactor + additive).",
+      "properties": {
+        "multiplier": { "type": "number" },
+        "additive": { "type": "number" }
+      }
+    },
+    "turnOrder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseMultiplier", "jitterRange", "jitterOffset"],
+      "description": "TurnOrderManager.BuildRound: score = Speed * (baseMultiplier + (random(0,1) * jitterRange - jitterOffset)).",
+      "properties": {
+        "baseMultiplier": { "type": "number" },
+        "jitterRange": { "type": "number" },
+        "jitterOffset": { "type": "number" }
+      }
+    },
+    "keywords": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cruel", "empowered", "engage", "stoic", "growthBonusPerUse", "teamworkBonusPerUse"],
+      "properties": {
+        "cruel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["threshold", "bonus"],
+          "description": "+bonus when the target's Hp is at or below threshold of their MaxHp.",
+          "properties": {
+            "threshold": { "type": "number" },
+            "bonus": { "type": "number" }
+          }
+        },
+        "empowered": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["threshold", "bonus"],
+          "description": "+bonus when the actor's Hp is at or above threshold of their own MaxHp.",
+          "properties": {
+            "threshold": { "type": "number" },
+            "bonus": { "type": "number" }
+          }
+        },
+        "engage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["threshold", "bonus"],
+          "description": "+bonus when the target's Hp is at or above threshold of their MaxHp.",
+          "properties": {
+            "threshold": { "type": "number" },
+            "bonus": { "type": "number" }
+          }
+        },
+        "stoic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["threshold", "bonus"],
+          "description": "+bonus when the actor's Hp is at or below threshold of their own MaxHp.",
+          "properties": {
+            "threshold": { "type": "number" },
+            "bonus": { "type": "number" }
+          }
+        },
+        "growthBonusPerUse": { "type": "number", "description": "GrowthKeyword: power bonus added per prior use of the action." },
+        "teamworkBonusPerUse": { "type": "number", "description": "TeamworkKeyword: power bonus added per prior use by either side, scoped to the whole side." }
+      }
+    },
+    "livingDeadReviveHp": {
+      "type": "integer",
+      "description": "LivingDeadPassive: Hp the entity is revived with when the passive triggers."
+    }
+  }
+}

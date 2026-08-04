@@ -234,7 +234,16 @@ function handleSave(filePath: string | null, category: string, data: Record<stri
 
 	let targetPath = filePath;
 
-	if (isNew) {
+	if (isNew && getCategoryDefinition(category)?.singleFile) {
+		// A singleton category's file always exists on disk already (it ships pre-created) -
+		// there's no id/name-based filename generation to do, just write straight to it.
+		const definition = getCategoryDefinition(category)!;
+		if (!currentGameDataRoot) {
+			postToWebview({ type: 'save-error', filePath, errors: [`No schema found for category "${category}".`] });
+			return;
+		}
+		targetPath = path.join(currentGameDataRoot, definition.singleFile!);
+	} else if (isNew) {
 		const definition = getCategoryDefinition(category);
 		const folder = currentGameDataRoot ? getCategoryFolder(currentGameDataRoot, category) : undefined;
 		if (!definition || !folder) {

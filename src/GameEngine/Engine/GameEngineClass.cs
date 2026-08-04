@@ -42,7 +42,47 @@ public class GameEngineClass
         _allMonsterActions = ContentLoader.LoadMonsterActions();
         _allDungeons = ContentLoader.LoadDungeons();
         _allAdventurers = ContentLoader.LoadAdventurers();
+
+        CombatBalance.Configure(ToCombatBalance(ContentLoader.LoadGameSettings()));
     }
+
+    // GameSettings (GameEngine.DataClasses) is the schema-validated JSON DTO; CombatBalance
+    // (CombatEngine.Engine) is what the formulas actually read. CombatEngine can't reference
+    // GameEngine/ContentLoader itself, so this is the one place the loaded values cross over.
+    private static CombatBalance ToCombatBalance(GameSettings s) => new()
+    {
+        DamageFormula = new CombatBalance.DamageFormulaSettings
+        {
+            PowerMultiplier           = s.DamageFormula.PowerMultiplier,
+            LevelMultiplier           = s.DamageFormula.LevelMultiplier,
+            DefenseMitigationConstant = s.DamageFormula.DefenseMitigationConstant,
+            DefenseFlatDivisor        = s.DamageFormula.DefenseFlatDivisor,
+        },
+        DefaultPowerFactor = s.DefaultPowerFactor,
+        CritBaseMultiplier = s.CritBaseMultiplier,
+        EvasionDecayAmount = s.EvasionDecayAmount,
+        KeywordCap = new CombatBalance.KeywordCapSettings
+        {
+            Multiplier = s.KeywordCap.Multiplier,
+            Additive   = s.KeywordCap.Additive,
+        },
+        TurnOrder = new CombatBalance.TurnOrderSettings
+        {
+            BaseMultiplier = s.TurnOrder.BaseMultiplier,
+            JitterRange    = s.TurnOrder.JitterRange,
+            JitterOffset   = s.TurnOrder.JitterOffset,
+        },
+        Keywords = new CombatBalance.KeywordBalanceSettings
+        {
+            Cruel               = new CombatBalance.ThresholdBonus { Threshold = s.Keywords.Cruel.Threshold, Bonus = s.Keywords.Cruel.Bonus },
+            Empowered           = new CombatBalance.ThresholdBonus { Threshold = s.Keywords.Empowered.Threshold, Bonus = s.Keywords.Empowered.Bonus },
+            Engage              = new CombatBalance.ThresholdBonus { Threshold = s.Keywords.Engage.Threshold, Bonus = s.Keywords.Engage.Bonus },
+            Stoic               = new CombatBalance.ThresholdBonus { Threshold = s.Keywords.Stoic.Threshold, Bonus = s.Keywords.Stoic.Bonus },
+            GrowthBonusPerUse   = s.Keywords.GrowthBonusPerUse,
+            TeamworkBonusPerUse = s.Keywords.TeamworkBonusPerUse,
+        },
+        LivingDeadReviveHp = s.LivingDeadReviveHp,
+    };
 
     public void CompleteStartup()  => _gameFlowMachine.CompleteStartup();
     public void OpenDataBrowser()  => _gameFlowMachine.OpenDataBrowser();

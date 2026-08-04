@@ -19,12 +19,14 @@ internal static class CombatMath
             return percentAmount;
         }
 
+        var formula = CombatBalance.Current.DamageFormula;
+
         double actionPower = calcType == DamageOrHealCalcType.FixedPower
             ? effectivePowerFactor
             : actor.Power * effectivePowerFactor;
         double baseAmount = calcType == DamageOrHealCalcType.FixedAmount
             ? effectivePowerFactor
-            : (actionPower * 2f) + (actor.Level * 5f);
+            : (actionPower * formula.PowerMultiplier) + (actor.Level * formula.LevelMultiplier);
         Logger.Debug($"[math] CalculateBaseAmount: {actor.Name} calcType={calcType} actionPower={actionPower:F2} -> baseAmount={baseAmount:F2}");
         return baseAmount;
     }
@@ -36,9 +38,10 @@ internal static class CombatMath
         DamageOrHealCalcType calcType)
     {
         double baseDamage = CalculateBaseAmount(actor, target, effectivePowerFactor, calcType);
+        var    formula    = CombatBalance.Current.DamageFormula;
 
         double rawDamage;
-        rawDamage = (baseDamage / ((target.Defense + 128f) / 128f)) - (target.Defense / 2f);
+        rawDamage = (baseDamage / ((target.Defense + formula.DefenseMitigationConstant) / formula.DefenseMitigationConstant)) - (target.Defense / formula.DefenseFlatDivisor);
 
         int damage = (int)Math.Max(0f, rawDamage);
 

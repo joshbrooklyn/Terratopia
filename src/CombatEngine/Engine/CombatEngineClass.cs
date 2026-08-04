@@ -160,7 +160,7 @@ public class CombatEngineClass
 
     private static int ApplyCritModifier(CombatEntity a, int damage)
     {
-        int result = (int)(damage * (1.0f + a.CritModifier));
+        int result = (int)(damage * (CombatBalance.Current.CritBaseMultiplier + a.CritModifier));
         Logger.Debug($"[combat] ApplyCritModifier: {a.Name} damage={damage} critModifier={a.CritModifier:F3} -> {result}");
         return result;
     }

@@ -13,6 +13,9 @@ export interface GameDataCategory {
 	category: string;
 	folderName: string;
 	items: GameDataItem[];
+	// True for a category backed by one fixed file (e.g. GameSettings.json) rather than a folder
+	// of many id/name-bearing entities. The tree view hides "New"/"Copy" for these.
+	isSingleton?: boolean;
 }
 
 export interface JsonSchemaProperty {
@@ -43,6 +46,9 @@ interface CategoryDefinition {
 	idField: string;
 	nameField: string;
 	schemaFile: string;
+	// When set, this category is one fixed file at `<gameDataRoot>/<singleFile>` rather than a
+	// folder of many entity files - idField/nameField/folderName don't apply.
+	singleFile?: string;
 }
 
 const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
@@ -50,6 +56,7 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
 	{ category: 'Monsters', folderName: 'Monsters', idField: 'monsterId', nameField: 'name', schemaFile: 'monster.schema.json' },
 	{ category: 'Techs', folderName: 'Techs', idField: 'techId', nameField: 'name', schemaFile: 'tech.schema.json' },
 	{ category: 'Items', folderName: 'Items', idField: 'itemId', nameField: 'name', schemaFile: 'item.schema.json' },
+	{ category: 'GameSettings', folderName: '', idField: '', nameField: '', schemaFile: 'gamesettings.schema.json', singleFile: 'GameSettings.json' },
 ];
 
 /** Reads the authoritative schemaVersion (encoded as a `const` on the schema) so callers never hardcode it. */
@@ -111,6 +118,14 @@ export function findGameDataRoot(): string | undefined {
 }
 
 function loadCategory(gameDataRoot: string, definition: CategoryDefinition): GameDataItem[] {
+	if (definition.singleFile) {
+		const filePath = path.join(gameDataRoot, definition.singleFile);
+		if (!fs.existsSync(filePath)) {
+			return [];
+		}
+		return [{ id: definition.category, name: definition.category, fileName: definition.singleFile, filePath }];
+	}
+
 	const dir = path.join(gameDataRoot, definition.folderName);
 	if (!fs.existsSync(dir)) {
 		return [];
@@ -146,6 +161,7 @@ export function loadAllCategories(gameDataRoot: string): GameDataCategory[] {
 		category: definition.category,
 		folderName: definition.folderName,
 		items: loadCategory(gameDataRoot, definition),
+		isSingleton: !!definition.singleFile,
 	}));
 }
 

@@ -18,7 +18,7 @@ public class GrowthKeyword : PowerKeyword
     {
         int usesIncludingThisOne = store.GetCount(UsageKey(actor.EntityId, actionId)); // OnUsed already counted this use
         int priorUses = Math.Max(0, usesIncludingThisOne - 1);
-        double bonus = 0.10 * priorUses;
+        double bonus = CombatBalance.Current.Keywords.GrowthBonusPerUse * priorUses;
         Logger.Debug($"[keyword] Growth: {actor.Name} priorUses={priorUses} -> bonus={bonus:F2}");
         return bonus;
     }

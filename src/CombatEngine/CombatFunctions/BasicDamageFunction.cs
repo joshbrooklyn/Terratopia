@@ -1,3 +1,4 @@
+using CombatEngine.Engine;
 using CombatEngine.Enums;
 
 namespace CombatEngine.CombatFunctions;
@@ -9,15 +10,13 @@ public class BasicDamageFunction : CombatFunction
 {
     public const string FunctionName = "BasicDamage";
 
-    private const double DefaultPowerFactor = 1.0;
-
     public override string Name => FunctionName;
 
     public override void Execute(CombatFunctionContext ctx)
     {
         // Element doesn't feed the formula yet - it's what the UI reports and what elemental
         // resistances will key off. A null element means non-elemental (physical).
-        double               basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;
+        double               basePowerFactor = ctx.Parameters.PowerFactor ?? CombatBalance.Current.DefaultPowerFactor;
         DamageOrHealCalcType calcType        = ctx.Parameters.CalcType    ?? DamageOrHealCalcType.StandardFormula;
 
         ctx.DeductTpCost();

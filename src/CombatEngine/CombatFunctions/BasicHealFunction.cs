@@ -1,3 +1,4 @@
+using CombatEngine.Engine;
 using CombatEngine.Enums;
 
 namespace CombatEngine.CombatFunctions;
@@ -11,13 +12,11 @@ public class BasicHealFunction : CombatFunction
 {
     public const string FunctionName = "BasicHeal";
 
-    private const double DefaultPowerFactor = 1.0;
-
     public override string Name => FunctionName;
 
     public override void Execute(CombatFunctionContext ctx)
     {
-        double               basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;
+        double               basePowerFactor = ctx.Parameters.PowerFactor ?? CombatBalance.Current.DefaultPowerFactor;
         DamageOrHealCalcType calcType        = ctx.Parameters.CalcType    ?? DamageOrHealCalcType.StandardFormula;
 
         ctx.DeductTpCost();

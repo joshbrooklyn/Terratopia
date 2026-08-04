@@ -36,7 +36,8 @@ internal sealed class KeywordResolver : IKeywordUsageStore
 
         // <= 0 when base PowerFactor is 0, which naturally yields no bonus ("no effect if the
         // base power modifier of the action is 0%").
-        double cap = Math.Min(basePowerFactor * 2, basePowerFactor + 0.5);
+        var    keywordCap = CombatBalance.Current.KeywordCap;
+        double cap        = Math.Min(basePowerFactor * keywordCap.Multiplier, basePowerFactor + keywordCap.Additive);
         Logger.Debug($"[keyword] ApplyKeywordBonuses: {actor.Name} -> {target.Name} basePowerFactor={basePowerFactor:F3} cap={cap:F3}");
 
         double totalBonus = 0.0;

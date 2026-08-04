@@ -32,6 +32,10 @@
       {
         "fileMatch": "/MonsterActions/*.json",
         "url": "./schemas/monsteraction.schema.json"
+      },
+      {
+        "fileMatch": "/GameSettings.json",
+        "url": "./schemas/gamesettings.schema.json"
       }
     ],
     "commands": [

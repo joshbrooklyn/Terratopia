@@ -45,6 +45,15 @@ public static class ContentLoader
 
     public static List<Adventurer> LoadAdventurers() => LoadDirectory<Adventurer>("Adventurers");
 
+    // The single GameData/GameSettings.json file - a lone file rather than a folder of entities,
+    // so it doesn't go through LoadDirectory<T>, but reuses the same validate-then-deserialize step.
+    public static GameSettings LoadGameSettings()
+    {
+        var schema = GetSchema<GameSettings>();
+        var file = Path.Combine(FindGameDataPath(), "GameSettings.json");
+        return ParseAndValidate<GameSettings>(file, schema, "GameSettings.json");
+    }
+
     private static List<T> LoadDirectory<T>(string subfolder) where T : IGameDataObject
     {
         var schema = GetSchema<T>();
@@ -55,26 +64,27 @@ public static class ContentLoader
 
         var result = new List<T>();
         foreach (var file in files)
-        {
-            using var document = JsonDocument.Parse(File.ReadAllText(file));
-
-            var evaluation = schema.Evaluate(document.RootElement, new EvaluationOptions { OutputFormat = OutputFormat.List });
-            if (!evaluation.IsValid)
-            {
-                var errors = new[] { evaluation }.Concat(evaluation.Details ?? Enumerable.Empty<EvaluationResults>())
-                    .Where(d => d.Errors is { Count: > 0 })
-                    .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
-                throw new InvalidOperationException(
-                    $"{Path.GetFileName(file)} ({subfolder}) failed schema validation:\n{string.Join("\n", errors)}");
-            }
-
-            var item = document.RootElement.Deserialize<T>(_options)
-                ?? throw new InvalidOperationException($"{Path.GetFileName(file)} deserialized to null.");
-
-            result.Add(item);
-        }
+            result.Add(ParseAndValidate<T>(file, schema, subfolder));
 
         return result;
+    }
+
+    private static T ParseAndValidate<T>(string file, JsonSchema schema, string categoryLabel)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(file));
+
+        var evaluation = schema.Evaluate(document.RootElement, new EvaluationOptions { OutputFormat = OutputFormat.List });
+        if (!evaluation.IsValid)
+        {
+            var errors = new[] { evaluation }.Concat(evaluation.Details ?? Enumerable.Empty<EvaluationResults>())
+                .Where(d => d.Errors is { Count: > 0 })
+                .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
+            throw new InvalidOperationException(
+                $"{Path.GetFileName(file)} ({categoryLabel}) failed schema validation:\n{string.Join("\n", errors)}");
+        }
+
+        return document.RootElement.Deserialize<T>(_options)
+            ?? throw new InvalidOperationException($"{Path.GetFileName(file)} deserialized to null.");
     }
 
     private static JsonSchema GetSchema<T>() where T : IGameDataObject

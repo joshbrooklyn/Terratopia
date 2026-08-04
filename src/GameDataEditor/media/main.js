@@ -132,17 +132,19 @@
 			label.textContent = `${category.category} (${category.items.length})`;
 			summary.appendChild(label);
 
-			const newBtn = document.createElement('button');
-			newBtn.className = 'btn btn-secondary btn-small';
-			newBtn.textContent = '+ New';
-			newBtn.addEventListener('click', event => {
-				event.preventDefault();
-				event.stopPropagation();
-				withDirtyCheck(() => {
-					vscode.postMessage({ type: 'new', category: category.category });
+			if (!category.isSingleton) {
+				const newBtn = document.createElement('button');
+				newBtn.className = 'btn btn-secondary btn-small';
+				newBtn.textContent = '+ New';
+				newBtn.addEventListener('click', event => {
+					event.preventDefault();
+					event.stopPropagation();
+					withDirtyCheck(() => {
+						vscode.postMessage({ type: 'new', category: category.category });
+					});
 				});
-			});
-			summary.appendChild(newBtn);
+				summary.appendChild(newBtn);
+			}
 
 			details.appendChild(summary);
 
@@ -168,16 +170,18 @@
 					});
 					row.appendChild(nameSpan);
 
-					const copyBtn = document.createElement('button');
-					copyBtn.className = 'btn btn-secondary btn-small copy-btn';
-					copyBtn.textContent = 'Copy';
-					copyBtn.addEventListener('click', event => {
-						event.stopPropagation();
-						withDirtyCheck(() => {
-							vscode.postMessage({ type: 'copy', filePath: item.filePath, category: category.category });
+					if (!category.isSingleton) {
+						const copyBtn = document.createElement('button');
+						copyBtn.className = 'btn btn-secondary btn-small copy-btn';
+						copyBtn.textContent = 'Copy';
+						copyBtn.addEventListener('click', event => {
+							event.stopPropagation();
+							withDirtyCheck(() => {
+								vscode.postMessage({ type: 'copy', filePath: item.filePath, category: category.category });
+							});
 						});
-					});
-					row.appendChild(copyBtn);
+						row.appendChild(copyBtn);
+					}
 
 					list.appendChild(row);
 				}

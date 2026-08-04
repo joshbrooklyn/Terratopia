@@ -15,7 +15,7 @@ public class TeamworkKeyword : PowerKeyword
     public override double GetBonus(CombatEntity actor, CombatEntity target, bool actorIsAlly, string actionId, IKeywordUsageStore store)
     {
         int count = store.GetCount(UsageKey(actorIsAlly));
-        double bonus = 0.05 * count;
+        double bonus = CombatBalance.Current.Keywords.TeamworkBonusPerUse * count;
         Logger.Debug($"[keyword] Teamwork: {actor.Name} side={(actorIsAlly ? "ally" : "enemy")} count={count} -> bonus={bonus:F2}");
         return bonus;
     }

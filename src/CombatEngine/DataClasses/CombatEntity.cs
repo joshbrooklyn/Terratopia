@@ -100,7 +100,7 @@ public class CombatEntity
     public void RegisterEvasion(CombatEntity attacker, float roll)
     {
         float oldEvasion = Evasion;
-        Evasion = Math.Max(0f, Evasion - 0.25f);
+        Evasion = Math.Max(0f, Evasion - (float)CombatBalance.Current.EvasionDecayAmount);
         Logger.Debug($"[combat] TryEvade: {Name} roll={roll:F3} vs evasion={oldEvasion:F3} -> evaded, evasion decayed to {Evasion:F3}");
         CombatEventBus.RaiseAttackEvaded(attacker.EntityId, attacker.Name, EntityId, Name);
     }
