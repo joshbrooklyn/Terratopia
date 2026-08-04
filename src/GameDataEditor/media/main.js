@@ -699,6 +699,10 @@
 	function renderFieldsInto(container, schemaLike, state, category, pathPrefix) {
 		pathPrefix = pathPrefix || '';
 		for (const [key, propSchema] of Object.entries(schemaLike.properties || {})) {
+			if (key === 'schemaVersion') {
+				// Managed by the host (formEditorPanel.ts stamps it on save/new/copy) - never user-editable.
+				continue;
+			}
 			const rule = getVisibilityRule(category, key);
 			if (rule && !rule.visible(state)) {
 				continue;
