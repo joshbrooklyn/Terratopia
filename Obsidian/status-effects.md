@@ -10,7 +10,7 @@
 		1. Power Up/Power Down - Increases/decreases Power by 30%
 		2. Defense Up/Defense Down - Increases/decreases Defense by 30%
 		3. Speed Up/Speed Down - 
-		4. Hp Up/Hp Down - Gain/Lose 10% of your max Hp at the end of every round
+		4. Regen/Poison - Gain/Lose 10% of your max Hp at the end of every round
 			1. Maybe this should be a triggered effect?
 	2. Positive Complex
 		1. Immune - Take 0 damage the next time you would take Hp damage, then reduce Immune by 1
