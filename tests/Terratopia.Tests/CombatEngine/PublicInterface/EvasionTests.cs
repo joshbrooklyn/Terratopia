@@ -109,7 +109,7 @@ public class EvasionTests
         {
             if (targetId == "defender") evadeBeforeHit = true;
         };
-        CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _, _, _) =>
         {
             if (targetId == "defender" && !evadeBeforeHit) hitBeforeEvade = true;
         };
@@ -136,7 +136,7 @@ public class EvasionTests
         bool damageReceived = false;
         bool evadeOccurred  = false;
 
-        CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _, _, _) =>
         {
             if (targetId == "defender") damageReceived = true;
         };

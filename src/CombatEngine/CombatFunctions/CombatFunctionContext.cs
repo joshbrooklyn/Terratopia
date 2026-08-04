@@ -48,10 +48,10 @@ public sealed class CombatFunctionContext
     public required Func<CombatEntity, CombatEntity, double, DamageOrHealCalcType, int> CalculateDamageAmount { get; init; }
     public required Func<CombatEntity, CombatEntity, double, DamageOrHealCalcType, int> CalculateHealAmount   { get; init; }
 
-    // Writes Hp, raises EntityDamaged + EntityHpChanged, and runs death passives if Hp hit 0.
+    // Writes Hp, raises EntityDamaged, and runs death passives if Hp hit 0.
     public required Action<CombatEntity, CombatEntity, int, bool> ApplyDamage { get; init; }
 
-    // Clamps to MaxHp, raises EntityHealed + EntityHpChanged. No-ops on a dead target.
+    // Clamps to MaxHp, raises EntityHealed. No-ops on a dead target.
     public required Action<CombatEntity, CombatEntity, int> ApplyHeal { get; init; }
 
     // Convenience: cost resolution + deduction, the first line of any function without bespoke

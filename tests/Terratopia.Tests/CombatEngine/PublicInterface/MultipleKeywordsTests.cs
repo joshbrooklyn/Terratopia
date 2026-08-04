@@ -63,7 +63,7 @@ public class MultipleKeywordsTests
         };
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damageDealt ??= dmg;
         };
@@ -142,7 +142,7 @@ public class MultipleKeywordsTests
         };
 
         var damages = new List<int>();
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damages.Add(dmg);
         };

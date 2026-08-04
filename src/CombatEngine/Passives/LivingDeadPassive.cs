@@ -11,19 +11,14 @@ public class LivingDeadPassive : DeathPassive
 
     public override bool TryPreventDeath(CombatEntity target)
     {
-        bool alreadyTriggered = target.ConsumedPassives.Contains(Name);
+        bool alreadyTriggered = target.HasConsumedPassive(Name);
         if (alreadyTriggered)
         {
             Logger.Debug($"[passive] LivingDead: {target.Name} alreadyTriggered -> not prevented");
             return false;
         }
-        target.ConsumedPassives.Add(Name);
-
-        int oldHp = target.Hp;
-        target.Hp = 1;
-        Logger.Debug($"[passive] LivingDead: {target.Name} oldHp={oldHp} -> revived at hp=1");
-        CombatEventBus.RaiseEntityRevived(target.EntityId, target.Name);
-        CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
+        target.ConsumePassive(Name);
+        target.Revive(1);
         return true;
     }
 }

@@ -252,7 +252,7 @@ public void LifeDrain_HealsActorForPercentOfDamageDealt()
     var (engine, ally, _) = SetupCombat(opening, allyHp: 50);
 
     int? healedAmount = null;
-    CombatEventBus.EntityHealed += (entityId, _, amount, _, _) =>
+    CombatEventBus.EntityHealed += (entityId, _, amount, _, _, _, _) =>
     {
         if (entityId == "ally") healedAmount ??= amount;
     };

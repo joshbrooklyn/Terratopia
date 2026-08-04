@@ -1,8 +1,6 @@
 using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
-using CombatEngine.Enums;
 using CombatEngine.Keywords;
-using CombatEngine.Passives;
 
 namespace CombatEngine.Engine;
 
@@ -124,44 +122,18 @@ public class CombatEngineClass
             GetEntity             = _roster.GetEntity,
             Rng                   = _rng,
             ResolveTpCost         = ()                => cmd.TPCost,
-            DeductTp              = DeductTp,
+            DeductTp              = (entity, amount)  => entity.SpendTp(amount),
             TryEvade              = TryEvade,
             RollCrit              = RollCrit,
             ApplyCritModifier     = ApplyCritModifier,
             ApplyKeywordBonuses   = (basePower, a, t) => _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.ActionId),
             CalculateDamageAmount = CombatMath.CalculateDamageAmount,
             CalculateHealAmount   = CombatMath.CalculateHealAmount,
-            ApplyDamage           = ApplyDamage,
-            ApplyHeal             = ApplyHeal,
+            ApplyDamage           = (actor, target, damage, isCrit) => target.TakeDamage(actor, damage, isCrit),
+            ApplyHeal             = (actor, target, amount)         => target.Heal(actor, amount),
         });
 
         CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
-    }
-
-    private static void HandleEntityDefeated(CombatEntity target)
-    {
-        foreach (var passive in PassiveRegistry.GetForTrigger<DeathPassive>(target.Passives, PassiveTrigger.OnDeath))
-        {
-            if (passive.TryPreventDeath(target))
-                return;
-        }
-
-        target.IsDead = true;
-        CombatEventBus.RaiseEntityDeath(target.EntityId, target.Name);
-    }
-
-    private static void DeductTp(CombatEntity actor, int amount)
-    {
-        if (amount <= 0)
-        {
-            Logger.Debug($"[combat] DeductTp: {actor.Name} amount={amount} -> skipped (non-positive)");
-            return;
-        }
-
-        int oldTp = actor.Tp;
-        actor.Tp -= amount;
-        Logger.Debug($"[combat] DeductTp: {actor.Name} oldTp={oldTp} amount={amount} -> newTp={actor.Tp}");
-        CombatEventBus.RaiseEntityTpChanged(actor.EntityId, actor.Name, oldTp, actor.Tp);
     }
 
     // True when the attack is evaded. Evasion decays 25% on each successful dodge.
@@ -174,9 +146,7 @@ public class CombatEngineClass
             return false;
         }
 
-        target.Evasion = Math.Max(0f, target.Evasion - 0.25f);
-        Logger.Debug($"[combat] TryEvade: {target.Name} roll={roll:F3} vs evasion={target.Evasion + 0.25f:F3} -> evaded, evasion decayed to {target.Evasion:F3}");
-        CombatEventBus.RaiseAttackEvaded(actor.EntityId, actor.Name, target.EntityId, target.Name);
+        target.RegisterEvasion(actor, roll);
         return true;
     }
 
@@ -193,33 +163,6 @@ public class CombatEngineClass
         int result = (int)(damage * (1.0f + a.CritModifier));
         Logger.Debug($"[combat] ApplyCritModifier: {a.Name} damage={damage} critModifier={a.CritModifier:F3} -> {result}");
         return result;
-    }
-
-    private static void ApplyDamage(CombatEntity actor, CombatEntity target, int damage, bool isCrit)
-    {
-        int oldHp = target.Hp;
-        target.Hp = (int)Math.Max(0f, target.Hp - damage);
-        Logger.Debug($"[combat] ApplyDamage: {actor.Name} -> {target.Name} oldHp={oldHp} damage={damage} isCrit={isCrit} -> newHp={target.Hp}");
-        CombatEventBus.RaiseEntityDamaged(target.EntityId, target.Name, damage, actor.EntityId, actor.Name, isCrit);
-        CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
-        if (target.Hp == 0 && !target.IsDead)
-            HandleEntityDefeated(target);
-    }
-
-    // Healing never revives - a dead target is skipped outright, and Hp is capped at MaxHp.
-    private static void ApplyHeal(CombatEntity actor, CombatEntity target, int amount)
-    {
-        if (target.IsDead || amount <= 0)
-        {
-            Logger.Debug($"[combat] ApplyHeal: {actor.Name} -> {target.Name} amount={amount} isDead={target.IsDead} -> skipped");
-            return;
-        }
-
-        int oldHp = target.Hp;
-        target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
-        Logger.Debug($"[combat] ApplyHeal: {actor.Name} -> {target.Name} oldHp={oldHp} amount={amount} -> newHp={target.Hp}");
-        CombatEventBus.RaiseEntityHealed(target.EntityId, target.Name, target.Hp - oldHp, actor.EntityId, actor.Name);
-        CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
     }
 
     private bool EvaluateWinCondition()

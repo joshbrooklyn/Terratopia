@@ -97,7 +97,7 @@ public class HpThresholdTests
     private static int? RunAndCaptureOpeningDamage(CombatEngineClass engine, CombatEntity enemy)
     {
         int? firstDamage = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "enemy") firstDamage ??= dmg;
         };

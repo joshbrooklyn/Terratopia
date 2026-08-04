@@ -68,10 +68,10 @@ public class LivingDeadTests
         //       attacker whose hits are always exactly lethal (25 damage vs 25 max HP), while
         //       the defender's own counterattacks are floored to 0 damage by the attacker's
         //       high defense — so only the attacker's hits matter and combat runs across
-        //       multiple rounds. The test records every EntityHpChanged value for "defender"
-        //       plus counts of EntityRevived and EntityDeath. On the first lethal hit, HP would
-        //       drop to 0, but LivingDeadPassive.TryPreventDeath intercepts it and immediately
-        //       bumps HP back up to 1, so the trace should show 0 then 1. On the next lethal
+        //       multiple rounds. The test records every EntityDamaged/EntityRevived new-HP value
+        //       for "defender" plus counts of EntityRevived and EntityDeath. On the first lethal
+        //       hit, HP would drop to 0, but LivingDeadPassive.TryPreventDeath intercepts it and
+        //       immediately bumps HP back up to 1, so the trace should show 0 then 1. On the next lethal
         //       hit the passive is already consumed (ConsumedPassives already contains its
         //       name), so this time HP drops to 0 and stays there — a real death. The test
         //       asserts the HP trace is exactly [0, 1, 0], revivedCount is 1, deathCount is 1,
@@ -83,9 +83,9 @@ public class LivingDeadTests
         int revivedCount = 0;
         int deathCount = 0;
 
-        CombatEventBus.EntityHpChanged += (id, _, _, newHp) => { if (id == "defender") hpTrace.Add(newHp); };
-        CombatEventBus.EntityRevived   += (id, _) => { if (id == "defender") revivedCount++; };
-        CombatEventBus.EntityDeath     += (id, _) => { if (id == "defender") deathCount++; };
+        CombatEventBus.EntityDamaged += (id, _, _, _, _, _, _, newHp) => { if (id == "defender") hpTrace.Add(newHp); };
+        CombatEventBus.EntityRevived += (id, _, _, newHp) => { if (id == "defender") { hpTrace.Add(newHp); revivedCount++; } };
+        CombatEventBus.EntityDeath   += (id, _) => { if (id == "defender") deathCount++; };
 
         engine.BeginCombat();
 
@@ -117,7 +117,7 @@ public class LivingDeadTests
         int revivedCount = 0;
         int deathCount = 0;
 
-        CombatEventBus.EntityRevived += (id, _) => { if (id == "defender") revivedCount++; };
+        CombatEventBus.EntityRevived += (id, _, _, _) => { if (id == "defender") revivedCount++; };
         CombatEventBus.EntityDeath   += (id, _) => { if (id == "defender") deathCount++; };
 
         engine.BeginCombat();
@@ -176,7 +176,7 @@ public class LivingDeadPassiveTests
         var passive = new LivingDeadPassive();
         passive.TryPreventDeath(entity);
 
-        entity.Hp = 0; // simulate a second lethal hit
+        entity.TakeDamage(entity, entity.Hp); // simulate a second lethal hit
         bool preventedAgain = passive.TryPreventDeath(entity);
 
         Assert.False(preventedAgain);

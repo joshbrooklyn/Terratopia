@@ -13,19 +13,40 @@ public partial class HpStatDisplay : Label
 		_currentHp = currentHp;
 		_maxHp = maxHp;
 		Text = $"HP: {currentHp} / {maxHp}";
-		CombatEventBus.EntityHpChanged += OnEntityHpChanged;
+		CombatEventBus.EntityDamaged += OnEntityDamaged;
+		CombatEventBus.EntityHealed += OnEntityHealed;
+		CombatEventBus.EntityRevived += OnEntityRevived;
 		CombatEventBus.EntityMaxHpChanged += OnEntityMaxHpChanged;
 	}
 
 	public override void _ExitTree()
 	{
-		CombatEventBus.EntityHpChanged -= OnEntityHpChanged;
+		CombatEventBus.EntityDamaged -= OnEntityDamaged;
+		CombatEventBus.EntityHealed -= OnEntityHealed;
+		CombatEventBus.EntityRevived -= OnEntityRevived;
 		CombatEventBus.EntityMaxHpChanged -= OnEntityMaxHpChanged;
 	}
 
-	private void OnEntityHpChanged(string entityId, string entityName, int oldHp, int newHp)
+	private void OnEntityDamaged(string targetId, string targetName, int amount, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp)
+	{
+		if (targetId != _entityId) return;
+		SetHp(newHp);
+	}
+
+	private void OnEntityHealed(string targetId, string targetName, int amount, string sourceId, string sourceName, int oldHp, int newHp)
+	{
+		if (targetId != _entityId) return;
+		SetHp(newHp);
+	}
+
+	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp)
 	{
 		if (entityId != _entityId) return;
+		SetHp(newHp);
+	}
+
+	private void SetHp(int newHp)
+	{
 		_currentHp = newHp;
 		Text = $"HP: {_currentHp} / {_maxHp}";
 	}

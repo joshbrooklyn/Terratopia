@@ -140,7 +140,7 @@ public class TargetingTests
         //       LivingOrDead.Living should offer only "livingEnemy".
         var ally        = MakeEntity("ally", speed: 10);
         var deadEnemy   = MakeEntity("deadEnemy", speed: 10);
-        deadEnemy.IsDead = true;
+        deadEnemy.MarkDead();
         var livingEnemy = MakeEntity("livingEnemy", speed: 10);
 
         var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Living,
@@ -159,7 +159,7 @@ public class TargetingTests
         //       pool should be exactly ["deadEnemy"].
         var ally        = MakeEntity("ally", speed: 10);
         var deadEnemy   = MakeEntity("deadEnemy", speed: 10);
-        deadEnemy.IsDead = true;
+        deadEnemy.MarkDead();
         var livingEnemy = MakeEntity("livingEnemy", speed: 10);
 
         var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Dead,
@@ -178,7 +178,7 @@ public class TargetingTests
         //       "livingEnemy" together.
         var ally        = MakeEntity("ally", speed: 10);
         var deadEnemy   = MakeEntity("deadEnemy", speed: 10);
-        deadEnemy.IsDead = true;
+        deadEnemy.MarkDead();
         var livingEnemy = MakeEntity("livingEnemy", speed: 10);
 
         var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Both,
@@ -198,7 +198,7 @@ public class TargetingTests
         //       TargetSelectionRequested, just with an empty valid-id list.
         var ally     = MakeEntity("ally", speed: 10);
         var deadOnly = MakeEntity("deadOnly", speed: 10);
-        deadOnly.IsDead = true;
+        deadOnly.MarkDead();
 
         var validIds = CaptureChooseValidIds("ally", ValidTarget.Enemies, LivingOrDead.Living,
             allies: [ally], enemies: [deadOnly]);
@@ -347,7 +347,7 @@ public class TargetingTests
         var e1   = MakeEntity("e1", speed: 5, hp: 1, power: 0);
         var e2   = MakeEntity("e2", speed: 4, hp: 1, power: 0);
         var e3   = MakeEntity("e3", speed: 3, hp: 1, power: 0);
-        e3.IsDead = true; // pre-dead: must never appear in an "All" expansion
+        e3.MarkDead(); // pre-dead: must never appear in an "All" expansion
 
         engine.InitCombat(allies: [ally], enemies: [e1, e2, e3]);
 
@@ -606,7 +606,7 @@ public class TargetingTests
         Assert.False(actionResolved, "Combat must not resolve the action before targets are submitted.");
 
         string? damagedId = null;
-        CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _) => damagedId ??= targetId;
+        CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _, _, _) => damagedId ??= targetId;
 
         engine.SubmitTargets(["e2"]);
 

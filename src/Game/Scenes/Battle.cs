@@ -64,7 +64,8 @@ public partial class Battle : Control
 		CombatEventBus.TurnEnded              += OnTurnEnded;
 		CombatEventBus.WaitingForTurn          += OnWaitingForTurn;
 		CombatEventBus.TargetSelectionRequested += OnTargetSelectionRequested;
-		CombatEventBus.EntityHpChanged        += OnEntityHpChanged;
+		CombatEventBus.EntityDamaged           += OnEntityDamaged;
+		CombatEventBus.EntityHealed            += OnEntityHealed;
 		CombatEventBus.EntityTpChanged        += OnEntityTpChanged;
 		CombatEventBus.EntityRevived          += OnEntityRevived;
 		CombatEventBus.ActionResolved         += OnActionResolved;
@@ -259,14 +260,17 @@ public partial class Battle : Control
 			? $"Choose target ({_pendingChosenTargets.Count + 1}/{_pendingNumAttacks})"
 			: "Choose target";
 
-	private void OnEntityHpChanged(string entityId, string entityName, int oldHp, int newHp) =>
-		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName}: HP {oldHp} → {newHp}"));
+	private void OnEntityDamaged(string targetId, string targetName, int amount, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp) =>
+		UiEventQueue.Enqueue(() => AddLogEntry($"{targetName}: HP {oldHp} → {newHp}"));
+
+	private void OnEntityHealed(string targetId, string targetName, int amount, string sourceId, string sourceName, int oldHp, int newHp) =>
+		UiEventQueue.Enqueue(() => AddLogEntry($"{targetName}: HP {oldHp} → {newHp}"));
 
 	private void OnEntityTpChanged(string entityId, string entityName, int oldTp, int newTp) =>
 		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName}: TP {oldTp} → {newTp}"));
 
-	private void OnEntityRevived(string entityId, string entityName) =>
-		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} was revived!"));
+	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp) =>
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} was revived! HP {oldHp} → {newHp}"));
 
 	private void OnActionResolved(CombatCommand cmd, string actorName, IReadOnlyList<string> targetNames) =>
 		UiEventQueue.Enqueue(() =>
@@ -312,7 +316,8 @@ public partial class Battle : Control
 		CombatEventBus.TurnEnded              -= OnTurnEnded;
 		CombatEventBus.WaitingForTurn          -= OnWaitingForTurn;
 		CombatEventBus.TargetSelectionRequested -= OnTargetSelectionRequested;
-		CombatEventBus.EntityHpChanged        -= OnEntityHpChanged;
+		CombatEventBus.EntityDamaged           -= OnEntityDamaged;
+		CombatEventBus.EntityHealed            -= OnEntityHealed;
 		CombatEventBus.EntityTpChanged        -= OnEntityTpChanged;
 		CombatEventBus.EntityRevived          -= OnEntityRevived;
 		CombatEventBus.ActionResolved         -= OnActionResolved;

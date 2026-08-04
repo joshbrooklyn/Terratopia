@@ -142,14 +142,13 @@ public class LivingDeadPassive : DeathPassive
 
         int oldHp = target.Hp;
         target.Hp = 1;
-        CombatEventBus.RaiseEntityRevived(target.EntityId, target.Name);
-        CombatEventBus.RaiseEntityHpChanged(target.EntityId, target.Name, oldHp, target.Hp);
+        CombatEventBus.RaiseEntityRevived(target.EntityId, target.Name, oldHp, target.Hp);
         return true;
     }
 }
 ```
 
-The first time this entity would die, `ConsumedPassives.Add(Name)` succeeds (returns `true` because the name wasn't already in the set), so the entity is revived to 1 HP instead of dying, and `EntityRevived` + `EntityHpChanged` events are raised. Every subsequent death attempt, `Add` returns `false` (the name's already there) — `TryPreventDeath` returns `false`, and the entity dies normally.
+The first time this entity would die, `ConsumedPassives.Add(Name)` succeeds (returns `true` because the name wasn't already in the set), so the entity is revived to 1 HP instead of dying, and an `EntityRevived` event is raised. Every subsequent death attempt, `Add` returns `false` (the name's already there) — `TryPreventDeath` returns `false`, and the entity dies normally.
 
 ## Extending: adding a new passive
 

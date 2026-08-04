@@ -102,7 +102,7 @@ public class DamageTests
             power: 10, level: 1, critChance: 0.0f, critModifier: 0.0f, targetDefense: 0);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") damageDealt ??= dmg;
         };
@@ -129,7 +129,7 @@ public class DamageTests
             power: 50, level: 1, critChance: 0.0f, critModifier: 0.0f, targetDefense: 50);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") damageDealt ??= dmg;
         };
@@ -155,7 +155,7 @@ public class DamageTests
             power: 5, level: 1, critChance: 0.0f, critModifier: 0.0f, targetDefense: 128);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") damageDealt ??= dmg;
         };
@@ -184,7 +184,7 @@ public class DamageTests
             targetDefense: 0, powerFactor: 2.0);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") damageDealt ??= dmg;
         };
@@ -212,7 +212,7 @@ public class DamageTests
             targetDefense: 0, powerFactor: 50, calcType: DamageOrHealCalcType.FixedPower);
 
         int? lowPowerDamage = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") lowPowerDamage ??= dmg;
         };
@@ -223,7 +223,7 @@ public class DamageTests
             targetDefense: 0, powerFactor: 50, calcType: DamageOrHealCalcType.FixedPower);
 
         int? highPowerDamage = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") highPowerDamage ??= dmg;
         };
@@ -252,7 +252,7 @@ public class DamageTests
             targetDefense: 50, powerFactor: 50, calcType: DamageOrHealCalcType.FixedPower);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") damageDealt ??= dmg;
         };
@@ -278,7 +278,7 @@ public class DamageTests
             targetDefense: 0, powerFactor: 50, calcType: DamageOrHealCalcType.FixedAmount);
 
         int? lowStatsDamage = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") lowStatsDamage ??= dmg;
         };
@@ -289,7 +289,7 @@ public class DamageTests
             targetDefense: 0, powerFactor: 50, calcType: DamageOrHealCalcType.FixedAmount);
 
         int? highStatsDamage = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") highStatsDamage ??= dmg;
         };
@@ -316,7 +316,7 @@ public class DamageTests
             targetDefense: 50, powerFactor: 50, calcType: DamageOrHealCalcType.FixedAmount);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") damageDealt ??= dmg;
         };
@@ -343,7 +343,7 @@ public class DamageTests
             targetDefense: 0, powerFactor: 0.05, calcType: DamageOrHealCalcType.PercentOfMax);
 
         int? lowStatsDamage = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") lowStatsDamage ??= dmg;
         };
@@ -354,7 +354,7 @@ public class DamageTests
             targetDefense: 0, powerFactor: 0.05, calcType: DamageOrHealCalcType.PercentOfMax);
 
         int? highStatsDamage = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") highStatsDamage ??= dmg;
         };
@@ -381,7 +381,7 @@ public class DamageTests
             targetDefense: 50, powerFactor: 0.05, calcType: DamageOrHealCalcType.PercentOfMax);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") damageDealt ??= dmg;
         };
@@ -408,7 +408,7 @@ public class DamageTests
             power: 0, level: 5, critChance: 0.0f, critModifier: 0.0f, targetDefense: 0);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "counter") damageDealt ??= dmg;
         };
@@ -437,7 +437,7 @@ public class DamageTests
 
         int?  damageDealt = null;
         bool? wasCrit     = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit, _, _) =>
         {
             if (targetId != "counter") return;
             damageDealt ??= dmg;
@@ -469,7 +469,7 @@ public class DamageTests
 
         int?  damageDealt = null;
         bool? wasCrit     = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit, _, _) =>
         {
             if (targetId != "counter") return;
             damageDealt ??= dmg;
@@ -504,7 +504,7 @@ public class DamageTests
 
         int?  damageDealt = null;
         bool? wasCrit     = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit, _, _) =>
         {
             if (targetId != "counter") return;
             damageDealt ??= dmg;
@@ -536,7 +536,7 @@ public class DamageTests
 
         int?  damageDealt = null;
         bool? wasCrit     = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit, _, _) =>
         {
             if (targetId != "counter") return;
             damageDealt ??= dmg;
@@ -567,7 +567,7 @@ public class DamageTests
 
         int?  damageDealt = null;
         bool? wasCrit     = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit, _, _) =>
         {
             if (targetId != "counter") return;
             damageDealt ??= dmg;
@@ -601,7 +601,7 @@ public class DamageTests
 
         int?  damageDealt = null;
         bool? wasCrit     = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, isCrit, _, _) =>
         {
             if (targetId != "counter") return;
             damageDealt ??= dmg;

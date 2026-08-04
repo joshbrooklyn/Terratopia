@@ -69,7 +69,7 @@ public partial class CombatantCard : PanelContainer
 		});
 	}
 
-	private void OnEntityDamaged(string targetId, string targetName, int amount, string sourceId, string sourceName, bool isCriticalHit)
+	private void OnEntityDamaged(string targetId, string targetName, int amount, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp)
 	{
 		if (targetId != _entityId) return;
 
@@ -122,7 +122,7 @@ public partial class CombatantCard : PanelContainer
 		UiEventQueue.Enqueue(() => Modulate = new Color(0.4f, 0.4f, 0.4f, 1f));
 	}
 
-	private void OnEntityRevived(string entityId, string entityName)
+	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp)
 	{
 		if (entityId != _entityId) return;
 

@@ -88,7 +88,7 @@ public class GrowthTests
         var (engine, _, enemy) = SetupGrowthDuel(enemyHp: 81, powerFactor: 1.0);
 
         var damages = new List<int>();
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damages.Add(dmg);
         };
@@ -120,7 +120,7 @@ public class GrowthTests
         var (engine, _, enemy) = SetupGrowthDuel(enemyHp: 7 + 9 + 11 + 11, powerFactor: 0.1);
 
         var damages = new List<int>();
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damages.Add(dmg);
         };
