@@ -30,6 +30,13 @@ public static class CombatEventBus
     public static event Action<string, string, BuffDebuffStat, bool, int>?           BuffDebuffTicked;  // entityId, entityName, stat, isPositive, roundsRemaining
     public static event Action<string, string, BuffDebuffStat, bool, int, int>?      BuffDebuffExpired; // entityId, entityName, stat, isPositive, oldValue, newValue
 
+    // Timed regen/drain. Unlike a buff/debuff, applying an entry doesn't move a stat by itself - the
+    // HP/TP delta only lands once per round, reported via the existing EntityDamaged/EntityHealed/
+    // EntityTpChanged events - so there is no oldValue/newValue here.
+    public static event Action<string, string, RegenDrainStat, bool, int, bool>? RegenDrainApplied; // entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved
+    public static event Action<string, string, RegenDrainStat, bool, int>?       RegenDrainTicked;  // entityId, entityName, stat, isPositive, roundsRemaining
+    public static event Action<string, string, RegenDrainStat, bool>?            RegenDrainExpired; // entityId, entityName, stat, isPositive
+
     // Entity lifecycle
     public static event Action<string, string, int, int>? EntityTpChanged;     // entityId, entityName, oldTp, newTp
     public static event Action<string, string, int, int>? EntityMaxHpChanged;  // entityId, entityName, oldMaxHp, newMaxHp
@@ -53,6 +60,9 @@ public static class CombatEventBus
     public static void RaiseBuffDebuffApplied(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, int oldValue, int newValue) => BuffDebuffApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue);
     public static void RaiseBuffDebuffTicked(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining) => BuffDebuffTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining);
     public static void RaiseBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue) => BuffDebuffExpired?.Invoke(entityId, entityName, stat, isPositive, oldValue, newValue);
+    public static void RaiseRegenDrainApplied(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved) => RegenDrainApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved);
+    public static void RaiseRegenDrainTicked(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining) => RegenDrainTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining);
+    public static void RaiseRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive) => RegenDrainExpired?.Invoke(entityId, entityName, stat, isPositive);
     public static void RaiseEntityTpChanged(string entityId, string entityName, int oldTp, int newTp) => EntityTpChanged?.Invoke(entityId, entityName, oldTp, newTp);
     public static void RaiseEntityMaxHpChanged(string entityId, string entityName, int oldMaxHp, int newMaxHp) => EntityMaxHpChanged?.Invoke(entityId, entityName, oldMaxHp, newMaxHp);
     public static void RaiseEntityMaxTpChanged(string entityId, string entityName, int oldMaxTp, int newMaxTp) => EntityMaxTpChanged?.Invoke(entityId, entityName, oldMaxTp, newMaxTp);
@@ -77,6 +87,9 @@ public static class CombatEventBus
         BuffDebuffApplied      = null;
         BuffDebuffTicked       = null;
         BuffDebuffExpired      = null;
+        RegenDrainApplied      = null;
+        RegenDrainTicked       = null;
+        RegenDrainExpired      = null;
         EntityTpChanged        = null;
         EntityMaxHpChanged     = null;
         EntityMaxTpChanged     = null;

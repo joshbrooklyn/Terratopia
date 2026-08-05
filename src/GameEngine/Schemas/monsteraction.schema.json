@@ -19,7 +19,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 10,
+      "const": 11,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "monsterActionId": {
@@ -136,6 +136,47 @@
                 "type": "boolean",
                 "default": false,
                 "description": "When true, this entry never expires from the round clock and rounds is ignored — it stays active until an opposite-polarity application on the same stat cancels it. Hand-maintained against CombatEngine.DataClasses.BuffDebuffSpec."
+              }
+            }
+          }
+        },
+        "regensDrains": {
+          "type": "array",
+          "uniqueBy": ["stat", "target"],
+          "description": "BasicDamage/BasicHeal: optional. Timed regen/drain, each applied once after the action fully resolves. Heals or damages the target's Hp or Tp by a fixed percentage of its max at the start of every round, with no elemental component. At most one entry per stat+target combination.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["stat", "type", "target", "rounds", "untilRemoved"],
+            "properties": {
+              "stat": {
+                "type": "string",
+                "enum": ["Hp", "Tp"],
+                "default": "Hp",
+                "description": "Hand-maintained against CombatEngine.Enums.RegenDrainStat."
+              },
+              "type": {
+                "type": "string",
+                "enum": ["Positive", "Negative"],
+                "default": "Positive",
+                "description": "Positive heals/restores gameSettings.regenDrainHpPct or regenDrainTpPct of the resource's max each round, Negative deals/spends the same fraction. Hand-maintained against CombatEngine.Enums.RegenDrainType."
+              },
+              "target": {
+                "type": "string",
+                "enum": ["SelectedTargets", "Self", "RandomAlly", "RandomEnemy", "AllAllies", "AllEnemies"],
+                "default": "SelectedTargets",
+                "description": "Who this entry lands on, relative to the actor and independent of the action's own targets. SelectedTargets is the action's chosen targets, de-duplicated. RandomAlly excludes the actor. All selectors consider living entities only. Hand-maintained against CombatEngine.Enums.BuffDebuffTarget (shared with buffsDebuffs)."
+              },
+              "rounds": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 0,
+                "description": "Rounds it lasts. The heal/damage is applied at the start of each round, before the remaining rounds are counted down. Re-applying the same type adds to the remaining rounds; the opposite type cancels it out. Ignored when untilRemoved is true."
+              },
+              "untilRemoved": {
+                "type": "boolean",
+                "default": false,
+                "description": "When true, this entry never expires from the round clock and rounds is ignored — it stays active until an opposite-polarity application on the same stat cancels it. Hand-maintained against CombatEngine.DataClasses.RegenDrainSpec."
               }
             }
           }

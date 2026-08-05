@@ -40,5 +40,6 @@ public class BasicDamageFunction : CombatFunction
         }
 
         ApplyBuffsDebuffs(ctx);
+        ApplyRegensDrains(ctx);
     }
 }

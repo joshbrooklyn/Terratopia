@@ -21,6 +21,8 @@ public sealed class CombatBalance
     public KeywordBalanceSettings Keywords { get; init; } = new();
     public int LivingDeadReviveHp { get; init; } = 1;
     public double TimedBuffPct { get; init; } = 0.35;
+    public double RegenDrainHpPct { get; init; } = 0.10;
+    public double RegenDrainTpPct { get; init; } = 0.10;
 
     public sealed class DamageFormulaSettings
     {

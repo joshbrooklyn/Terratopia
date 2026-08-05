@@ -59,10 +59,16 @@ public sealed class CombatFunctionContext
     // untilRemoved is true, rounds is ignored and the entry never expires from the round clock.
     public required Action<CombatEntity, BuffDebuffStat, bool, int, bool> ApplyBuffDebuff { get; init; }
 
-    // (selector) => the living entities a buffsDebuffs[] entry lands on, resolved relative to
-    // Actor and independent of Targets except for BuffDebuffTarget.SelectedTargets. RandomAlly/
-    // RandomEnemy draw from the engine's shared Rng.
+    // (selector) => the living entities a buffsDebuffs[]/regensDrains[] entry lands on, resolved
+    // relative to Actor and independent of Targets except for BuffDebuffTarget.SelectedTargets.
+    // RandomAlly/RandomEnemy draw from the engine's shared Rng.
     public required Func<BuffDebuffTarget, IReadOnlyList<CombatEntity>> ResolveBuffDebuffTargets { get; init; }
+
+    // (target, stat, isPositive, rounds, untilRemoved) => applies a regen/drain, raising
+    // RegenDrainApplied, or RegenDrainExpired when an opposite-polarity entry cancels the existing
+    // one out. When untilRemoved is true, rounds is ignored and the entry never expires from the
+    // round clock. Targets are resolved via ResolveBuffDebuffTargets, same as buffsDebuffs.
+    public required Action<CombatEntity, RegenDrainStat, bool, int, bool> ApplyRegenDrain { get; init; }
 
     // Convenience: cost resolution + deduction, the first line of any function without bespoke
     // TP rules.

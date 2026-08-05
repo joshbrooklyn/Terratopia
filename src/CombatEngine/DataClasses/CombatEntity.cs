@@ -52,6 +52,7 @@ public class CombatEntity
     private readonly HashSet<string> _consumedPassives = new();
     public IReadOnlyCollection<string> ConsumedPassives => _consumedPassives;
     private readonly Dictionary<BuffDebuffStat, BuffDebuff> _buffsDebuffs = new();
+    private readonly Dictionary<RegenDrainStat, RegenDrain> _regensDrains = new();
 
     // At most one buff or debuff per stat, and every one of them moves the stat by the same
     // global magnitude - polarity is the only thing that varies per buff.
@@ -118,8 +119,23 @@ public class CombatEntity
         }
 
         int oldTp = Tp;
-        Tp -= amount;
+        Tp = Math.Max(0, Tp - amount);
         Logger.Debug($"[combat] DeductTp: {Name} oldTp={oldTp} amount={amount} -> newTp={Tp}");
+        CombatEventBus.RaiseEntityTpChanged(EntityId, Name, oldTp, Tp);
+    }
+
+    // Mirrors Heal: caps at MaxTp, no-ops on a non-positive amount.
+    public void RestoreTp(int amount)
+    {
+        if (amount <= 0)
+        {
+            Logger.Debug($"[combat] RestoreTp: {Name} amount={amount} -> skipped (non-positive)");
+            return;
+        }
+
+        int oldTp = Tp;
+        Tp = Math.Min(MaxTp, Tp + amount);
+        Logger.Debug($"[combat] RestoreTp: {Name} oldTp={oldTp} amount={amount} -> newTp={Tp}");
         CombatEventBus.RaiseEntityTpChanged(EntityId, Name, oldTp, Tp);
     }
 
@@ -216,14 +232,137 @@ public class CombatEntity
         }
     }
 
+    // A resource holds at most one regen/drain, following the same merge/cancel/sticky-UntilRemoved
+    // rules as AddBuffDebuff. Unlike a buff/debuff, applying an entry changes nothing by itself -
+    // the HP/TP delta only lands once ApplyRegensDrains runs - so there is no oldValue/newValue to
+    // report on this event.
+    public void AddRegenDrain(RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved)
+    {
+        if (!untilRemoved && roundsRemaining <= 0)
+        {
+            Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} -> skipped (non-positive rounds)");
+            return;
+        }
+
+        if (_regensDrains.TryGetValue(stat, out var existing))
+        {
+            if (existing.IsPositive == isPositive)
+            {
+                existing.UntilRemoved = existing.UntilRemoved || untilRemoved;
+                if (!existing.UntilRemoved)
+                {
+                    existing.RoundsRemaining += roundsRemaining;
+                }
+                _regensDrains[stat] = existing;
+                Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> refreshed to {(existing.UntilRemoved ? "untilRemoved" : existing.RoundsRemaining.ToString())}");
+                CombatEventBus.RaiseRegenDrainApplied(EntityId, Name, stat, isPositive, existing.RoundsRemaining, existing.UntilRemoved);
+                return;
+            }
+
+            _regensDrains.Remove(stat);
+            Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} -> cancelled existing (isPositive={existing.IsPositive})");
+            CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, existing.IsPositive);
+            return;
+        }
+
+        _regensDrains[stat] = new RegenDrain { Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved };
+        Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> applied");
+        CombatEventBus.RaiseRegenDrainApplied(EntityId, Name, stat, isPositive, roundsRemaining, untilRemoved);
+    }
+
+    // Applies every active regen/drain's HP/TP delta for this round. A flat percentage of the
+    // resource's max, computed directly here rather than through CombatMath - no Defense
+    // mitigation, no element, matching the design ("no elemental component"). Routes through the
+    // existing TakeDamage/Heal/SpendTp/RestoreTp so clamping, death handling (HandleDefeat/OnDeath
+    // passives), and the usual EntityDamaged/EntityHealed/EntityTpChanged events all fire exactly
+    // as they would for any other source. The entity itself is passed as the "actor" - the
+    // affliction's source, for logging/event purposes, is the afflicted entity.
+    private void ApplyRegensDrains()
+    {
+        if (IsDead)
+            return;
+
+        foreach (var regenDrain in _regensDrains.Values)
+        {
+            switch (regenDrain.Stat)
+            {
+                case RegenDrainStat.Hp:
+                    int hpAmount = (int)Math.Round(MaxHp * CombatBalance.Current.RegenDrainHpPct);
+                    if (regenDrain.IsPositive)
+                        Heal(this, hpAmount);
+                    else
+                        TakeDamage(this, hpAmount);
+                    break;
+                case RegenDrainStat.Tp:
+                    int tpAmount = (int)Math.Round(MaxTp * CombatBalance.Current.RegenDrainTpPct);
+                    if (regenDrain.IsPositive)
+                        RestoreTp(tpAmount);
+                    else
+                        SpendTp(tpAmount);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(regenDrain.Stat), regenDrain.Stat, "No resource for this RegenDrainStat.");
+            }
+
+            // A drain that kills the entity mid-loop shouldn't also apply any of its remaining
+            // entries this round.
+            if (IsDead)
+                return;
+        }
+    }
+
+    public void TickRegensDrains()
+    {
+        // Snapshot the keys so an expiring entry can be removed inside the loop.
+        foreach (var stat in _regensDrains.Keys.ToList())
+        {
+            var regenDrain = _regensDrains[stat];
+
+            // UntilRemoved entries never tick - they're removed only by opposite-polarity
+            // cancellation in AddRegenDrain, never by the round clock.
+            if (regenDrain.UntilRemoved)
+            {
+                continue;
+            }
+
+            regenDrain.RoundsRemaining--;
+
+            if (regenDrain.RoundsRemaining <= 0)
+            {
+                _regensDrains.Remove(stat);
+                Logger.Debug($"[combat] TickRegensDrains: {Name} stat={stat} isPositive={regenDrain.IsPositive} -> expired");
+                CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, regenDrain.IsPositive);
+            }
+            else
+            {
+                _regensDrains[stat] = regenDrain;
+                Logger.Debug($"[combat] TickRegensDrains: {Name} stat={stat} isPositive={regenDrain.IsPositive} -> {regenDrain.RoundsRemaining} rounds remaining");
+                CombatEventBus.RaiseRegenDrainTicked(EntityId, Name, stat, regenDrain.IsPositive, regenDrain.RoundsRemaining);
+            }
+        }
+    }
+
     internal void OnRoundStart()
     {
+        // ApplyRegensDrains lands the HP/TP delta first, so a rounds:1 entry always fires exactly
+        // once before TickRegensDrains removes it. TickBuffDebuffs runs afterward - order between
+        // the two families doesn't matter, since they touch disjoint state.
+        ApplyRegensDrains();
+        TickRegensDrains();
         TickBuffDebuffs();
     }
 
     private struct BuffDebuff
     {
         public BuffDebuffStat Stat;
+        public bool IsPositive;
+        public int RoundsRemaining;
+        public bool UntilRemoved;
+    }
+
+    private struct RegenDrain
+    {
+        public RegenDrainStat Stat;
         public bool IsPositive;
         public int RoundsRemaining;
         public bool UntilRemoved;

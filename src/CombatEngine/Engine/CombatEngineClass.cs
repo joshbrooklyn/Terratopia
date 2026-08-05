@@ -135,6 +135,7 @@ public class CombatEngineClass
             ApplyHeal             = (actor, target, amount)         => target.Heal(actor, amount),
             ApplyBuffDebuff       = (target, stat, isPositive, rounds, untilRemoved) => target.AddBuffDebuff(stat, isPositive, rounds, untilRemoved),
             ResolveBuffDebuffTargets = selector => _roster.ResolveBuffDebuffTargets(actor, selector, targets),
+            ApplyRegenDrain       = (target, stat, isPositive, rounds, untilRemoved) => target.AddRegenDrain(stat, isPositive, rounds, untilRemoved),
         });
 
         CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());

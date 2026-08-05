@@ -18,6 +18,8 @@ public class GameSettings : IGameDataObject
     public required KeywordBalanceSettings Keywords { get; init; }
     public required int LivingDeadReviveHp { get; init; }
     public required double TimedBuffPct { get; init; }
+    public required double RegenDrainHpPct { get; init; }
+    public required double RegenDrainTpPct { get; init; }
 
     public class DamageFormulaSettings
     {

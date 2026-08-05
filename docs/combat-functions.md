@@ -276,6 +276,7 @@ The fields currently available to read in `ctx.Parameters`, in
 | `CalcType` | `DamageOrHealCalcType?` | Whether `PowerFactor` is a multiplier on the actor's `Power` stat (`StandardFormula`), a flat power value that still scales with Level and is mitigated by Defense (`FixedPower`), the entire base amount outright — skipping both Power and Level, though Defense still mitigates it (`FixedAmount`), or a fraction of the target's MaxHp used as the entire base amount, again skipping Power and Level (`PercentOfMax`). |
 | `PowerFactor` | `double?` | The action's base power modifier — the number that scales into a damage or heal amount before keyword bonuses are added. |
 | `BuffsDebuffs` | `IReadOnlyList<BuffDebuffSpec>?` | Timed buffs/debuffs this action applies, each resolved and applied once after the action fully resolves — after all hits, all damage/healing, and regardless of what was evaded. `null` or empty means the action applies none. |
+| `RegensDrains` | `IReadOnlyList<RegenDrainSpec>?` | Timed regen/drain this action applies, resolved and applied once the same way as `BuffsDebuffs`. Heals/restores or damages/spends a fixed percentage (`GameSettings.RegenDrainHpPct`/`RegenDrainTpPct`) of the target's MaxHp/MaxTp at the start of every round, with no elemental component. See [`regen-and-drain.md`](regen-and-drain.md). |
 
 Each `BuffDebuffSpec` entry is fully self-contained — `Stat`, `Type` (`Positive`/`Negative`),
 `Target`, `Rounds`, and `UntilRemoved` are all mandatory C# `required` properties, so unlike the
@@ -308,7 +309,9 @@ different targets that happen to resolve to the same entity.
 
 See [`buffs-and-debuffs.md`](buffs-and-debuffs.md) for the full writeup — timing/evasion semantics,
 data-authoring examples, GameData Editor and migration support, and plain-English descriptions of
-the test suite.
+the test suite. `RegensDrains` (`IReadOnlyList<RegenDrainSpec>?`) works the same way, applied
+through the analogous `ApplyRegensDrains(ctx)` helper; see
+[`regen-and-drain.md`](regen-and-drain.md) for its full writeup.
 
 ## Reference: `CombatFunctionContext`
 
@@ -337,4 +340,5 @@ Everything available on `ctx` inside `Execute`, in
 | `ApplyDamage(actor, target, amount, isCrit)` | Applies a damage amount to a target. |
 | `ApplyHeal(actor, target, amount)` | Applies a heal amount to a target. |
 | `ApplyBuffDebuff(target, stat, isPositive, rounds, untilRemoved)` | Applies a buff/debuff to one of a target's stats. Re-applying the same polarity extends it (or, if either side is `untilRemoved`, keeps it indefinite); the opposite polarity cancels the existing one out. `rounds` is ignored when `untilRemoved` is true. |
-| `ResolveBuffDebuffTargets(selector)` | The living entities a `BuffDebuffTarget` selector resolves to, relative to `Actor`. Used by the shared `ApplyBuffsDebuffs(ctx)` helper above — call that instead of this directly in almost every case. |
+| `ResolveBuffDebuffTargets(selector)` | The living entities a `BuffDebuffTarget` selector resolves to, relative to `Actor`. Used by the shared `ApplyBuffsDebuffs(ctx)`/`ApplyRegensDrains(ctx)` helpers above — call that instead of this directly in almost every case. |
+| `ApplyRegenDrain(target, stat, isPositive, rounds, untilRemoved)` | Applies a regen/drain to one of a target's resources (`Hp`/`Tp`). Same re-apply/cancel rules as `ApplyBuffDebuff`. |

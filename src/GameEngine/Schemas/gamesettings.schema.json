@@ -14,12 +14,14 @@
     "turnOrder",
     "keywords",
     "livingDeadReviveHp",
-    "timedBuffPct"
+    "timedBuffPct",
+    "regenDrainHpPct",
+    "regenDrainTpPct"
   ],
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 2,
+      "const": 3,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "damageFormula": {
@@ -123,6 +125,14 @@
     "timedBuffPct": {
       "type": "number",
       "description": "CombatEntity.AddBuffDebuff: global magnitude (as a fraction, e.g. 0.35 = 35%) applied by every timed buff/debuff."
+    },
+    "regenDrainHpPct": {
+      "type": "number",
+      "description": "CombatEntity.ApplyRegensDrains: fraction of MaxHp (e.g. 0.10 = 10%) healed or dealt by every timed Hp regen/drain, at the start of every round."
+    },
+    "regenDrainTpPct": {
+      "type": "number",
+      "description": "CombatEntity.ApplyRegensDrains: fraction of MaxTp (e.g. 0.10 = 10%) restored or drained by every timed Tp regen/drain, at the start of every round."
     }
   }
 }

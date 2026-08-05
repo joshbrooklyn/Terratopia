@@ -10,8 +10,8 @@
 		1. Power Up/Power Down - Increases/decreases Power by 30%
 		2. Defense Up/Defense Down - Increases/decreases Defense by 30%
 		3. Speed Up/Speed Down - Take your turn at the beginning/end of the turn order.  If multiple characters have Speed Up/Dwn, their turns are sorted by randomized speed, identically to normal turn order (see [combat-flow](combat-flow)) 
-		4. Regen/Poison - Gain/Lose 10% of your max Hp at the end of every round
-			1. Maybe this should be a triggered effect?
+		4. Regen/Drain - Gain/Lose 10% of your max Hp or Tp at the start of every round
+			1. Implemented in CombatEngine as its own parallel mechanic (RegenDrainSpec/RegenDrainStat/RegenDrainType), mirroring Power/Defense/Speed Up/Down rather than being folded into the same enum - see [docs/regen-and-drain.md](../docs/regen-and-drain.md).
 	2. Complex (Not exhaustive)
 		1. Immune - Take 0 damage the next time you would take Hp damage, then reduce Immune by 1
 		2. Debilitate - Next attack that hits you that has an element, reduce your lowest resistance to that attack by one, then reduce Debilitate by 1

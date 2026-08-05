@@ -49,4 +49,29 @@ public abstract class CombatFunction
             }
         }
     }
+
+    // Resolves and applies every regensDrains[] entry, the same way as ApplyBuffsDebuffs - shared
+    // by every function that can rider one onto its action, called once after the function has
+    // fully resolved its own damage/healing, no-ops when none were authored, and throws when two
+    // entries land on the same (entity, stat) pair.
+    protected static void ApplyRegensDrains(CombatFunctionContext ctx)
+    {
+        var specs = ctx.Parameters.RegensDrains;
+        if (specs is not { Count: > 0 })
+            return;
+
+        var applied = new HashSet<(string EntityId, RegenDrainStat Stat)>();
+
+        foreach (var spec in specs)
+        {
+            foreach (var entity in ctx.ResolveBuffDebuffTargets(spec.Target))
+            {
+                if (!applied.Add((entity.EntityId, spec.Stat)))
+                    throw new InvalidOperationException(
+                        $"{ctx.Command.CombatFunction} ('{ctx.Command.ActionId}'): two regensDrains entries both target {entity.Name}'s {spec.Stat}.");
+
+                ctx.ApplyRegenDrain(entity, spec.Stat, spec.Type == RegenDrainType.Positive, spec.Rounds, spec.UntilRemoved);
+            }
+        }
+    }
 }

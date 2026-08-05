@@ -83,6 +83,8 @@ public class GameEngineClass
         },
         LivingDeadReviveHp = s.LivingDeadReviveHp,
         TimedBuffPct = s.TimedBuffPct,
+        RegenDrainHpPct = s.RegenDrainHpPct,
+        RegenDrainTpPct = s.RegenDrainTpPct,
     };
 
     public void CompleteStartup()  => _gameFlowMachine.CompleteStartup();

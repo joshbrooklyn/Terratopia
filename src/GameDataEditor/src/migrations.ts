@@ -237,12 +237,32 @@ function addTimedBuffPct(data: Record<string, unknown>): MigrationResult {
 	return { notes: ['Set timedBuffPct to 0.35.'] };
 }
 
+/** v2 → v3: backfills the new required `regenDrainHpPct`/`regenDrainTpPct`, the global magnitudes for timed regen/drain (CombatEntity.ApplyRegensDrains). */
+function addRegenDrainPct(data: Record<string, unknown>): MigrationResult {
+	data.regenDrainHpPct = 0.10;
+	data.regenDrainTpPct = 0.10;
+	data.schemaVersion = 3;
+	return { notes: ['Set regenDrainHpPct and regenDrainTpPct to 0.10.'] };
+}
+
+/** v9 → v10 (tech): adds the optional `regensDrains` array; nothing to backfill. */
+function bumpToV10(data: Record<string, unknown>): MigrationResult {
+	data.schemaVersion = 10;
+	return { notes: [] };
+}
+
+/** v10 → v11 (item/monsteraction): adds the optional `regensDrains` array; nothing to backfill. */
+function bumpToV11(data: Record<string, unknown>): MigrationResult {
+	data.schemaVersion = 11;
+	return { notes: [] };
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10 },
-	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9 },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10 },
-	'gamesettings.schema.json': { 1: addTimedBuffPct },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10, 10: bumpToV11 },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9, 9: bumpToV10 },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11 },
+	'gamesettings.schema.json': { 1: addTimedBuffPct, 2: addRegenDrainPct },
 };
 
 export interface RunMigrationsResult {

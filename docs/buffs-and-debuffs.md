@@ -212,7 +212,7 @@ The GameData Editor's form view needs no bespoke UI for this: it's fully schema-
 `renderObjectListField` (`src/GameDataEditor/media/main.js`), giving an "Add entry"/"Remove" list
 where `stat`, `type`, `target`, `rounds`, and `untilRemoved` are each editable per entry.
 
-Current schema versions: tech and monsteraction are at 8, item is at 9.
+Current schema versions: tech 10, item 11, monsteraction 11.
 
 ## Test coverage
 
@@ -374,3 +374,6 @@ test and a scripted follow-up move finishing the enemy off so the fight terminat
 - [`combat-engine-public-interface.md`](combat-engine-public-interface.md) — the
   `BuffDebuffApplied`/`BuffDebuffTicked`/`BuffDebuffExpired` event signatures, which this feature
   doesn't change.
+- [`regen-and-drain.md`](regen-and-drain.md) — the sibling feature that mirrors nearly every
+  structural decision here (target selectors, `UntilRemoved`, collision handling), applied to Hp/Tp
+  percentages instead of stat modifiers.

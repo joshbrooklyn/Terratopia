@@ -24,4 +24,8 @@ public class CombatFunctionParameters
     // marks stat/type/target/rounds required) and carries its own target selector, so it need not
     // land on the action's own targets.
     public IReadOnlyList<BuffDebuffSpec>? BuffsDebuffs { get; init; }
+
+    // Timed regen/drain (heal/damage a fixed % of MaxHp or MaxTp at the start of every round),
+    // applied once each the same way as BuffsDebuffs.
+    public IReadOnlyList<RegenDrainSpec>? RegensDrains { get; init; }
 }

@@ -68,7 +68,10 @@ Static event bus; the engine's only channel for reporting what happened. All eve
 | `BuffDebuffApplied` | `Action<string, string, BuffDebuffStat, bool, int, bool, int, int>` | entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue |
 | `BuffDebuffTicked` | `Action<string, string, BuffDebuffStat, bool, int>` | entityId, entityName, stat, isPositive, roundsRemaining |
 | `BuffDebuffExpired` | `Action<string, string, BuffDebuffStat, bool, int, int>` | entityId, entityName, stat, isPositive, oldValue, newValue |
-| `EntityTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldTp, newTp |
+| `RegenDrainApplied` | `Action<string, string, RegenDrainStat, bool, int, bool>` | entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved — no oldValue/newValue, since applying an entry doesn't move the resource by itself; see [`regen-and-drain.md`](regen-and-drain.md) |
+| `RegenDrainTicked` | `Action<string, string, RegenDrainStat, bool, int>` | entityId, entityName, stat, isPositive, roundsRemaining |
+| `RegenDrainExpired` | `Action<string, string, RegenDrainStat, bool>` | entityId, entityName, stat, isPositive |
+| `EntityTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldTp, newTp — also raised by the per-round Hp/Tp regen/drain delta, alongside `EntityDamaged`/`EntityHealed` |
 | `EntityMaxHpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxHp, newMaxHp |
 | `EntityMaxTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxTp, newMaxTp |
 | `EntityDeath` | `Action<string, string>` | entityId, entityName |

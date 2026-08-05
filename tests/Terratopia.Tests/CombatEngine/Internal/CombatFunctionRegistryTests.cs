@@ -140,4 +140,31 @@ public class CombatFunctionRegistryTests
             Assert.Equal(expected, schemaFields);
         }
     }
+
+    [Fact]
+    public void RegenDrainSpec_MatchesSchemaSuperset()
+    {
+        // What: verifies parameters.regensDrains.items in every action schema declares exactly the
+        //       fields RegenDrainSpec exposes — the same hand-mirror guarantee as
+        //       BuffDebuffSpec_MatchesSchemaSuperset.
+        // How:  regensDrains.items is a closed (additionalProperties: false) hand-maintained mirror
+        //       of RegenDrainSpec, so this reflects over it, camelCases each property name, and
+        //       asserts set equality against parameters.properties.regensDrains.items.properties in
+        //       each schema.
+        var expected = typeof(RegenDrainSpec)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => CamelCase(p.Name))
+            .OrderBy(n => n)
+            .ToArray();
+
+        foreach (var resourceName in ActionSchemaResources)
+        {
+            var schemaFields = LoadSchema(resourceName)
+                .GetProperty("properties").GetProperty("parameters").GetProperty("properties")
+                .GetProperty("regensDrains").GetProperty("items").GetProperty("properties")
+                .EnumerateObject().Select(p => p.Name).OrderBy(n => n).ToArray();
+
+            Assert.Equal(expected, schemaFields);
+        }
+    }
 }

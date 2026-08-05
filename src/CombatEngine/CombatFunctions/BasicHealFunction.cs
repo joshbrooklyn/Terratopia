@@ -33,5 +33,6 @@ public class BasicHealFunction : CombatFunction
         }
 
         ApplyBuffsDebuffs(ctx);
+        ApplyRegensDrains(ctx);
     }
 }
