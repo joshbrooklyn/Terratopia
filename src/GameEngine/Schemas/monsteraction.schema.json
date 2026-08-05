@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "MonsterAction",
-  "description": "Terratopia monster action definition (src/GameEngine/DataClasses/MonsterAction.cs)",
+  "description": "Terratopia monster action definition (src/GameEngine/DataClasses/MonsterAction.cs). Note: if targetingType is \"All\" or \"Self\", allowMultipleAttackOnSameTarget must be omitted — enforced at load time by ContentLoader, not expressible here.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -19,7 +19,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 8,
+      "const": 10,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "monsterActionId": {
@@ -52,14 +52,7 @@
       "uniqueItems": true,
       "description": "Names of keyword classes (src/CombatEngine/Keywords) applied to this action, e.g. \"Engage\". Hand-maintained against PowerKeywordRegistry.cs's registered KeywordName constants — keep in sync by hand."
     },
-    "traits": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
-    },
-    "numTargets": {
+    "numAttacks": {
       "type": "integer",
       "default": 1
     },
@@ -75,6 +68,10 @@
     "livingOrDead": {
       "type": "string",
       "enum": ["Living", "Dead", "Both"]
+    },
+    "allowMultipleAttackOnSameTarget": {
+      "type": "boolean",
+      "description": "Must be omitted when targetingType is \"All\" or \"Self\"."
     },
     "combatFunction": {
       "type": "string",

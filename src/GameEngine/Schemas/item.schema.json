@@ -18,7 +18,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 9,
+      "const": 10,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "itemId": {
@@ -52,13 +52,6 @@
       },
       "uniqueItems": true,
       "description": "Names of keyword classes (src/CombatEngine/Keywords) applied to this action, e.g. \"Engage\". Hand-maintained against PowerKeywordRegistry.cs's registered KeywordName constants — keep in sync by hand."
-    },
-    "traits": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
     },
     "targetingType": {
       "type": "string",

@@ -16,11 +16,11 @@ public class MonsterAction : IGameDataObject
     public int Tier { get; init; }
     public string Description { get; init; } = "";
     public List<string> Keywords { get; init; } = [];
-    public List<string> Traits { get; init; } = [];
-    public int NumTargets { get; init; } = 1;
+    public int NumAttacks { get; init; } = 1;
     public TargetingType TargetingType { get; init; } = TargetingType.Choose;
     public required ValidTarget ValidTargets { get; init; }
     public required LivingOrDead LivingOrDead { get; init; }
+    public bool? AllowMultipleAttackOnSameTarget { get; init; }
     public required string CombatFunction { get; init; }
     public CombatFunctionParameters Parameters { get; init; } = new();
 }

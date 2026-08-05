@@ -204,6 +204,32 @@ function backfillUntilRemovedToV9(data: Record<string, unknown>): MigrationResul
 	return backfillUntilRemoved(data, 9);
 }
 
+/** v8 → v9 (monsteraction): drops the never-wired numTargets field; numAttacks/allowMultipleAttackOnSameTarget are new and optional (schema default / omittable), so no backfill is needed. */
+function dropNumTargetsV9(data: Record<string, unknown>): MigrationResult {
+	const had = data.numTargets !== undefined;
+	delete data.numTargets;
+	data.schemaVersion = 9;
+	return { notes: had ? ['Removed numTargets (was never used by the engine).'] : [] };
+}
+
+/** Drops the never-wired traits field, common to tech/item/monsteraction. */
+function dropTraits(data: Record<string, unknown>, nextVersion: number): MigrationResult {
+	const had = data.traits !== undefined;
+	delete data.traits;
+	data.schemaVersion = nextVersion;
+	return { notes: had ? ['Removed traits (was never used by the engine).'] : [] };
+}
+
+/** v8 → v9 (tech): see dropTraits. */
+function dropTraitsV9(data: Record<string, unknown>): MigrationResult {
+	return dropTraits(data, 9);
+}
+
+/** v9 → v10 (item/monsteraction): see dropTraits. */
+function dropTraitsV10(data: Record<string, unknown>): MigrationResult {
+	return dropTraits(data, 10);
+}
+
 /** v1 → v2: backfills the new required `timedBuffPct`, the global magnitude for timed buffs/debuffs (CombatEntity.AddBuffDebuff). */
 function addTimedBuffPct(data: Record<string, unknown>): MigrationResult {
 	data.timedBuffPct = 0.35;
@@ -213,9 +239,9 @@ function addTimedBuffPct(data: Record<string, unknown>): MigrationResult {
 
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9 },
-	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8 },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8 },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10 },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9 },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10 },
 	'gamesettings.schema.json': { 1: addTimedBuffPct },
 };
 

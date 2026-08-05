@@ -39,7 +39,21 @@ public static class ContentLoader
 
     public static List<Monster> LoadMonsters() => LoadDirectory<Monster>("Monsters");
 
-    public static List<MonsterAction> LoadMonsterActions() => LoadDirectory<MonsterAction>("MonsterActions");
+    public static List<MonsterAction> LoadMonsterActions()
+    {
+        var actions = LoadDirectory<MonsterAction>("MonsterActions");
+
+        foreach (var action in actions)
+        {
+            bool mustBeBlank = action.TargetingType is TargetingType.All or TargetingType.Self;
+
+            if (mustBeBlank && action.AllowMultipleAttackOnSameTarget is not null)
+                throw new ArgumentException(
+                    $"MonsterAction '{action.MonsterActionId}': allowMultipleAttackOnSameTarget must be blank for TargetingType '{action.TargetingType}'.");
+        }
+
+        return actions;
+    }
 
     public static List<Dungeon> LoadDungeons() => LoadDirectory<Dungeon>("Dungeons");
 

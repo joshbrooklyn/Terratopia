@@ -82,6 +82,9 @@ const DYNAMIC_ENUM_FIELDS: Record<string, Record<string, string>> = {
 		techsIds: 'Techs',
 		itemIds: 'Items',
 	},
+	Monsters: {
+		monsterActionIds: 'MonsterActions',
+	},
 };
 
 function getSchemaWithDynamicEnums(extensionUri: vscode.Uri, gameDataRoot: string | undefined, category: string): JsonSchemaObject | undefined {

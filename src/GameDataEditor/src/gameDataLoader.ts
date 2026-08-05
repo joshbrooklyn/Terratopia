@@ -59,6 +59,7 @@ interface CategoryDefinition {
 const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
 	{ category: 'Adventurers', folderName: 'Adventurers', idField: 'adventurerId', nameField: 'name', schemaFile: 'adventurer.schema.json' },
 	{ category: 'Monsters', folderName: 'Monsters', idField: 'monsterId', nameField: 'name', schemaFile: 'monster.schema.json' },
+	{ category: 'MonsterActions', folderName: 'MonsterActions', idField: 'monsterActionId', nameField: 'name', schemaFile: 'monsteraction.schema.json' },
 	{ category: 'Techs', folderName: 'Techs', idField: 'techId', nameField: 'name', schemaFile: 'tech.schema.json' },
 	{ category: 'Items', folderName: 'Items', idField: 'itemId', nameField: 'name', schemaFile: 'item.schema.json' },
 	{ category: 'GameSettings', folderName: '', idField: '', nameField: '', schemaFile: 'gamesettings.schema.json', singleFile: 'GameSettings.json' },

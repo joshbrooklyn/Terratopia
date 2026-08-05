@@ -245,6 +245,8 @@ public class GameEngineClass
             Parameters     = action.Parameters,
             Keywords       = action.Keywords,
             ActionId       = action.MonsterActionId,
+            NumAttacks     = action.NumAttacks,
+            AllowMultipleAttackOnSameTarget = action.AllowMultipleAttackOnSameTarget ?? false,
         };
     }
 

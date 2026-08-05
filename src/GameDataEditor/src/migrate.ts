@@ -7,8 +7,7 @@ import { runMigrations } from './migrations';
 
 /**
  * On-disk folders to scan, independent of CATEGORY_DEFINITIONS in gameDataLoader.ts —
- * that list drives the tree UI and doesn't include MonsterActions, which has no
- * form-editor support yet but still needs its schemaVersion/enum drift caught here.
+ * that list drives the tree UI. The two lists are kept in sync by hand.
  */
 const MIGRATION_TARGETS: { folderName: string; schemaFile: string }[] = [
 	{ folderName: 'Adventurers', schemaFile: 'adventurer.schema.json' },

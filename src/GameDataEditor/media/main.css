@@ -130,6 +130,27 @@ pre {
 	padding-bottom: 16px;
 }
 
+.form-section {
+	grid-column: 1 / -1;
+	padding-top: 16px;
+	border-top: 1px solid var(--vscode-panel-border);
+}
+
+.form-section:first-child {
+	padding-top: 0;
+	border-top: none;
+}
+
+.form-section-title {
+	grid-column: 1 / -1;
+	margin: 0 0 10px;
+	font-size: 0.78em;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--vscode-descriptionForeground);
+}
+
 .group-row {
 	grid-column: 1 / -1;
 }
@@ -234,14 +255,17 @@ pre {
 	border-radius: 4px;
 	padding: 10px;
 	margin: 6px 0;
+	background-color: var(--vscode-textCodeBlock-background);
 }
 
 .array-group-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	font-weight: 600;
+	padding-bottom: 8px;
 	margin-bottom: 8px;
+	border-bottom: 1px solid var(--vscode-panel-border);
+	font-weight: 600;
 	grid-column: 1 / -1;
 }
 

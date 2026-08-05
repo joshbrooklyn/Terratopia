@@ -19,19 +19,57 @@
 				visible: state => !['All', 'Self'].includes(state.targetingType),
 			},
 		},
+		MonsterActions: {
+			allowMultipleAttackOnSameTarget: {
+				watch: ['targetingType'],
+				visible: state => !['All', 'Self'].includes(state.targetingType),
+			},
+		},
 	};
 
 	const DISABLED_FIELDS = {
-		Techs: ['traits'],
-		Items: ['traits'],
+		Techs: [],
+		Items: [],
 		Adventurers: [],
-		Monsters: ['monsterActionIds'],
+		Monsters: [],
+		MonsterActions: [],
 	};
 
 	function isFieldDisabled(category, key) {
 		const fields = DISABLED_FIELDS[category];
 		return !!fields && fields.includes(key);
 	}
+
+	// Ordered groups of top-level fields, purely a display grouping for renderFieldsInto - the
+	// underlying schema/state layout is untouched. Any property not listed here (including future
+	// schema additions) falls into a trailing untitled section rather than disappearing.
+	const SECTION_DEFINITIONS = {
+		MonsterActions: [
+			{ title: 'Identity', fields: ['monsterActionId', 'name', 'jobClass', 'tier', 'description'] },
+			{ title: 'Targeting', fields: ['targetingType', 'validTargets', 'livingOrDead', 'allowMultipleAttackOnSameTarget'] },
+			{ title: 'Combat', fields: ['tpCost', 'numAttacks', 'keywords', 'combatFunction', 'parameters'] },
+		],
+		Techs: [
+			{ title: 'Identity', fields: ['techId', 'name', 'jobClass', 'tier', 'rarity', 'description'] },
+			{ title: 'Targeting', fields: ['targetingType', 'validTargets', 'livingOrDead', 'allowMultipleAttackOnSameTarget'] },
+			{ title: 'Combat', fields: ['tpCost', 'numAttacks', 'keywords', 'combatFunction', 'parameters'] },
+		],
+		Items: [
+			{ title: 'Identity', fields: ['itemId', 'name', 'rarity', 'description', 'maxUses'] },
+			{ title: 'Targeting', fields: ['targetingType', 'validTargets', 'livingOrDead', 'allowMultipleAttackOnSameTarget'] },
+			{ title: 'Combat', fields: ['numAttacks', 'keywords', 'combatFunction', 'parameters'] },
+		],
+		Monsters: [
+			{ title: 'Identity', fields: ['monsterId', 'name'] },
+			{ title: 'Stats', fields: ['hpBase', 'hpPerLevel', 'powerBase', 'powerPerLevel', 'defenseBase', 'defensePerLevel', 'speedBase', 'speedBasePerLevel'] },
+			{ title: 'Abilities', fields: ['monsterActionIds', 'passives', 'canUseFightAction'] },
+		],
+		Adventurers: [
+			{ title: 'Identity', fields: ['adventurerId', 'name'] },
+			{ title: 'Stats', fields: ['maxHp', 'hp', 'maxTp', 'tp', 'power', 'defense', 'speed', 'evasion', 'critChance', 'critModifier'] },
+			{ title: 'Abilities', fields: ['techsIds', 'itemIds', 'canUseFightAction'] },
+		],
+	};
 
 	function humanizeFieldName(key) {
 		return key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
@@ -751,7 +789,47 @@
 
 	function renderFieldsInto(container, schemaLike, state, category, pathPrefix) {
 		pathPrefix = pathPrefix || '';
-		for (const [key, propSchema] of Object.entries(schemaLike.properties || {})) {
+		const sections = SECTION_DEFINITIONS[category];
+		const allKeys = Object.keys(schemaLike.properties || {});
+		if (!sections) {
+			appendFieldRows(container, schemaLike, state, category, pathPrefix, allKeys);
+			return;
+		}
+
+		// Group into the category's named sections; anything not listed (including fields a
+		// section table hasn't caught up with yet) falls into a trailing untitled section.
+		const remaining = new Set(allKeys);
+		for (const section of sections) {
+			const keys = section.fields.filter(key => remaining.has(key));
+			keys.forEach(key => remaining.delete(key));
+			if (keys.length === 0) {
+				continue;
+			}
+			container.appendChild(renderFormSection(section.title, schemaLike, state, category, pathPrefix, keys));
+		}
+		if (remaining.size > 0) {
+			container.appendChild(renderFormSection(null, schemaLike, state, category, pathPrefix, [...remaining]));
+		}
+	}
+
+	function renderFormSection(title, schemaLike, state, category, pathPrefix, keys) {
+		const section = document.createElement('div');
+		section.className = 'form-section';
+		if (title) {
+			const heading = document.createElement('h3');
+			heading.className = 'form-section-title';
+			heading.textContent = title;
+			section.appendChild(heading);
+		}
+		const grid = document.createElement('div');
+		grid.className = 'field-grid';
+		appendFieldRows(grid, schemaLike, state, category, pathPrefix, keys);
+		section.appendChild(grid);
+		return section;
+	}
+
+	function appendFieldRows(container, schemaLike, state, category, pathPrefix, keys) {
+		for (const key of keys) {
 			if (key === 'schemaVersion') {
 				// Managed by the host (formEditorPanel.ts stamps it on save/new/copy) - never user-editable.
 				continue;
@@ -762,7 +840,7 @@
 			}
 			const required = (schemaLike.required || []).includes(key);
 			const fieldPath = pathPrefix ? `${pathPrefix}.${key}` : key;
-			container.appendChild(renderField(key, propSchema, required, state, category, fieldPath));
+			container.appendChild(renderField(key, schemaLike.properties[key], required, state, category, fieldPath));
 		}
 	}
 

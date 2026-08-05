@@ -18,7 +18,6 @@ public class Tech : IGameDataObject
     public string Description { get; init; } = "";
     public int NumAttacks { get; init; } = 1;
     public List<string> Keywords { get; init; } = [];
-    public List<string> Traits { get; init; } = [];
     public TargetingType TargetingType { get; init; } = TargetingType.Choose;
     public required ValidTarget ValidTargets { get; init; }
     public required LivingOrDead LivingOrDead { get; init; }

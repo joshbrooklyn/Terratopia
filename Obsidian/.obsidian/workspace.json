@@ -69,12 +69,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "status-effects.md",
+                "file": "character-specializations.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "status-effects"
+              "title": "character-specializations"
             }
           }
         ],
@@ -110,7 +110,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "regen",
+                "query": "weyland trait",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -241,14 +241,17 @@
       "bases:Create new base": false
     }
   },
-  "active": "5b57768951cd6a10",
+  "active": "8398a597a22b8bd6",
   "lastOpenFiles": [
-    "combat-flow.md",
-    "status-effects.md",
+    "jobs.md",
+    "complex-effects-report.md",
     "complex-action-effects.md",
+    "order-of-operations-for-stat-changes.md",
+    "how-enemy-actions-are-determined.md",
+    "status-effects.md",
+    "combat-flow.md",
     "().md",
     "elements-and-resistances.md",
-    "complex-effects-report.md",
     "passive-effects.md",
     "triggered-effects.md",
     "list-of-combat-action-features-in-implementation-order.md",
@@ -258,17 +261,14 @@
     "characters.md",
     "character-specializations.md",
     "combat-entities.md",
-    "how-enemy-actions-are-determined.md",
     "damage-calculation.md",
     "trigger-execution-order.md",
     "events.md",
-    "jobs.md",
     "doubt-gauge.md",
     "combat-actions 1.md",
     "elixirs.md",
     "evasion.md",
     "loot-system.md",
-    "characters/weyland.md",
     "pretty combat-engine-class-diagram.html",
     "entity-action-resolution.md.tmp.28300.1777947822079",
     "pretty combat-engine-public-interface.html",
