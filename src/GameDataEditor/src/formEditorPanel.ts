@@ -311,6 +311,7 @@ function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): stri
 	<div id="tree-pane">
 		<div id="tree-root"></div>
 	</div>
+	<div id="splitter"></div>
 	<div id="detail-pane">
 		<p class="placeholder">Select an item from the tree to view it.</p>
 	</div>

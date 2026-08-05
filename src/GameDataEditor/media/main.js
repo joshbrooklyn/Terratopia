@@ -1,7 +1,9 @@
 (function () {
 	const vscode = acquireVsCodeApi();
 	const treeRoot = document.getElementById('tree-root');
+	const treePane = document.getElementById('tree-pane');
 	const detailPane = document.getElementById('detail-pane');
+	const splitter = document.getElementById('splitter');
 
 	let selectedRow = null;
 	let currentDetail = null; // { filePath, category, schema, name }
@@ -33,6 +35,29 @@
 
 	function humanizeFieldName(key) {
 		return key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
+	}
+
+	// A small all-scalar object (damageFormula, keywordCap, a keyword's threshold/bonus) can sit
+	// two tracks wide in the field grid; anything with nested groups or a variable-length list
+	// needs the full row. Object lists always take the full row regardless.
+	function applyGroupSpan(row, propSchema) {
+		row.classList.add('group-row');
+		const props = Object.values(propSchema.properties || {});
+		const allScalar = props.length > 0 && props.length <= 4 &&
+			props.every(p => p.type !== 'object' && p.type !== 'array');
+		if (allScalar) {
+			row.classList.add('compact');
+		}
+	}
+
+	function appendFieldHelp(row, description) {
+		if (!description) {
+			return;
+		}
+		const help = document.createElement('p');
+		help.className = 'field-help';
+		help.textContent = description;
+		row.appendChild(help);
 	}
 
 	function appendDisabledNote(row, key, disabled) {
@@ -477,8 +502,12 @@
 			return renderStringListField(row, key, propSchema, required, state, disabled, fieldPath);
 		}
 
+		if (!disabled && propSchema.description) {
+			row.title = propSchema.description;
+		}
+
 		const label = document.createElement('label');
-		label.textContent = required ? `${key} ` : key;
+		label.textContent = required ? `${humanizeFieldName(key)} ` : humanizeFieldName(key);
 		if (required) {
 			const marker = document.createElement('span');
 			marker.className = 'required-marker';
@@ -559,10 +588,10 @@
 	}
 
 	function renderStringListField(row, key, propSchema, required, state, disabled, fieldPath) {
-		row.classList.add('array-row');
+		row.classList.add('group-row');
 
 		const label = document.createElement('label');
-		label.textContent = key + (required ? ' *' : '');
+		label.textContent = humanizeFieldName(key) + (required ? ' *' : '');
 		row.appendChild(label);
 		appendDisabledNote(row, key, disabled);
 
@@ -646,11 +675,12 @@
 	// of the object's own fields - the same body renderObjectListField uses per array entry, minus
 	// the add/remove buttons, since the object is always present rather than a list.
 	function renderObjectField(row, key, propSchema, required, state, disabled, fieldPath) {
-		row.classList.add('array-row');
+		applyGroupSpan(row, propSchema);
 
 		const label = document.createElement('label');
-		label.textContent = key + (required ? ' *' : '');
+		label.textContent = humanizeFieldName(key) + (required ? ' *' : '');
 		row.appendChild(label);
+		appendFieldHelp(row, propSchema.description);
 		appendDisabledNote(row, key, disabled);
 
 		const nestedSchemaLike = { properties: propSchema.properties || {}, required: propSchema.required || [] };
@@ -659,7 +689,7 @@
 		}
 
 		const fieldset = document.createElement('fieldset');
-		fieldset.className = 'array-group';
+		fieldset.className = 'array-group field-grid';
 		renderFieldsInto(fieldset, nestedSchemaLike, state[key], undefined, fieldPath);
 		row.appendChild(fieldset);
 
@@ -667,11 +697,12 @@
 	}
 
 	function renderObjectListField(row, key, propSchema, required, state, disabled, fieldPath) {
-		row.classList.add('array-row');
+		row.classList.add('group-row');
 
 		const label = document.createElement('label');
-		label.textContent = key + (required ? ' *' : '');
+		label.textContent = humanizeFieldName(key) + (required ? ' *' : '');
 		row.appendChild(label);
+		appendFieldHelp(row, propSchema.items && propSchema.items.description);
 		appendDisabledNote(row, key, disabled);
 
 		const entries = Array.isArray(state[key]) ? state[key] : (state[key] = []);
@@ -679,7 +710,7 @@
 
 		entries.forEach((entry, index) => {
 			const fieldset = document.createElement('fieldset');
-			fieldset.className = 'array-group';
+			fieldset.className = 'array-group field-grid';
 
 			const header = document.createElement('div');
 			header.className = 'array-group-header';
@@ -761,6 +792,7 @@
 
 		const fields = document.createElement('div');
 		fields.id = 'form-fields';
+		fields.classList.add('field-grid');
 		renderFieldsInto(fields, currentDetail.schema, formState, currentDetail.category);
 		detailPane.appendChild(fields);
 
@@ -844,6 +876,48 @@
 		}
 		errorsBox.appendChild(list);
 	}
+
+	function initSplitter() {
+		const MIN_WIDTH = 140;
+		const MAX_WIDTH = 600;
+
+		const savedState = vscode.getState();
+		if (savedState && typeof savedState.treeWidth === 'number') {
+			document.body.style.setProperty('--tree-width', `${savedState.treeWidth}px`);
+		}
+
+		if (!splitter || !treePane) {
+			return;
+		}
+
+		let dragging = false;
+
+		splitter.addEventListener('mousedown', event => {
+			event.preventDefault();
+			dragging = true;
+			splitter.classList.add('dragging');
+		});
+
+		document.addEventListener('mousemove', event => {
+			if (!dragging) {
+				return;
+			}
+			const width = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, event.clientX));
+			document.body.style.setProperty('--tree-width', `${width}px`);
+		});
+
+		document.addEventListener('mouseup', () => {
+			if (!dragging) {
+				return;
+			}
+			dragging = false;
+			splitter.classList.remove('dragging');
+			const width = treePane.getBoundingClientRect().width;
+			vscode.setState({ ...(vscode.getState() || {}), treeWidth: width });
+		});
+	}
+
+	initSplitter();
 
 	window.addEventListener('message', event => {
 		const message = event.data;
