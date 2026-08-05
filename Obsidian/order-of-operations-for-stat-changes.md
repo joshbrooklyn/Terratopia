@@ -1,0 +1,4 @@
+- When stats are changed by more than one thing, they apply in the following order:
+	- Effects that set the stat to a certain value (Power = 128)
+	- Multiplication/Division (+10% Power)
+	- Addition/Subtraction (+5 Power)
