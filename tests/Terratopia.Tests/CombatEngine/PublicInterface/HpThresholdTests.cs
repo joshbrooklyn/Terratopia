@@ -97,7 +97,7 @@ public class HpThresholdTests
     private static int? RunAndCaptureOpeningDamage(CombatEngineClass engine, CombatEntity enemy)
     {
         int? firstDamage = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _, _, _) =>
         {
             if (targetId == "enemy") firstDamage ??= dmg;
         };
@@ -119,7 +119,7 @@ public class HpThresholdTests
             allyHp: 1000, allyMaxHp: 1000, enemyHp: 100, enemyMaxHp: 100);
 
         double? appliedBonus = null;
-        CombatEventBus.KeywordApplied += (name, _, _, _, _, bonus) => { if (name == EngageKeyword.KeywordName) appliedBonus ??= bonus; };
+        CombatEventBus.KeywordApplied += (name, _, _, _, _, bonus, _, _) => { if (name == EngageKeyword.KeywordName) appliedBonus ??= bonus; };
 
         var damage = RunAndCaptureOpeningDamage(engine, enemy);
 
@@ -138,7 +138,7 @@ public class HpThresholdTests
             allyHp: 1000, allyMaxHp: 1000, enemyHp: 50, enemyMaxHp: 100);
 
         bool engageApplied = false;
-        CombatEventBus.KeywordApplied += (name, _, _, _, _, _) => { if (name == EngageKeyword.KeywordName) engageApplied = true; };
+        CombatEventBus.KeywordApplied += (name, _, _, _, _, _, _, _) => { if (name == EngageKeyword.KeywordName) engageApplied = true; };
 
         var damage = RunAndCaptureOpeningDamage(engine, enemy);
 
@@ -157,7 +157,7 @@ public class HpThresholdTests
             allyHp: 1000, allyMaxHp: 1000, enemyHp: 25, enemyMaxHp: 100);
 
         double? appliedBonus = null;
-        CombatEventBus.KeywordApplied += (name, _, _, _, _, bonus) => { if (name == CruelKeyword.KeywordName) appliedBonus ??= bonus; };
+        CombatEventBus.KeywordApplied += (name, _, _, _, _, bonus, _, _) => { if (name == CruelKeyword.KeywordName) appliedBonus ??= bonus; };
 
         var damage = RunAndCaptureOpeningDamage(engine, enemy);
 
@@ -175,7 +175,7 @@ public class HpThresholdTests
             allyHp: 1000, allyMaxHp: 1000, enemyHp: 50, enemyMaxHp: 100);
 
         bool cruelApplied = false;
-        CombatEventBus.KeywordApplied += (name, _, _, _, _, _) => { if (name == CruelKeyword.KeywordName) cruelApplied = true; };
+        CombatEventBus.KeywordApplied += (name, _, _, _, _, _, _, _) => { if (name == CruelKeyword.KeywordName) cruelApplied = true; };
 
         var damage = RunAndCaptureOpeningDamage(engine, enemy);
 
@@ -194,7 +194,7 @@ public class HpThresholdTests
             allyHp: 1000, allyMaxHp: 1000, enemyHp: 100, enemyMaxHp: 100);
 
         double? appliedBonus = null;
-        CombatEventBus.KeywordApplied += (name, _, _, _, _, bonus) => { if (name == EmpoweredKeyword.KeywordName) appliedBonus ??= bonus; };
+        CombatEventBus.KeywordApplied += (name, _, _, _, _, bonus, _, _) => { if (name == EmpoweredKeyword.KeywordName) appliedBonus ??= bonus; };
 
         var damage = RunAndCaptureOpeningDamage(engine, enemy);
 
@@ -213,7 +213,7 @@ public class HpThresholdTests
             allyHp: 500, allyMaxHp: 1000, enemyHp: 100, enemyMaxHp: 100);
 
         bool empoweredApplied = false;
-        CombatEventBus.KeywordApplied += (name, _, _, _, _, _) => { if (name == EmpoweredKeyword.KeywordName) empoweredApplied = true; };
+        CombatEventBus.KeywordApplied += (name, _, _, _, _, _, _, _) => { if (name == EmpoweredKeyword.KeywordName) empoweredApplied = true; };
 
         var damage = RunAndCaptureOpeningDamage(engine, enemy);
 
@@ -232,7 +232,7 @@ public class HpThresholdTests
             allyHp: 250, allyMaxHp: 1000, enemyHp: 100, enemyMaxHp: 100);
 
         double? appliedBonus = null;
-        CombatEventBus.KeywordApplied += (name, _, _, _, _, bonus) => { if (name == StoicKeyword.KeywordName) appliedBonus ??= bonus; };
+        CombatEventBus.KeywordApplied += (name, _, _, _, _, bonus, _, _) => { if (name == StoicKeyword.KeywordName) appliedBonus ??= bonus; };
 
         var damage = RunAndCaptureOpeningDamage(engine, enemy);
 
@@ -251,7 +251,7 @@ public class HpThresholdTests
             allyHp: 500, allyMaxHp: 1000, enemyHp: 100, enemyMaxHp: 100);
 
         bool stoicApplied = false;
-        CombatEventBus.KeywordApplied += (name, _, _, _, _, _) => { if (name == StoicKeyword.KeywordName) stoicApplied = true; };
+        CombatEventBus.KeywordApplied += (name, _, _, _, _, _, _, _) => { if (name == StoicKeyword.KeywordName) stoicApplied = true; };
 
         var damage = RunAndCaptureOpeningDamage(engine, enemy);
 

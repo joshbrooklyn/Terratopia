@@ -75,16 +75,18 @@ Keyword names are pure data. The flow from game data to damage math:
 
 1. **JSON data** — `tech.schema.json`, `item.schema.json`, and `monsteraction.schema.json` each have a `keywords` field: an array of unique strings restricted by an `enum` to the currently registered keyword names (`Teamwork`, `Engage`, `Cruel`, `Empowered`, `Stoic`, `Growth`). That enum is **hand-maintained, not generated** — it must be kept in sync by hand with `PowerKeywordRegistry.cs`'s registered `KeywordName` constants. `ContentLoader` validates every GameData file against its schema at load time and throws on an invalid value, so an out-of-sync enum (or a name not yet added to it) breaks loading, not just editor validation — see `Resolve` above for the separate, more forgiving runtime behavior once a name does pass schema validation.
 2. **Data classes** — `Tech.Keywords`, `Item.Keywords`, `MonsterAction.Keywords` are `List<string>` properties that load straight from that JSON.
-3. **`GameEngineClass`** copies both the keyword list and an `ActionId` (`Tech.TechId` / `Item.ItemId` / `MonsterAction.MonsterActionId`) onto the `CombatCommand` it builds, in `MakeTechCommand`, `MakeItemCommand`, and `MakeMonsterCombatCommand`:
+3. **`GameEngineClass`** copies both the keyword list and a `SourceId`/`SourceName` (`Tech.TechId`/`Tech.Name`, `Item.ItemId`/`Item.Name`, or `MonsterAction.MonsterActionId`/`MonsterAction.Name`) onto the `CombatCommand` it builds, in `MakeTechCommand`, `UseItem`, and `MakeMonsterCombatCommand`:
    ```csharp
-   Keywords = tech.Keywords,
-   ActionId = tech.TechId,
+   Keywords   = tech.Keywords,
+   SourceId   = tech.TechId,
+   SourceName = tech.Name,
    ```
-   The `ActionId` matters because `GrowthKeyword` needs to distinguish "used this specific action before" from "used a different action before" (see catalog below). The plain "Fight" command (`MakeFightCommand`) sets neither — a basic attack carries no keywords.
+   The `SourceId` matters because `GrowthKeyword` needs to distinguish "used this specific action before" from "used a different action before" (see catalog below); `SourceName` is echoed onto effect events so callers can report what caused them without a separate lookup. The plain "Fight" command (`MakeFightCommand`) sets `SourceId`/`SourceName` to `"fight"`/`"Fight"` and carries no keywords.
 4. **`CombatCommand`** just holds this data (`CombatEngine.DataClasses.CombatCommand`):
    ```csharp
    public List<string> Keywords { get; init; } = [];
-   public string ActionId { get; init; } = string.Empty;
+   public string SourceId { get; init; } = string.Empty;
+   public string SourceName { get; init; } = string.Empty;
    ```
 5. **`CombatEngineClass.ResolveAction`** resolves the keywords when the command is actually executed, then hands both the `OnUsed` notification and the capped bonus summation to `KeywordResolver` (see next section). `KeywordResolver` implements `IKeywordUsageStore` itself, so it *is* the usage-counter store passed to every keyword call.
 
@@ -97,13 +99,13 @@ Resolution is split across three places: `CombatEngineClass.ResolveAction` resol
 ```csharp
 bool actorIsAlly    = _roster.IsPlayerEntity(actor);
 var  activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
-_keywords.NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.ActionId);
+_keywords.NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.SourceId);
 
 function.Execute(new CombatFunctionContext
 {
     // ... other injected steps ...
     ApplyKeywordBonuses = (basePower, a, t) =>
-        _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.ActionId),
+        _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.SourceId, cmd.SourceName),
 });
 ```
 

@@ -1,12 +1,41 @@
+using System;
+using System.Collections.Generic;
 using CombatEngine;
+using CombatEngine.Enums;
 using GameEngine.DataClasses;
 using Godot;
 
 public partial class CombatantCard : PanelContainer
 {
+	private static readonly Color PositiveColor = new(0.4f, 0.9f, 0.45f);
+	private static readonly Color NegativeColor = new(1f, 0.35f, 0.35f);
+
 	private string _entityId = "";
 	private Label  _evadedLabel = null!;
 	private Label  _damageLabel = null!;
+
+	private Label _powerEffLabel   = null!;
+	private Label _defenseEffLabel = null!;
+	private Label _speedEffLabel   = null!;
+	private int   _basePower;
+	private int   _baseDefense;
+	private int   _baseSpeed;
+
+	private VBoxContainer _effectsContainer   = null!;
+	private VBoxContainer _inventoryContainer = null!;
+
+	private StyleBoxFlat _normalStyle     = null!;
+	private StyleBoxFlat _activeStyle     = null!;
+	private StyleBoxFlat _targetableStyle = null!;
+	private bool _isActiveTurn;
+	private bool _targetable;
+
+	// Emitted when this card is clicked while SetTargetable(true) is in effect - Battle listens
+	// to drive click-to-target selection.
+	public event Action<string>? Clicked;
+
+	private readonly Dictionary<BuffDebuffStat, (bool IsPositive, int Rounds, bool UntilRemoved, int Value)> _buffs = new();
+	private readonly Dictionary<RegenDrainStat, (bool IsPositive, int Rounds, bool UntilRemoved)> _regens = new();
 
 	public void Initialize(CombatantSeed seed, bool showTp)
 	{
@@ -14,15 +43,23 @@ public partial class CombatantCard : PanelContainer
 		_evadedLabel = GetNode<Label>("EvadedLabel");
 		_damageLabel = GetNode<Label>("DamageLabel");
 
-		GetNode<Label>("VBoxContainer/NameLabel").Text     = seed.Name;
-		GetNode<Label>("VBoxContainer/LevelLabel").Text   = $"Level: {seed.Level}";
-		GetNode<Label>("VBoxContainer/PowerLabel").Text   = $"PWR: {seed.Power}";
-		GetNode<Label>("VBoxContainer/DefenseLabel").Text = $"DEF: {seed.Defense}";
-		GetNode<Label>("VBoxContainer/SpeedLabel").Text   = $"SPD: {seed.Speed}";
-		GetNode<Label>("VBoxContainer/EvasionLabel").Text = $"EVA: {seed.Evasion:P0}";
-		GetNode<Label>("VBoxContainer/CritLabel").Text    = $"CRIT: {seed.CritChance:P0}";
+		GetNode<Label>("Columns/StatsColumn/NameLabel").Text = seed.Name;
+		GetNode<Label>("Columns/StatsColumn/LevelLabel").Text = $"Level: {seed.Level}";
 
-		var statContainer = GetNode<VBoxContainer>("VBoxContainer/StatContainer");
+		_basePower   = seed.Power;
+		_baseDefense = seed.Defense;
+		_baseSpeed   = seed.Speed;
+		GetNode<Label>("Columns/StatsColumn/PowerRow/PowerBaseLabel").Text     = $"PWR: {seed.Power}";
+		GetNode<Label>("Columns/StatsColumn/DefenseRow/DefenseBaseLabel").Text = $"DEF: {seed.Defense}";
+		GetNode<Label>("Columns/StatsColumn/SpeedRow/SpeedBaseLabel").Text     = $"SPD: {seed.Speed}";
+		_powerEffLabel   = GetNode<Label>("Columns/StatsColumn/PowerRow/PowerEffLabel");
+		_defenseEffLabel = GetNode<Label>("Columns/StatsColumn/DefenseRow/DefenseEffLabel");
+		_speedEffLabel   = GetNode<Label>("Columns/StatsColumn/SpeedRow/SpeedEffLabel");
+
+		GetNode<Label>("Columns/StatsColumn/EvasionLabel").Text = $"EVA: {seed.Evasion:P0}";
+		GetNode<Label>("Columns/StatsColumn/CritLabel").Text    = $"CRIT: {seed.CritChance:P0}";
+
+		var statContainer = GetNode<VBoxContainer>("Columns/StatsColumn/StatContainer");
 
 		var hpScene = GD.Load<PackedScene>("res://Scenes/HpStatDisplay.tscn");
 		var hp      = hpScene.Instantiate<HpStatDisplay>();
@@ -37,11 +74,31 @@ public partial class CombatantCard : PanelContainer
 			tp.Initialize(seed.EntityId, seed.Tp, seed.MaxTp);
 		}
 
+		_effectsContainer   = GetNode<VBoxContainer>("Columns/EffectsColumn/EffectsContainer");
+		_inventoryContainer = GetNode<VBoxContainer>("Columns/InventoryColumn/InventoryContainer");
+		RenderInventory(seed);
+
+		_normalStyle = (StyleBoxFlat)GetThemeStylebox("panel").Duplicate();
+
+		_activeStyle = (StyleBoxFlat)_normalStyle.Duplicate();
+		_activeStyle.BorderColor = new Color(0.3f, 0.6f, 1f, 1f);
+		_activeStyle.BorderWidthLeft = _activeStyle.BorderWidthTop = _activeStyle.BorderWidthRight = _activeStyle.BorderWidthBottom = 4;
+
+		_targetableStyle = (StyleBoxFlat)_normalStyle.Duplicate();
+		_targetableStyle.BorderColor = new Color(1f, 0.85f, 0.2f, 1f);
+		_targetableStyle.BorderWidthLeft = _targetableStyle.BorderWidthTop = _targetableStyle.BorderWidthRight = _targetableStyle.BorderWidthBottom = 4;
+
 		CombatEventBus.AttackEvaded += OnAttackEvaded;
 		CombatEventBus.EntityDamaged += OnEntityDamaged;
 		CombatEventBus.EntityDeath += OnEntityDeath;
 		CombatEventBus.EntityRevived += OnEntityRevived;
 		CombatEventBus.KeywordApplied += OnKeywordApplied;
+		CombatEventBus.BuffDebuffApplied += OnBuffDebuffApplied;
+		CombatEventBus.BuffDebuffTicked += OnBuffDebuffTicked;
+		CombatEventBus.BuffDebuffExpired += OnBuffDebuffExpired;
+		CombatEventBus.RegenDrainApplied += OnRegenDrainApplied;
+		CombatEventBus.RegenDrainTicked += OnRegenDrainTicked;
+		CombatEventBus.RegenDrainExpired += OnRegenDrainExpired;
 	}
 
 	public override void _ExitTree()
@@ -51,9 +108,57 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.EntityDeath -= OnEntityDeath;
 		CombatEventBus.EntityRevived -= OnEntityRevived;
 		CombatEventBus.KeywordApplied -= OnKeywordApplied;
+		CombatEventBus.BuffDebuffApplied -= OnBuffDebuffApplied;
+		CombatEventBus.BuffDebuffTicked -= OnBuffDebuffTicked;
+		CombatEventBus.BuffDebuffExpired -= OnBuffDebuffExpired;
+		CombatEventBus.RegenDrainApplied -= OnRegenDrainApplied;
+		CombatEventBus.RegenDrainTicked -= OnRegenDrainTicked;
+		CombatEventBus.RegenDrainExpired -= OnRegenDrainExpired;
 	}
 
-	private void OnAttackEvaded(string attackerId, string attackerName, string targetId, string targetName, float oldEvasion, float newEvasion)
+	// PanelContainer defaults to MouseFilter.Stop and the inner Columns tree is set to Ignore in
+	// the .tscn, so clicks on the card (but not its labels) reach here without any overlay node.
+	public override void _GuiInput(InputEvent @event)
+	{
+		if (!_targetable) return;
+
+		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
+			Clicked?.Invoke(_entityId);
+	}
+
+	// Blue outline while it's this entity's turn. Kept off Modulate, which the death-grey and
+	// damage-flash tweens below already own.
+	public void SetActiveTurn(bool active)
+	{
+		_isActiveTurn = active;
+		RefreshCardStyle();
+	}
+
+	// Gold outline while this card is a valid click target for the pending action.
+	public void SetTargetable(bool targetable)
+	{
+		_targetable = targetable;
+		RefreshCardStyle();
+	}
+
+	private void RefreshCardStyle() =>
+		AddThemeStyleboxOverride("panel", _targetable ? _targetableStyle : _isActiveTurn ? _activeStyle : _normalStyle);
+
+	private void RenderInventory(CombatantSeed seed)
+	{
+		foreach (var entry in seed.Techs)
+			AddInventoryLabel(entry.Name);
+		foreach (var entry in seed.Items)
+			AddInventoryLabel(entry.Name);
+	}
+
+	private void AddInventoryLabel(string name)
+	{
+		var label = new Label { Text = name, AutowrapMode = TextServer.AutowrapMode.Word };
+		_inventoryContainer.AddChild(label);
+	}
+
+	private void OnAttackEvaded(string attackerId, string attackerName, string targetId, string targetName, float oldEvasion, float newEvasion, string sourceId, string sourceName)
 	{
 		if (targetId != _entityId) return;
 
@@ -69,7 +174,7 @@ public partial class CombatantCard : PanelContainer
 		});
 	}
 
-	private void OnEntityDamaged(string targetId, string targetName, int amount, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp)
+	private void OnEntityDamaged(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp)
 	{
 		if (targetId != _entityId) return;
 
@@ -90,7 +195,7 @@ public partial class CombatantCard : PanelContainer
 		});
 	}
 
-	private void OnKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus)
+	private void OnKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName)
 	{
 		if (targetId != _entityId) return;
 
@@ -115,17 +220,152 @@ public partial class CombatantCard : PanelContainer
 		});
 	}
 
-	private void OnEntityDeath(string entityId, string entityName)
+	private void OnEntityDeath(string entityId, string entityName, string sourceId, string sourceName)
 	{
 		if (entityId != _entityId) return;
 
 		UiEventQueue.Enqueue(() => Modulate = new Color(0.4f, 0.4f, 0.4f, 1f));
 	}
 
-	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp)
+	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp, string sourceId, string sourceName)
 	{
 		if (entityId != _entityId) return;
 
 		UiEventQueue.Enqueue(() => Modulate = new Color(1, 1, 1, 1));
 	}
+
+	private void OnBuffDebuffApplied(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, int oldValue, int newValue, string sourceId, string sourceName)
+	{
+		if (entityId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			_buffs[stat] = (isPositive, roundsRemaining, untilRemoved, newValue);
+			RenderStat(stat);
+			RenderEffects();
+		});
+	}
+
+	private void OnBuffDebuffTicked(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName)
+	{
+		if (entityId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			if (!_buffs.TryGetValue(stat, out var existing)) return;
+			_buffs[stat] = existing with { Rounds = roundsRemaining };
+			RenderEffects();
+		});
+	}
+
+	private void OnBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName)
+	{
+		if (entityId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			_buffs.Remove(stat);
+			RenderStat(stat);
+			RenderEffects();
+		});
+	}
+
+	private void OnRegenDrainApplied(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName)
+	{
+		if (entityId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			_regens[stat] = (isPositive, roundsRemaining, untilRemoved);
+			RenderEffects();
+		});
+	}
+
+	private void OnRegenDrainTicked(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName)
+	{
+		if (entityId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			if (!_regens.TryGetValue(stat, out var existing)) return;
+			_regens[stat] = existing with { Rounds = roundsRemaining };
+			RenderEffects();
+		});
+	}
+
+	private void OnRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName)
+	{
+		if (entityId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			_regens.Remove(stat);
+			RenderEffects();
+		});
+	}
+
+	private void RenderStat(BuffDebuffStat stat)
+	{
+		var label = stat switch
+		{
+			BuffDebuffStat.Power   => _powerEffLabel,
+			BuffDebuffStat.Defense => _defenseEffLabel,
+			BuffDebuffStat.Speed   => _speedEffLabel,
+			_ => null,
+		};
+		if (label is null) return;
+
+		if (_buffs.TryGetValue(stat, out var buff))
+		{
+			label.Text = $"({buff.Value})";
+			label.AddThemeColorOverride("font_color", buff.IsPositive ? PositiveColor : NegativeColor);
+		}
+		else
+		{
+			label.Text = "";
+		}
+	}
+
+	private void RenderEffects()
+	{
+		foreach (Node child in _effectsContainer.GetChildren())
+			child.QueueFree();
+
+		foreach (var (stat, e) in _buffs)
+		{
+			var label = new Label
+			{
+				Text = $"{StatAbbrev(stat)} {(e.IsPositive ? "↑" : "↓")} {Duration(e.Rounds, e.UntilRemoved)}",
+			};
+			label.AddThemeColorOverride("font_color", e.IsPositive ? PositiveColor : NegativeColor);
+			_effectsContainer.AddChild(label);
+		}
+
+		foreach (var (stat, e) in _regens)
+		{
+			var label = new Label
+			{
+				Text = $"{ResourceAbbrev(stat)} {(e.IsPositive ? "regen" : "drain")} {Duration(e.Rounds, e.UntilRemoved)}",
+			};
+			label.AddThemeColorOverride("font_color", e.IsPositive ? PositiveColor : NegativeColor);
+			_effectsContainer.AddChild(label);
+		}
+	}
+
+	private static string Duration(int rounds, bool untilRemoved) => untilRemoved ? "∞" : $"{rounds}t";
+
+	private static string StatAbbrev(BuffDebuffStat stat) => stat switch
+	{
+		BuffDebuffStat.Power   => "PWR",
+		BuffDebuffStat.Defense => "DEF",
+		BuffDebuffStat.Speed   => "SPD",
+		_ => stat.ToString(),
+	};
+
+	private static string ResourceAbbrev(RegenDrainStat stat) => stat switch
+	{
+		RegenDrainStat.Hp => "HP",
+		RegenDrainStat.Tp => "TP",
+		_ => stat.ToString(),
+	};
 }

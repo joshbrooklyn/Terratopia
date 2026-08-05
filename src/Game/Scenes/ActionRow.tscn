@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://c0actionrow1"]
+
+[ext_resource type="Script" path="res://Scenes/ActionRow.cs" id="1_actionrow"]
+
+[node name="ActionRow" type="PanelContainer"]
+size_flags_horizontal = 3
+script = ExtResource("1_actionrow")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="ActionButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Action"
+
+[node name="DescriptionLabel" type="Label" parent="VBox"]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="BonusesLabel" type="Label" parent="VBox"]
+layout_mode = 2
+autowrap_mode = 2
+modulate = Color(0.75, 0.75, 0.75, 1)

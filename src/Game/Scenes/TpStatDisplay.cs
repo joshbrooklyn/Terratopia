@@ -23,7 +23,7 @@ public partial class TpStatDisplay : Label
 		CombatEventBus.EntityMaxTpChanged -= OnEntityMaxTpChanged;
 	}
 
-	private void OnEntityTpChanged(string entityId, string entityName, int oldTp, int newTp)
+	private void OnEntityTpChanged(string entityId, string entityName, int oldTp, int newTp, string sourceId, string sourceName)
 	{
 		if (entityId != _entityId) return;
 		_currentTp = newTp;

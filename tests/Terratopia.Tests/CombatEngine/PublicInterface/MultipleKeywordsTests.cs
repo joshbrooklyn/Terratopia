@@ -63,7 +63,7 @@ public class MultipleKeywordsTests
         };
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damageDealt ??= dmg;
         };
@@ -120,7 +120,7 @@ public class MultipleKeywordsTests
                     ValidTargets  = ValidTarget.Enemies,
                     LivingOrDead  = LivingOrDead.Living,
                     TPCost        = 0,
-                    ActionId      = "tech1",
+                    SourceId      = "tech1",
                     Keywords      = [TeamworkKeyword.KeywordName, GrowthKeyword.KeywordName],
                     CombatFunction = BasicDamageFunction.FunctionName,
                     Parameters = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.StandardFormula, PowerFactor = 0.3 },
@@ -142,7 +142,7 @@ public class MultipleKeywordsTests
         };
 
         var damages = new List<int>();
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damages.Add(dmg);
         };

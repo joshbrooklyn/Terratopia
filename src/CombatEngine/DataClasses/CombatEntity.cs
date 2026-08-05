@@ -73,17 +73,17 @@ public class CombatEntity
         _ => throw new ArgumentOutOfRangeException(nameof(stat), stat, "No buffable stat for this BuffDebuffStat."),
     };
 
-    public void TakeDamage(CombatEntity actor, int damage, bool isCrit = false)
+    public void TakeDamage(CombatEntity actor, int damage, string sourceId, string sourceName, bool isCrit = false)
     {
         int oldHp = Hp;
         Hp = Math.Max(0, Hp - damage);
         Logger.Debug($"[combat] ApplyDamage: {actor.Name} -> {Name} oldHp={oldHp} damage={damage} isCrit={isCrit} -> newHp={Hp}");
-        CombatEventBus.RaiseEntityDamaged(EntityId, Name, damage, actor.EntityId, actor.Name, isCrit, oldHp, Hp);
+        CombatEventBus.RaiseEntityDamaged(EntityId, Name, damage, actor.EntityId, actor.Name, sourceId, sourceName, isCrit, oldHp, Hp);
         if (Hp == 0 && !IsDead)
-            HandleDefeat();
+            HandleDefeat(sourceId, sourceName);
     }
 
-    private void HandleDefeat()
+    private void HandleDefeat(string sourceId, string sourceName)
     {
         foreach (var passive in PassiveRegistry.GetForTrigger<DeathPassive>(Passives, PassiveTrigger.OnDeath))
         {
@@ -92,11 +92,11 @@ public class CombatEntity
         }
 
         MarkDead();
-        CombatEventBus.RaiseEntityDeath(EntityId, Name);
+        CombatEventBus.RaiseEntityDeath(EntityId, Name, sourceId, sourceName);
     }
 
     // Healing never revives - a dead target is skipped outright, and Hp is capped at MaxHp.
-    public void Heal(CombatEntity actor, int amount)
+    public void Heal(CombatEntity actor, int amount, string sourceId, string sourceName)
     {
         if (IsDead || amount <= 0)
         {
@@ -107,10 +107,10 @@ public class CombatEntity
         int oldHp = Hp;
         Hp = Math.Min(MaxHp, Hp + amount);
         Logger.Debug($"[combat] ApplyHeal: {actor.Name} -> {Name} oldHp={oldHp} amount={amount} -> newHp={Hp}");
-        CombatEventBus.RaiseEntityHealed(EntityId, Name, Hp - oldHp, actor.EntityId, actor.Name, oldHp, Hp);
+        CombatEventBus.RaiseEntityHealed(EntityId, Name, Hp - oldHp, actor.EntityId, actor.Name, sourceId, sourceName, oldHp, Hp);
     }
 
-    public void SpendTp(int amount)
+    public void SpendTp(int amount, string sourceId, string sourceName)
     {
         if (amount <= 0)
         {
@@ -121,11 +121,11 @@ public class CombatEntity
         int oldTp = Tp;
         Tp = Math.Max(0, Tp - amount);
         Logger.Debug($"[combat] DeductTp: {Name} oldTp={oldTp} amount={amount} -> newTp={Tp}");
-        CombatEventBus.RaiseEntityTpChanged(EntityId, Name, oldTp, Tp);
+        CombatEventBus.RaiseEntityTpChanged(EntityId, Name, oldTp, Tp, sourceId, sourceName);
     }
 
     // Mirrors Heal: caps at MaxTp, no-ops on a non-positive amount.
-    public void RestoreTp(int amount)
+    public void RestoreTp(int amount, string sourceId, string sourceName)
     {
         if (amount <= 0)
         {
@@ -136,27 +136,27 @@ public class CombatEntity
         int oldTp = Tp;
         Tp = Math.Min(MaxTp, Tp + amount);
         Logger.Debug($"[combat] RestoreTp: {Name} oldTp={oldTp} amount={amount} -> newTp={Tp}");
-        CombatEventBus.RaiseEntityTpChanged(EntityId, Name, oldTp, Tp);
+        CombatEventBus.RaiseEntityTpChanged(EntityId, Name, oldTp, Tp, sourceId, sourceName);
     }
 
     // Called by the engine once it has already rolled and decided the attack was evaded.
     // Evasion decays 25% on each successful dodge.
-    public void RegisterEvasion(CombatEntity attacker, float roll)
+    public void RegisterEvasion(CombatEntity attacker, float roll, string sourceId, string sourceName)
     {
         float oldEvasion = Evasion;
         Evasion = Math.Max(0f, Evasion - (float)CombatBalance.Current.EvasionDecayAmount);
         Logger.Debug($"[combat] TryEvade: {Name} roll={roll:F3} vs evasion={oldEvasion:F3} -> evaded, evasion decayed to {Evasion:F3}");
-        CombatEventBus.RaiseAttackEvaded(attacker.EntityId, attacker.Name, EntityId, Name, oldEvasion, Evasion);
+        CombatEventBus.RaiseAttackEvaded(attacker.EntityId, attacker.Name, EntityId, Name, oldEvasion, Evasion, sourceId, sourceName);
     }
 
     public void MarkDead() => IsDead = true;
 
-    public void Revive(int hp)
+    public void Revive(int hp, string sourceId, string sourceName)
     {
         int oldHp = Hp;
         Hp = hp;
         Logger.Debug($"[combat] Revive: {Name} oldHp={oldHp} -> revived at hp={Hp}");
-        CombatEventBus.RaiseEntityRevived(EntityId, Name, oldHp, Hp);
+        CombatEventBus.RaiseEntityRevived(EntityId, Name, oldHp, Hp, sourceId, sourceName);
     }
 
     // A stat holds at most one buff/debuff. Re-applying the same polarity refreshes it - the
@@ -164,7 +164,7 @@ public class CombatEntity
     // one outright, so neither survives. UntilRemoved is sticky on refresh: if either side of a
     // same-polarity merge is UntilRemoved, the result is UntilRemoved and rounds math is skipped -
     // "lasts until removed" is a stronger guarantee than "lasts N more rounds" and must win either way.
-    public void AddBuffDebuff(BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved)
+    public void AddBuffDebuff(BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName)
     {
         if (!untilRemoved && roundsRemaining <= 0)
         {
@@ -183,21 +183,24 @@ public class CombatEntity
                 {
                     existing.RoundsRemaining += roundsRemaining;
                 }
+                // The newest application's source is the one the player just saw, so it wins on refresh.
+                existing.SourceId = sourceId;
+                existing.SourceName = sourceName;
                 _buffsDebuffs[stat] = existing;
                 Logger.Debug($"[combat] AddBuffDebuff: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> refreshed to {(existing.UntilRemoved ? "untilRemoved" : existing.RoundsRemaining.ToString())}, value {oldValue} -> {GetStatValue(stat)}");
-                CombatEventBus.RaiseBuffDebuffApplied(EntityId, Name, stat, isPositive, existing.RoundsRemaining, existing.UntilRemoved, oldValue, GetStatValue(stat));
+                CombatEventBus.RaiseBuffDebuffApplied(EntityId, Name, stat, isPositive, existing.RoundsRemaining, existing.UntilRemoved, oldValue, GetStatValue(stat), sourceId, sourceName);
                 return;
             }
 
             _buffsDebuffs.Remove(stat);
             Logger.Debug($"[combat] AddBuffDebuff: {Name} stat={stat} isPositive={isPositive} -> cancelled existing (isPositive={existing.IsPositive}), value {oldValue} -> {GetStatValue(stat)}");
-            CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, existing.IsPositive, oldValue, GetStatValue(stat));
+            CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, existing.IsPositive, oldValue, GetStatValue(stat), sourceId, sourceName);
             return;
         }
 
-        _buffsDebuffs[stat] = new BuffDebuff { Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved };
+        _buffsDebuffs[stat] = new BuffDebuff { Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved, SourceId = sourceId, SourceName = sourceName };
         Logger.Debug($"[combat] AddBuffDebuff: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> applied, value {oldValue} -> {GetStatValue(stat)}");
-        CombatEventBus.RaiseBuffDebuffApplied(EntityId, Name, stat, isPositive, roundsRemaining, untilRemoved, oldValue, GetStatValue(stat));
+        CombatEventBus.RaiseBuffDebuffApplied(EntityId, Name, stat, isPositive, roundsRemaining, untilRemoved, oldValue, GetStatValue(stat), sourceId, sourceName);
     }
 
     public void TickBuffDebuffs()
@@ -221,13 +224,13 @@ public class CombatEntity
             {
                 _buffsDebuffs.Remove(stat);
                 Logger.Debug($"[combat] TickBuffDebuffs: {Name} stat={stat} isPositive={buff.IsPositive} -> expired, value {oldValue} -> {GetStatValue(stat)}");
-                CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, buff.IsPositive, oldValue, GetStatValue(stat));
+                CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, buff.IsPositive, oldValue, GetStatValue(stat), buff.SourceId, buff.SourceName);
             }
             else
             {
                 _buffsDebuffs[stat] = buff;
                 Logger.Debug($"[combat] TickBuffDebuffs: {Name} stat={stat} isPositive={buff.IsPositive} -> {buff.RoundsRemaining} rounds remaining");
-                CombatEventBus.RaiseBuffDebuffTicked(EntityId, Name, stat, buff.IsPositive, buff.RoundsRemaining);
+                CombatEventBus.RaiseBuffDebuffTicked(EntityId, Name, stat, buff.IsPositive, buff.RoundsRemaining, buff.SourceId, buff.SourceName);
             }
         }
     }
@@ -236,7 +239,7 @@ public class CombatEntity
     // rules as AddBuffDebuff. Unlike a buff/debuff, applying an entry changes nothing by itself -
     // the HP/TP delta only lands once ApplyRegensDrains runs - so there is no oldValue/newValue to
     // report on this event.
-    public void AddRegenDrain(RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved)
+    public void AddRegenDrain(RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName)
     {
         if (!untilRemoved && roundsRemaining <= 0)
         {
@@ -253,21 +256,24 @@ public class CombatEntity
                 {
                     existing.RoundsRemaining += roundsRemaining;
                 }
+                // The newest application's source is the one the player just saw, so it wins on refresh.
+                existing.SourceId = sourceId;
+                existing.SourceName = sourceName;
                 _regensDrains[stat] = existing;
                 Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> refreshed to {(existing.UntilRemoved ? "untilRemoved" : existing.RoundsRemaining.ToString())}");
-                CombatEventBus.RaiseRegenDrainApplied(EntityId, Name, stat, isPositive, existing.RoundsRemaining, existing.UntilRemoved);
+                CombatEventBus.RaiseRegenDrainApplied(EntityId, Name, stat, isPositive, existing.RoundsRemaining, existing.UntilRemoved, sourceId, sourceName);
                 return;
             }
 
             _regensDrains.Remove(stat);
             Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} -> cancelled existing (isPositive={existing.IsPositive})");
-            CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, existing.IsPositive);
+            CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, existing.IsPositive, sourceId, sourceName);
             return;
         }
 
-        _regensDrains[stat] = new RegenDrain { Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved };
+        _regensDrains[stat] = new RegenDrain { Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved, SourceId = sourceId, SourceName = sourceName };
         Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> applied");
-        CombatEventBus.RaiseRegenDrainApplied(EntityId, Name, stat, isPositive, roundsRemaining, untilRemoved);
+        CombatEventBus.RaiseRegenDrainApplied(EntityId, Name, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName);
     }
 
     // Applies every active regen/drain's HP/TP delta for this round. A flat percentage of the
@@ -276,7 +282,7 @@ public class CombatEntity
     // existing TakeDamage/Heal/SpendTp/RestoreTp so clamping, death handling (HandleDefeat/OnDeath
     // passives), and the usual EntityDamaged/EntityHealed/EntityTpChanged events all fire exactly
     // as they would for any other source. The entity itself is passed as the "actor" - the
-    // affliction's source, for logging/event purposes, is the afflicted entity.
+    // sourceId/sourceName reported are the tech/item that originally inflicted the regen/drain.
     private void ApplyRegensDrains()
     {
         if (IsDead)
@@ -289,16 +295,16 @@ public class CombatEntity
                 case RegenDrainStat.Hp:
                     int hpAmount = (int)Math.Round(MaxHp * CombatBalance.Current.RegenDrainHpPct);
                     if (regenDrain.IsPositive)
-                        Heal(this, hpAmount);
+                        Heal(this, hpAmount, regenDrain.SourceId, regenDrain.SourceName);
                     else
-                        TakeDamage(this, hpAmount);
+                        TakeDamage(this, hpAmount, regenDrain.SourceId, regenDrain.SourceName);
                     break;
                 case RegenDrainStat.Tp:
                     int tpAmount = (int)Math.Round(MaxTp * CombatBalance.Current.RegenDrainTpPct);
                     if (regenDrain.IsPositive)
-                        RestoreTp(tpAmount);
+                        RestoreTp(tpAmount, regenDrain.SourceId, regenDrain.SourceName);
                     else
-                        SpendTp(tpAmount);
+                        SpendTp(tpAmount, regenDrain.SourceId, regenDrain.SourceName);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(regenDrain.Stat), regenDrain.Stat, "No resource for this RegenDrainStat.");
@@ -331,13 +337,13 @@ public class CombatEntity
             {
                 _regensDrains.Remove(stat);
                 Logger.Debug($"[combat] TickRegensDrains: {Name} stat={stat} isPositive={regenDrain.IsPositive} -> expired");
-                CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, regenDrain.IsPositive);
+                CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, regenDrain.IsPositive, regenDrain.SourceId, regenDrain.SourceName);
             }
             else
             {
                 _regensDrains[stat] = regenDrain;
                 Logger.Debug($"[combat] TickRegensDrains: {Name} stat={stat} isPositive={regenDrain.IsPositive} -> {regenDrain.RoundsRemaining} rounds remaining");
-                CombatEventBus.RaiseRegenDrainTicked(EntityId, Name, stat, regenDrain.IsPositive, regenDrain.RoundsRemaining);
+                CombatEventBus.RaiseRegenDrainTicked(EntityId, Name, stat, regenDrain.IsPositive, regenDrain.RoundsRemaining, regenDrain.SourceId, regenDrain.SourceName);
             }
         }
     }
@@ -358,6 +364,8 @@ public class CombatEntity
         public bool IsPositive;
         public int RoundsRemaining;
         public bool UntilRemoved;
+        public string SourceId;
+        public string SourceName;
     }
 
     private struct RegenDrain
@@ -366,6 +374,8 @@ public class CombatEntity
         public bool IsPositive;
         public int RoundsRemaining;
         public bool UntilRemoved;
+        public string SourceId;
+        public string SourceName;
     }
 
     public void ConsumePassive(string passiveName) => _consumedPassives.Add(passiveName);

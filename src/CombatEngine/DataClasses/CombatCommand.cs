@@ -25,7 +25,9 @@ public class CombatCommand
     public List<string> Keywords { get; init; } = [];
 
     // Identifies the specific Tech/Item/MonsterAction this command came from, so stacking
-    // keywords (e.g. Growth) can tell "used this action again" from "used a different action".
-    public string ActionId { get; init; } = string.Empty;
+    // keywords (e.g. Growth) can tell "used this action again" from "used a different action",
+    // and so effect events (EntityDamaged, BuffDebuffApplied, etc.) can report what caused them.
+    public string SourceId { get; init; } = string.Empty;
+    public string SourceName { get; init; } = string.Empty;
     public List<string> ChosenTargets { get; internal set; } = [];
 }

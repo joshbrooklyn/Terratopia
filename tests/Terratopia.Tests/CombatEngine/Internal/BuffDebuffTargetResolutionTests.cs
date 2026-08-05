@@ -28,7 +28,7 @@ public class BuffDebuffTargetResolutionTests
 
         var alive = MakeEntity("t1");
         var dead  = MakeEntity("t2");
-        dead.TakeDamage(alive, 1000, isCrit: false);
+        dead.TakeDamage(alive, 1000, "test", "Test", isCrit: false);
 
         var resolved = roster.ResolveBuffDebuffTargets(alive, BuffDebuffTarget.SelectedTargets, [alive, alive, dead]);
 
@@ -57,7 +57,7 @@ public class BuffDebuffTargetResolutionTests
         var living2  = MakeEntity("e2");
         var dead     = MakeEntity("e3");
         var roster   = new CombatRoster(allies: [MakeEntity("ally")], enemies: [actor, living2, dead], new Random(0));
-        dead.TakeDamage(actor, 1000, isCrit: false);
+        dead.TakeDamage(actor, 1000, "test", "Test", isCrit: false);
 
         var resolved = roster.ResolveBuffDebuffTargets(actor, BuffDebuffTarget.AllAllies, selectedTargets: []);
 
@@ -125,7 +125,7 @@ public class BuffDebuffTargetResolutionTests
     {
         var actor = MakeEntity("actor");
         var enemy = MakeEntity("enemy");
-        enemy.TakeDamage(actor, 1000, isCrit: false);
+        enemy.TakeDamage(actor, 1000, "test", "Test", isCrit: false);
         var roster = new CombatRoster(allies: [actor], enemies: [enemy], new Random(0));
 
         var resolved = roster.ResolveBuffDebuffTargets(actor, BuffDebuffTarget.RandomEnemy, selectedTargets: []);

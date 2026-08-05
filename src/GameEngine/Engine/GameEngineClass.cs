@@ -120,12 +120,20 @@ public class GameEngineClass
                 .Where(t => t != null)
                 .Select(t => new CombatantInventoryEntry(t.TechId, t.Name, t.Description))
                 .ToList();
+            if (a.CanUseFightAction)
+                techs.Add(new CombatantInventoryEntry("fight", "Fight", "A basic physical attack."));
+
+            var items = a.ItemIds
+                .Select(id => _allItems.Lookup(id))
+                .Where(i => i != null)
+                .Select(i => new CombatantInventoryEntry(i.ItemId, i.Name, i.Description))
+                .ToList();
 
             allySeeds.Add(new CombatantSeed(
                 a.AdventurerId, a.Name,
                 a.Hp, a.MaxHp, a.Tp, a.MaxTp,
                 slot.Level, a.Power, a.Defense, a.Speed, a.Evasion, a.CritChance,
-                techs, [], [], []));
+                techs, items, [], []));
         }
 
         _enemyMonsterMap = new Dictionary<string, Monster>();
@@ -153,11 +161,19 @@ public class GameEngineClass
                 power, def, speed,
                 0f, 0f, 0.5f, passives: monster.Passives));
 
+            var actions = monster.MonsterActionIds
+                .Select(id => _allMonsterActions.Lookup(id))
+                .Where(a => a != null)
+                .Select(a => new CombatantInventoryEntry(a.MonsterActionId, a.Name, a.Description))
+                .ToList();
+            if (monster.CanUseFightAction)
+                actions.Add(new CombatantInventoryEntry("fight", "Fight", "A basic physical attack."));
+
             enemySeeds.Add(new CombatantSeed(
                 entityId, displayName,
                 hp, hp, 0, 0,
                 level, power, def, speed, 0f, 0f,
-                [], [], [], []));
+                actions, [], [], []));
         }
 
         CombatEngineClass.Instance.InitCombat(allies, enemies);
@@ -200,7 +216,8 @@ public class GameEngineClass
             CombatFunction = tech.CombatFunction,
             Parameters     = tech.Parameters,
             Keywords       = tech.Keywords,
-            ActionId       = tech.TechId,
+            SourceId       = tech.TechId,
+            SourceName     = tech.Name,
             NumAttacks     = tech.NumAttacks,
             AllowMultipleAttackOnSameTarget = tech.AllowMultipleAttackOnSameTarget ?? false,
         };
@@ -226,7 +243,8 @@ public class GameEngineClass
             CombatFunction = item.CombatFunction,
             Parameters     = item.Parameters,
             Keywords       = item.Keywords,
-            ActionId       = item.ItemId,
+            SourceId       = item.ItemId,
+            SourceName     = item.Name,
             NumAttacks     = item.NumAttacks,
             AllowMultipleAttackOnSameTarget = item.AllowMultipleAttackOnSameTarget ?? false,
         };
@@ -246,7 +264,8 @@ public class GameEngineClass
             CombatFunction = action.CombatFunction,
             Parameters     = action.Parameters,
             Keywords       = action.Keywords,
-            ActionId       = action.MonsterActionId,
+            SourceId       = action.MonsterActionId,
+            SourceName     = action.Name,
             NumAttacks     = action.NumAttacks,
             AllowMultipleAttackOnSameTarget = action.AllowMultipleAttackOnSameTarget ?? false,
         };
@@ -284,6 +303,8 @@ public class GameEngineClass
                 CalcType    = DamageOrHealCalcType.StandardFormula,
                 PowerFactor = 1.0,
             },
+            SourceId       = "fight",
+            SourceName     = "Fight",
         };
     }
 }

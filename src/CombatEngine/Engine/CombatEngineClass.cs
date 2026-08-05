@@ -108,7 +108,7 @@ public class CombatEngineClass
 
         bool actorIsAlly    = _roster.IsPlayerEntity(actor);
         var  activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
-        _keywords.NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.ActionId);
+        _keywords.NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.SourceId);
 
         var targets = cmd.ChosenTargets.Select(_roster.GetEntity).ToList();
 
@@ -124,25 +124,25 @@ public class CombatEngineClass
             Rng                   = _rng,
             ResolveTpCost         = ()                => cmd.TPCost,
             // Monsters don't spend TP on actions today; MonsterAction.TPCost is reserved for a future feature.
-            DeductTp              = (entity, amount)  => { if (actorIsAlly) entity.SpendTp(amount); },
-            TryEvade              = TryEvade,
+            DeductTp              = (entity, amount)  => { if (actorIsAlly) entity.SpendTp(amount, cmd.SourceId, cmd.SourceName); },
+            TryEvade              = (a, t) => TryEvade(a, t, cmd.SourceId, cmd.SourceName),
             RollCrit              = RollCrit,
             ApplyCritModifier     = ApplyCritModifier,
-            ApplyKeywordBonuses   = (basePower, a, t) => _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.ActionId),
+            ApplyKeywordBonuses   = (basePower, a, t) => _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.SourceId, cmd.SourceName),
             CalculateDamageAmount = CombatMath.CalculateDamageAmount,
             CalculateHealAmount   = CombatMath.CalculateHealAmount,
-            ApplyDamage           = (actor, target, damage, isCrit) => target.TakeDamage(actor, damage, isCrit),
-            ApplyHeal             = (actor, target, amount)         => target.Heal(actor, amount),
-            ApplyBuffDebuff       = (target, stat, isPositive, rounds, untilRemoved) => target.AddBuffDebuff(stat, isPositive, rounds, untilRemoved),
+            ApplyDamage           = (actor, target, damage, isCrit) => target.TakeDamage(actor, damage, cmd.SourceId, cmd.SourceName, isCrit),
+            ApplyHeal             = (actor, target, amount)         => target.Heal(actor, amount, cmd.SourceId, cmd.SourceName),
+            ApplyBuffDebuff       = (target, stat, isPositive, rounds, untilRemoved) => target.AddBuffDebuff(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName),
             ResolveBuffDebuffTargets = selector => _roster.ResolveBuffDebuffTargets(actor, selector, targets),
-            ApplyRegenDrain       = (target, stat, isPositive, rounds, untilRemoved) => target.AddRegenDrain(stat, isPositive, rounds, untilRemoved),
+            ApplyRegenDrain       = (target, stat, isPositive, rounds, untilRemoved) => target.AddRegenDrain(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName),
         });
 
         CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
     }
 
     // True when the attack is evaded. Evasion decays 25% on each successful dodge.
-    private bool TryEvade(CombatEntity actor, CombatEntity target)
+    private bool TryEvade(CombatEntity actor, CombatEntity target, string sourceId, string sourceName)
     {
         float roll = _rng.NextSingle();
         if (roll >= target.Evasion)
@@ -151,7 +151,7 @@ public class CombatEngineClass
             return false;
         }
 
-        target.RegisterEvasion(actor, roll);
+        target.RegisterEvasion(actor, roll, sourceId, sourceName);
         return true;
     }
 

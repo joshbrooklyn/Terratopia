@@ -606,7 +606,7 @@ public class TargetingTests
         Assert.False(actionResolved, "Combat must not resolve the action before targets are submitted.");
 
         string? damagedId = null;
-        CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _, _, _) => damagedId ??= targetId;
+        CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _, _, _, _, _) => damagedId ??= targetId;
 
         engine.SubmitTargets(["e2"]);
 

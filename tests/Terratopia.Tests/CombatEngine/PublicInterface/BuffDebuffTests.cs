@@ -40,10 +40,10 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         var buffed = MakeEntity();
-        buffed.AddBuffDebuff(stat, isPositive: true, roundsRemaining: 2, untilRemoved: false);
+        buffed.AddBuffDebuff(stat, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
         var debuffed = MakeEntity();
-        debuffed.AddBuffDebuff(stat, isPositive: false, roundsRemaining: 2, untilRemoved: false);
+        debuffed.AddBuffDebuff(stat, isPositive: false, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
         Assert.Equal(stat == BuffDebuffStat.Power   ? 27 : 20, buffed.Power);
         Assert.Equal(stat == BuffDebuffStat.Defense ? 27 : 20, buffed.Defense);
@@ -64,10 +64,10 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         (BuffDebuffStat Stat, bool IsPositive, int Rounds, bool UntilRemoved, int Old, int New)? applied = null;
-        CombatEventBus.BuffDebuffApplied += (_, _, stat, isPositive, rounds, untilRemoved, oldValue, newValue) =>
+        CombatEventBus.BuffDebuffApplied += (_, _, stat, isPositive, rounds, untilRemoved, oldValue, newValue, _, _) =>
             applied = (stat, isPositive, rounds, untilRemoved, oldValue, newValue);
 
-        MakeEntity().AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false);
+        MakeEntity().AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false, "test", "Test");
 
         Assert.Equal((BuffDebuffStat.Power, true, 3, false, 20, 27), applied);
     }
@@ -81,10 +81,10 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         bool raised = false;
-        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, _) => raised = true;
+        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, _, _, _) => raised = true;
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 0, untilRemoved: false);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 0, untilRemoved: false, "test", "Test");
 
         Assert.Equal(20, entity.Power);
         Assert.False(raised);
@@ -101,10 +101,10 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         bool raised = false;
-        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, _) => raised = true;
+        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, _, _, _) => raised = true;
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 0, untilRemoved: true);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 0, untilRemoved: true, "test", "Test");
 
         Assert.Equal(27, entity.Power);
         Assert.True(raised);
@@ -125,11 +125,11 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         int lastRounds = 0;
-        CombatEventBus.BuffDebuffApplied += (_, _, _, _, rounds, _, _, _) => lastRounds = rounds;
+        CombatEventBus.BuffDebuffApplied += (_, _, _, _, rounds, _, _, _, _, _) => lastRounds = rounds;
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 2, untilRemoved: false);
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test");
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false, "test", "Test");
 
         Assert.Equal(5, lastRounds);
         Assert.Equal(27, entity.Power);
@@ -147,13 +147,13 @@ public class BuffDebuffTests
 
         int appliedCount = 0;
         (bool IsPositive, int Old, int New)? expired = null;
-        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, _) => appliedCount++;
-        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue) =>
+        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, _, _, _) => appliedCount++;
+        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue, _, _) =>
             expired = (isPositive, oldValue, newValue);
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true,  roundsRemaining: 2, untilRemoved: false);
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: false, roundsRemaining: 9, untilRemoved: false);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true,  roundsRemaining: 2, untilRemoved: false, "test", "Test");
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: false, roundsRemaining: 9, untilRemoved: false, "test", "Test");
 
         Assert.Equal(20, entity.Power);
         Assert.Equal(1, appliedCount);
@@ -170,12 +170,12 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         (bool IsPositive, int Old, int New)? expired = null;
-        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue) =>
+        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue, _, _) =>
             expired = (isPositive, oldValue, newValue);
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true,  roundsRemaining: 2, untilRemoved: true);
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: false, roundsRemaining: 9, untilRemoved: false);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true,  roundsRemaining: 2, untilRemoved: true, "test", "Test");
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: false, roundsRemaining: 9, untilRemoved: false, "test", "Test");
 
         Assert.Equal(20, entity.Power);
         Assert.Equal((true, 27, 20), expired);
@@ -191,12 +191,12 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 2, untilRemoved: false);
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 1, untilRemoved: true);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test");
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 1, untilRemoved: true, "test", "Test");
 
         bool tickedOrExpired = false;
-        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, _) => tickedOrExpired = true;
-        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _) => tickedOrExpired = true;
+        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, _, _, _) => tickedOrExpired = true;
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _, _, _) => tickedOrExpired = true;
 
         for (int i = 0; i < 5; i++) entity.TickBuffDebuffs();
 
@@ -214,12 +214,12 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 1, untilRemoved: true);
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 1, untilRemoved: true, "test", "Test");
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false, "test", "Test");
 
         bool tickedOrExpired = false;
-        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, _) => tickedOrExpired = true;
-        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _) => tickedOrExpired = true;
+        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, _, _, _) => tickedOrExpired = true;
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _, _, _) => tickedOrExpired = true;
 
         for (int i = 0; i < 5; i++) entity.TickBuffDebuffs();
 
@@ -244,11 +244,11 @@ public class BuffDebuffTests
 
         var ticked  = new List<int>();
         var expired = new List<(int Old, int New)>();
-        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, rounds) => ticked.Add(rounds);
-        CombatEventBus.BuffDebuffExpired += (_, _, _, _, oldValue, newValue) => expired.Add((oldValue, newValue));
+        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, rounds, _, _) => ticked.Add(rounds);
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, oldValue, newValue, _, _) => expired.Add((oldValue, newValue));
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 2, untilRemoved: false);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
         entity.TickBuffDebuffs();
         Assert.Equal(27, entity.Power);
@@ -275,11 +275,11 @@ public class BuffDebuffTests
 
         var ticked  = new List<int>();
         var expired = new List<(int Old, int New)>();
-        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, rounds) => ticked.Add(rounds);
-        CombatEventBus.BuffDebuffExpired += (_, _, _, _, oldValue, newValue) => expired.Add((oldValue, newValue));
+        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, rounds, _, _) => ticked.Add(rounds);
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, oldValue, newValue, _, _) => expired.Add((oldValue, newValue));
 
         var entity = MakeEntity();
-        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 1, untilRemoved: true);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 1, untilRemoved: true, "test", "Test");
 
         for (int i = 0; i < 5; i++) entity.TickBuffDebuffs();
 
@@ -394,11 +394,11 @@ public class BuffDebuffTests
 
         var damages = new List<int>();
         var applied = new List<int>();
-        CombatEventBus.EntityDamaged     += (targetId, _, amount, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged     += (targetId, _, amount, _, _, _, _, _, _, _) =>
         {
             if (targetId == "enemy" && damages.Count < 3) damages.Add(amount);
         };
-        CombatEventBus.BuffDebuffApplied += (_, _, _, _, rounds, _, _, _) => applied.Add(rounds);
+        CombatEventBus.BuffDebuffApplied += (_, _, _, _, rounds, _, _, _, _, _) => applied.Add(rounds);
 
         engine.BeginCombat();
 
@@ -437,8 +437,8 @@ public class BuffDebuffTests
 
         int? newPower = null;
         var  ticked   = new List<int>();
-        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, value) => newPower ??= value;
-        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, rounds) => ticked.Add(rounds);
+        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, value, _, _) => newPower ??= value;
+        CombatEventBus.BuffDebuffTicked  += (_, _, _, _, rounds, _, _) => ticked.Add(rounds);
 
         engine.BeginCombat();
 
@@ -476,7 +476,7 @@ public class BuffDebuffTests
         var (engine, _, _) = SetupCombat(opening);
 
         var applied = new List<(string EntityId, BuffDebuffStat Stat)>();
-        CombatEventBus.BuffDebuffApplied += (entityId, _, stat, _, _, _, _, _) => applied.Add((entityId, stat));
+        CombatEventBus.BuffDebuffApplied += (entityId, _, stat, _, _, _, _, _, _, _) => applied.Add((entityId, stat));
 
         engine.BeginCombat();
 
@@ -517,11 +517,11 @@ public class BuffDebuffTests
         bool openingMoveSeen           = false;
         bool enemyDamagedByOpeningMove = false;
         int? newPower                  = null;
-        CombatEventBus.EntityDamaged     += (targetId, _, _, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged     += (targetId, _, _, _, _, _, _, _, _, _) =>
         {
             if (!openingMoveSeen && targetId == "enemy") enemyDamagedByOpeningMove = true;
         };
-        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, value) =>
+        CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, value, _, _) =>
         {
             if (!openingMoveSeen) { newPower = value; openingMoveSeen = true; }
         };
@@ -560,7 +560,7 @@ public class BuffDebuffTests
         var (engine, _, _) = SetupCombat(opening);
 
         bool raised = false;
-        CombatEventBus.BuffDebuffApplied += (_, _, stat, _, _, _, _, _) =>
+        CombatEventBus.BuffDebuffApplied += (_, _, stat, _, _, _, _, _, _, _) =>
         {
             if (stat == BuffDebuffStat.Power) raised = true;
         };
@@ -583,7 +583,7 @@ public class BuffDebuffTests
         var opening = new CombatCommand
         {
             ActorId        = "ally",
-            ActionId       = "broken_tech",
+            SourceId       = "broken_tech",
             TargetingType  = TargetingType.Self,
             ValidTargets   = ValidTarget.Allies,
             LivingOrDead   = LivingOrDead.Living,

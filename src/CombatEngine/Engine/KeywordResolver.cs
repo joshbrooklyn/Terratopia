@@ -29,7 +29,7 @@ internal sealed class KeywordResolver : IKeywordUsageStore
     // Each active keyword's bonus is capped independently against this action's own base power
     // factor, then the capped contributions are summed (not: sum first, then cap once) - see
     // docs/keywords.md "Capping rules". Also raises KeywordApplied for each nonzero contribution.
-    internal double ApplyKeywordBonuses(List<PowerKeyword> activeKeywords, double basePowerFactor, CombatEntity actor, CombatEntity target, bool actorIsAlly, string actionId)
+    internal double ApplyKeywordBonuses(List<PowerKeyword> activeKeywords, double basePowerFactor, CombatEntity actor, CombatEntity target, bool actorIsAlly, string actionId, string sourceName)
     {
         if (activeKeywords.Count == 0)
             return 0.0;
@@ -47,7 +47,7 @@ internal sealed class KeywordResolver : IKeywordUsageStore
             double applied = Math.Min(raw, cap);
             Logger.Debug($"[keyword] {keyword.Name}: raw={raw:F3} applied={applied:F3}");
             if (applied > 0)
-                CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied);
+                CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied, actionId, sourceName);
             totalBonus += applied;
         }
         Logger.Debug($"[keyword] ApplyKeywordBonuses: {actor.Name} -> {target.Name} totalBonus={totalBonus:F3}");

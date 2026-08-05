@@ -83,9 +83,9 @@ public class LivingDeadTests
         int revivedCount = 0;
         int deathCount = 0;
 
-        CombatEventBus.EntityDamaged += (id, _, _, _, _, _, _, newHp) => { if (id == "defender") hpTrace.Add(newHp); };
-        CombatEventBus.EntityRevived += (id, _, _, newHp) => { if (id == "defender") { hpTrace.Add(newHp); revivedCount++; } };
-        CombatEventBus.EntityDeath   += (id, _) => { if (id == "defender") deathCount++; };
+        CombatEventBus.EntityDamaged += (id, _, _, _, _, _, _, _, _, newHp) => { if (id == "defender") hpTrace.Add(newHp); };
+        CombatEventBus.EntityRevived += (id, _, _, newHp, _, _) => { if (id == "defender") { hpTrace.Add(newHp); revivedCount++; } };
+        CombatEventBus.EntityDeath   += (id, _, _, _) => { if (id == "defender") deathCount++; };
 
         engine.BeginCombat();
 
@@ -117,8 +117,8 @@ public class LivingDeadTests
         int revivedCount = 0;
         int deathCount = 0;
 
-        CombatEventBus.EntityRevived += (id, _, _, _) => { if (id == "defender") revivedCount++; };
-        CombatEventBus.EntityDeath   += (id, _) => { if (id == "defender") deathCount++; };
+        CombatEventBus.EntityRevived += (id, _, _, _, _, _) => { if (id == "defender") revivedCount++; };
+        CombatEventBus.EntityDeath   += (id, _, _, _) => { if (id == "defender") deathCount++; };
 
         engine.BeginCombat();
 
@@ -176,7 +176,7 @@ public class LivingDeadPassiveTests
         var passive = new LivingDeadPassive();
         passive.TryPreventDeath(entity);
 
-        entity.TakeDamage(entity, entity.Hp); // simulate a second lethal hit
+        entity.TakeDamage(entity, entity.Hp, "test", "Test"); // simulate a second lethal hit
         bool preventedAgain = passive.TryPreventDeath(entity);
 
         Assert.False(preventedAgain);

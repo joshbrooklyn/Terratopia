@@ -97,10 +97,21 @@ namespace CombatEngine.Engine
                 });
 
             _machine.Configure(CombatFlowState.TurnStart)
-                .Permit(CombatFlowTrigger.TurnReady, CombatFlowState.WaitingForTurn)
+                .PermitDynamic(CombatFlowTrigger.TurnReady,
+                    () => _currentEntity!.IsDead ? CombatFlowState.CheckWinCondition : CombatFlowState.WaitingForTurn)
                 .OnEntry(() =>
                 {
                     _currentEntity = _nextTurn();
+
+                    // Dying doesn't vacate a queue slot built for the round - an entity killed
+                    // earlier this round can still be dequeued for "its" turn. Skip it silently:
+                    // no TurnStarted/TurnEnded, no chance to submit a command.
+                    if (_currentEntity!.IsDead)
+                    {
+                        _machine.Fire(CombatFlowTrigger.TurnReady);
+                        return;
+                    }
+
                     CombatEventBus.RaiseTurnStarted(_currentEntity!.EntityId, _currentEntity!.Name);
                     _machine.Fire(CombatFlowTrigger.TurnReady);
                 });

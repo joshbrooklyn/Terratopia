@@ -18,7 +18,7 @@ public class LivingDeadPassive : DeathPassive
             return false;
         }
         target.ConsumePassive(Name);
-        target.Revive(CombatBalance.Current.LivingDeadReviveHp);
+        target.Revive(CombatBalance.Current.LivingDeadReviveHp, PassiveName, PassiveName);
         return true;
     }
 }

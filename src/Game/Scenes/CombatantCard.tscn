@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://btmlv4aefhoh1"]
+[gd_scene load_steps=4 format=3 uid="uid://btmlv4aefhoh1"]
 
 [ext_resource type="Script" path="res://Scenes/CombatantCard.cs" id="1_card"]
 
@@ -14,13 +14,110 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_active"]
+bg_color = Color(0.118, 0.118, 0.118, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.3, 0.6, 1, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
 [node name="CombatantCard" type="PanelContainer"]
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_border")
 script = ExtResource("1_card")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="Columns" type="HBoxContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="StatsColumn" type="VBoxContainer" parent="Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="NameLabel" type="Label" parent="Columns/StatsColumn"]
+layout_mode = 2
+text = "—"
+horizontal_alignment = 1
+
+[node name="LevelLabel" type="Label" parent="Columns/StatsColumn"]
+layout_mode = 2
+text = "Level: —"
+
+[node name="StatContainer" type="VBoxContainer" parent="Columns/StatsColumn"]
+layout_mode = 2
+
+[node name="PowerRow" type="HBoxContainer" parent="Columns/StatsColumn"]
+layout_mode = 2
+
+[node name="PowerBaseLabel" type="Label" parent="Columns/StatsColumn/PowerRow"]
+layout_mode = 2
+text = "PWR: —"
+
+[node name="PowerEffLabel" type="Label" parent="Columns/StatsColumn/PowerRow"]
+layout_mode = 2
+text = ""
+
+[node name="DefenseRow" type="HBoxContainer" parent="Columns/StatsColumn"]
+layout_mode = 2
+
+[node name="DefenseBaseLabel" type="Label" parent="Columns/StatsColumn/DefenseRow"]
+layout_mode = 2
+text = "DEF: —"
+
+[node name="DefenseEffLabel" type="Label" parent="Columns/StatsColumn/DefenseRow"]
+layout_mode = 2
+text = ""
+
+[node name="SpeedRow" type="HBoxContainer" parent="Columns/StatsColumn"]
+layout_mode = 2
+
+[node name="SpeedBaseLabel" type="Label" parent="Columns/StatsColumn/SpeedRow"]
+layout_mode = 2
+text = "SPD: —"
+
+[node name="SpeedEffLabel" type="Label" parent="Columns/StatsColumn/SpeedRow"]
+layout_mode = 2
+text = ""
+
+[node name="EvasionLabel" type="Label" parent="Columns/StatsColumn"]
+layout_mode = 2
+text = "EVA: —"
+
+[node name="CritLabel" type="Label" parent="Columns/StatsColumn"]
+layout_mode = 2
+text = "CRIT: —"
+
+[node name="EffectsColumn" type="VBoxContainer" parent="Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="EffectsHeader" type="Label" parent="Columns/EffectsColumn"]
+layout_mode = 2
+text = "Effects"
+horizontal_alignment = 1
+
+[node name="EffectsContainer" type="VBoxContainer" parent="Columns/EffectsColumn"]
+layout_mode = 2
+
+[node name="InventoryColumn" type="VBoxContainer" parent="Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="InventoryHeader" type="Label" parent="Columns/InventoryColumn"]
+layout_mode = 2
+text = "Actions"
+horizontal_alignment = 1
+
+[node name="InventoryContainer" type="VBoxContainer" parent="Columns/InventoryColumn"]
 layout_mode = 2
 
 [node name="EvadedLabel" type="Label" parent="."]
@@ -38,35 +135,3 @@ mouse_filter = 2
 text = "-0"
 horizontal_alignment = 1
 vertical_alignment = 0
-
-[node name="NameLabel" type="Label" parent="VBoxContainer"]
-layout_mode = 2
-text = "—"
-horizontal_alignment = 1
-
-[node name="LevelLabel" type="Label" parent="VBoxContainer"]
-layout_mode = 2
-text = "Level: —"
-
-[node name="StatContainer" type="VBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-
-[node name="PowerLabel" type="Label" parent="VBoxContainer"]
-layout_mode = 2
-text = "PWR: —"
-
-[node name="DefenseLabel" type="Label" parent="VBoxContainer"]
-layout_mode = 2
-text = "DEF: —"
-
-[node name="SpeedLabel" type="Label" parent="VBoxContainer"]
-layout_mode = 2
-text = "SPD: —"
-
-[node name="EvasionLabel" type="Label" parent="VBoxContainer"]
-layout_mode = 2
-text = "EVA: —"
-
-[node name="CritLabel" type="Label" parent="VBoxContainer"]
-layout_mode = 2
-text = "CRIT: —"

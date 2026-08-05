@@ -119,7 +119,7 @@ public class CombatFunctionTests
         var (engine, ally, _) = SetupCombat(opening);
 
         (int oldTp, int newTp)? firstChange = null;
-        CombatEventBus.EntityTpChanged += (entityId, _, oldTp, newTp) =>
+        CombatEventBus.EntityTpChanged += (entityId, _, oldTp, newTp, _, _) =>
         {
             if (entityId == "ally") firstChange ??= (oldTp, newTp);
         };
@@ -144,11 +144,11 @@ public class CombatFunctionTests
         var (engine, ally, _) = SetupCombat(opening);
 
         bool allyHpChanged = false;
-        CombatEventBus.EntityDamaged += (entityId, _, _, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (entityId, _, _, _, _, _, _, _, _, _) =>
         {
             if (entityId == "ally") allyHpChanged = true;
         };
-        CombatEventBus.EntityHealed += (entityId, _, _, _, _, _, _) =>
+        CombatEventBus.EntityHealed += (entityId, _, _, _, _, _, _, _, _) =>
         {
             if (entityId == "ally") allyHpChanged = true;
         };
@@ -177,7 +177,7 @@ public class CombatFunctionTests
         var (engine, ally, _) = SetupCombat(opening, allyHp: 10);
 
         int? healedAmount = null;
-        CombatEventBus.EntityHealed += (entityId, _, amount, _, _, _, _) =>
+        CombatEventBus.EntityHealed += (entityId, _, amount, _, _, _, _, _, _) =>
         {
             if (entityId == "ally") healedAmount ??= amount;
         };
@@ -202,7 +202,7 @@ public class CombatFunctionTests
         var (engine, ally, _) = SetupCombat(opening, allyHp: 90);
 
         int? healedAmount = null;
-        CombatEventBus.EntityHealed += (entityId, _, amount, _, _, _, _) =>
+        CombatEventBus.EntityHealed += (entityId, _, amount, _, _, _, _, _, _) =>
         {
             if (entityId == "ally") healedAmount ??= amount;
         };
@@ -248,8 +248,8 @@ public class CombatFunctionTests
 
         bool corpseHealed  = false;
         bool corpseRevived = false;
-        CombatEventBus.EntityHealed  += (entityId, _, _, _, _, _, _) => { if (entityId == "corpse") corpseHealed  = true; };
-        CombatEventBus.EntityRevived += (entityId, _, _, _)          => { if (entityId == "corpse") corpseRevived = true; };
+        CombatEventBus.EntityHealed  += (entityId, _, _, _, _, _, _, _, _) => { if (entityId == "corpse") corpseHealed  = true; };
+        CombatEventBus.EntityRevived += (entityId, _, _, _, _, _)          => { if (entityId == "corpse") corpseRevived = true; };
 
         engine.BeginCombat();
 
@@ -291,7 +291,7 @@ public class CombatFunctionTests
             onTargetSelectionRequested: e => e.SubmitTargets(["friend"]));
 
         int? healedAmount = null;
-        CombatEventBus.EntityHealed += (entityId, _, amount, _, _, _, _) =>
+        CombatEventBus.EntityHealed += (entityId, _, amount, _, _, _, _, _, _) =>
         {
             if (entityId == "friend") healedAmount ??= amount;
         };

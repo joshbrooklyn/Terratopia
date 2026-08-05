@@ -94,7 +94,7 @@ public class TeamworkTests
             [("ally1", teamwork: true, powerFactor: 1.0)], enemyHp: 26);
 
         int? damageDealt = null;
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damageDealt ??= dmg;
         };
@@ -124,7 +124,7 @@ public class TeamworkTests
             enemyHp: 53);
 
         var damages = new List<int>();
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damages.Add(dmg);
         };
@@ -161,7 +161,7 @@ public class TeamworkTests
             enemyHp: 26 + 27 + 28 + 29 + 11);
 
         var damages = new List<int>();
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damages.Add(dmg);
         };
@@ -193,7 +193,7 @@ public class TeamworkTests
             enemyHp: 5 + 27);
 
         var damages = new List<int>();
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _, _, _) =>
         {
             if (targetId == "enemy") damages.Add(dmg);
         };
@@ -280,7 +280,7 @@ public class TeamworkTests
         };
 
         var allyHits = new List<int>();
-        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _) =>
+        CombatEventBus.EntityDamaged += (targetId, _, dmg, _, _, _, _, _, _, _) =>
         {
             if (targetId is "enemy1" or "enemy2") allyHits.Add(dmg);
         };

@@ -61,21 +61,21 @@ Static event bus; the engine's only channel for reporting what happened. All eve
 | `CombatOver` | `Action<bool>` | playerWon |
 | `ActionRejected` | `Action<CombatCommand, string, string>` | command, actorName, reason |
 | `ActionResolved` | `Action<CombatCommand, string, IReadOnlyList<string>>` | command, actorName, targetNames |
-| `EntityDamaged` | `Action<string, string, int, string, string, bool, int, int>` | targetId, targetName, amount, sourceId, sourceName, isCriticalHit, oldHp, newHp |
-| `EntityHealed` | `Action<string, string, int, string, string, int, int>` | targetId, targetName, amount, sourceId, sourceName, oldHp, newHp |
-| `AttackEvaded` | `Action<string, string, string, string, float, float>` | attackerId, attackerName, targetId, targetName, oldEvasion, newEvasion |
-| `KeywordApplied` | `Action<string, string, string, string, string, double>` | keywordName, actorId, actorName, targetId, targetName, bonus |
-| `BuffDebuffApplied` | `Action<string, string, BuffDebuffStat, bool, int, bool, int, int>` | entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue |
-| `BuffDebuffTicked` | `Action<string, string, BuffDebuffStat, bool, int>` | entityId, entityName, stat, isPositive, roundsRemaining |
-| `BuffDebuffExpired` | `Action<string, string, BuffDebuffStat, bool, int, int>` | entityId, entityName, stat, isPositive, oldValue, newValue |
-| `RegenDrainApplied` | `Action<string, string, RegenDrainStat, bool, int, bool>` | entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved — no oldValue/newValue, since applying an entry doesn't move the resource by itself; see [`regen-and-drain.md`](regen-and-drain.md) |
-| `RegenDrainTicked` | `Action<string, string, RegenDrainStat, bool, int>` | entityId, entityName, stat, isPositive, roundsRemaining |
-| `RegenDrainExpired` | `Action<string, string, RegenDrainStat, bool>` | entityId, entityName, stat, isPositive |
-| `EntityTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldTp, newTp — also raised by the per-round Hp/Tp regen/drain delta, alongside `EntityDamaged`/`EntityHealed` |
+| `EntityDamaged` | `Action<string, string, int, string, string, string, string, bool, int, int>` | targetId, targetName, amount, actorId, actorName, sourceId, sourceName, isCriticalHit, oldHp, newHp — sourceId/sourceName identify the Tech/Item/MonsterAction (`CombatCommand.SourceId`/`SourceName`) that caused the damage, distinct from actorId/actorName, the entity that dealt it |
+| `EntityHealed` | `Action<string, string, int, string, string, string, string, int, int>` | targetId, targetName, amount, actorId, actorName, sourceId, sourceName, oldHp, newHp |
+| `AttackEvaded` | `Action<string, string, string, string, float, float, string, string>` | attackerId, attackerName, targetId, targetName, oldEvasion, newEvasion, sourceId, sourceName |
+| `KeywordApplied` | `Action<string, string, string, string, string, double, string, string>` | keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName |
+| `BuffDebuffApplied` | `Action<string, string, BuffDebuffStat, bool, int, bool, int, int, string, string>` | entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue, sourceId, sourceName |
+| `BuffDebuffTicked` | `Action<string, string, BuffDebuffStat, bool, int, string, string>` | entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName |
+| `BuffDebuffExpired` | `Action<string, string, BuffDebuffStat, bool, int, int, string, string>` | entityId, entityName, stat, isPositive, oldValue, newValue, sourceId, sourceName |
+| `RegenDrainApplied` | `Action<string, string, RegenDrainStat, bool, int, bool, string, string>` | entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName — no oldValue/newValue, since applying an entry doesn't move the resource by itself; see [`regen-and-drain.md`](regen-and-drain.md) |
+| `RegenDrainTicked` | `Action<string, string, RegenDrainStat, bool, int, string, string>` | entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName |
+| `RegenDrainExpired` | `Action<string, string, RegenDrainStat, bool, string, string>` | entityId, entityName, stat, isPositive, sourceId, sourceName |
+| `EntityTpChanged` | `Action<string, string, int, int, string, string>` | entityId, entityName, oldTp, newTp, sourceId, sourceName — also raised by the per-round Hp/Tp regen/drain delta, alongside `EntityDamaged`/`EntityHealed` |
 | `EntityMaxHpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxHp, newMaxHp |
 | `EntityMaxTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxTp, newMaxTp |
-| `EntityDeath` | `Action<string, string>` | entityId, entityName |
-| `EntityRevived` | `Action<string, string, int, int>` | entityId, entityName, oldHp, newHp |
+| `EntityDeath` | `Action<string, string, string, string>` | entityId, entityName, sourceId, sourceName |
+| `EntityRevived` | `Action<string, string, int, int, string, string>` | entityId, entityName, oldHp, newHp, sourceId, sourceName |
 
 ### `CombatEntity` (`CombatEngine.DataClasses`)
 
@@ -92,19 +92,21 @@ Describes an action being taken. Constructed by callers (player UI or the caller
 - `int TPCost` — TP deducted from the actor on resolution.
 - `int NumAttacks` — number of separate attack instances this command performs (default 1).
 - `bool AllowMultipleAttackOnSameTarget` — whether the same target may be chosen/picked more than once across the `NumAttacks` attacks (default false; when false and the valid-target pool is smaller than `NumAttacks`, the required picks are capped to the pool size rather than forcing repeats).
-- `List<CombatDirectEffect> DirectEffects` — effects applied to each chosen target.
+- `string CombatFunction` *(required)* — name of the `CombatFunction` this command resolves through, looked up via `CombatFunctionRegistry`.
+- `CombatFunctionParameters Parameters` — the flat parameter bag the resolved `CombatFunction` reads its inputs from (element, calc type, power factor, buffsDebuffs, regensDrains).
+- `List<string> Keywords` — power keyword names active on this command, resolved via `PowerKeywordRegistry`; see [keywords.md](keywords.md).
+- `string SourceId` / `string SourceName` — the Tech/Item/MonsterAction ID and display name this command came from (empty for the basic Fight action's synthetic `"fight"`/`"Fight"`). Used both for stacking-keyword bookkeeping (e.g. Growth telling "used this action again" from "used a different action") and echoed onto every effect event `CombatEventBus` raises as a result of this command, so callers can report what caused an effect without a separate lookup.
 - `List<string> ChosenTargets` — target entity IDs, one per attack instance; publicly gettable, set internally by the engine (via `SubmitTargets` or auto-target expansion).
 
-### `CombatDirectEffect` (`CombatEngine.DataClasses`)
+### `CombatFunctionParameters` (`CombatEngine.DataClasses`)
 
-A single effect within a command: `CombatDirectEffectType EffectType`, `ElementType? Element`, `DamageCalcType CalcType`, `double PowerFactor`.
+The parameter bag a `CombatFunction` reads its inputs from: `ElementType? Element`, `DamageOrHealCalcType? CalcType`, `double? PowerFactor`, `IReadOnlyList<BuffDebuffSpec>? BuffsDebuffs`, `IReadOnlyList<RegenDrainSpec>? RegensDrains`. Every field is optional; each `CombatFunction` decides which ones it requires. See [combat-functions.md](combat-functions.md).
 
 ### Enums (`CombatEngine.Enums`)
 
 - `ValidTarget`: `Allies`, `Enemies`, `Both`
 - `LivingOrDead`: `Living`, `Dead`, `Both`
 - `TargetingType`: `Choose`, `Random`, `All`, `Self`
-- `CombatDirectEffectType`: `Damage`, `Heal`
 - `DamageOrHealCalcType`: `StandardFormula`, `FixedPower`, `FixedAmount`, `PercentOfMax` — see [damage-or-heal-calc-type.md](damage-or-heal-calc-type.md)
 - `ElementType`: `Fire`, `Ice`, `Lightning`, `Void`
 

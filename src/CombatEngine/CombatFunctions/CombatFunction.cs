@@ -14,7 +14,7 @@ namespace CombatEngine.CombatFunctions;
 //   1. Call ctx.DeductTpCost() (or bespoke TP logic) before touching a target. It no-ops on a
 //      0-TP command, so there is no reason to guard it.
 //   2. Validate your own parameters and throw InvalidOperationException naming
-//      ctx.Command.ActionId. The "parameters" schema block marks every field optional, so the
+//      ctx.Command.SourceId. The "parameters" schema block marks every field optional, so the
 //      function is the ONLY place requirements are enforced.
 public abstract class CombatFunction
 {
@@ -43,7 +43,7 @@ public abstract class CombatFunction
             {
                 if (!applied.Add((entity.EntityId, spec.Stat)))
                     throw new InvalidOperationException(
-                        $"{ctx.Command.CombatFunction} ('{ctx.Command.ActionId}'): two buffsDebuffs entries both target {entity.Name}'s {spec.Stat}.");
+                        $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two buffsDebuffs entries both target {entity.Name}'s {spec.Stat}.");
 
                 ctx.ApplyBuffDebuff(entity, spec.Stat, spec.Type == BuffDebuffType.Positive, spec.Rounds, spec.UntilRemoved);
             }
@@ -68,7 +68,7 @@ public abstract class CombatFunction
             {
                 if (!applied.Add((entity.EntityId, spec.Stat)))
                     throw new InvalidOperationException(
-                        $"{ctx.Command.CombatFunction} ('{ctx.Command.ActionId}'): two regensDrains entries both target {entity.Name}'s {spec.Stat}.");
+                        $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two regensDrains entries both target {entity.Name}'s {spec.Stat}.");
 
                 ctx.ApplyRegenDrain(entity, spec.Stat, spec.Type == RegenDrainType.Positive, spec.Rounds, spec.UntilRemoved);
             }

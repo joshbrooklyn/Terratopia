@@ -22,11 +22,6 @@ grow_vertical = 2
 [node name="HeaderRow" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 
-[node name="RoundLabel" type="Label" parent="VBoxContainer/HeaderRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Round —"
-
 [node name="QuitBattleButton" type="Button" parent="VBoxContainer/HeaderRow"]
 layout_mode = 2
 text = "Quit Battle"
@@ -41,22 +36,73 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 size_flags_stretch_ratio = 0.9
 
-[node name="LogPanel" type="VBoxContainer" parent="VBoxContainer/ContentArea"]
+[node name="CenterPanel" type="VBoxContainer" parent="VBoxContainer/ContentArea"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-size_flags_stretch_ratio = 1.2
+size_flags_stretch_ratio = 1.6
 
-[node name="LogHeader" type="Label" parent="VBoxContainer/ContentArea/LogPanel"]
+[node name="RoundPane" type="PanelContainer" parent="VBoxContainer/ContentArea/CenterPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.5
+
+[node name="RoundPaneVBox" type="VBoxContainer" parent="VBoxContainer/ContentArea/CenterPanel/RoundPane"]
+layout_mode = 2
+
+[node name="RoundLabel" type="Label" parent="VBoxContainer/ContentArea/CenterPanel/RoundPane/RoundPaneVBox"]
+layout_mode = 2
+text = "Round —"
+horizontal_alignment = 1
+
+[node name="TurnOrderLabel" type="Label" parent="VBoxContainer/ContentArea/CenterPanel/RoundPane/RoundPaneVBox"]
+layout_mode = 2
+autowrap_mode = 2
+horizontal_alignment = 1
+
+[node name="ActionPane" type="PanelContainer" parent="VBoxContainer/ContentArea/CenterPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 2.0
+
+[node name="ActionPaneVBox" type="VBoxContainer" parent="VBoxContainer/ContentArea/CenterPanel/ActionPane"]
+layout_mode = 2
+
+[node name="ActionPaneTitle" type="Label" parent="VBoxContainer/ContentArea/CenterPanel/ActionPane/ActionPaneVBox"]
+layout_mode = 2
+text = "Waiting..."
+horizontal_alignment = 1
+
+[node name="ActionScroll" type="ScrollContainer" parent="VBoxContainer/ContentArea/CenterPanel/ActionPane/ActionPaneVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ActionContainer" type="VBoxContainer" parent="VBoxContainer/ContentArea/CenterPanel/ActionPane/ActionPaneVBox/ActionScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SelectedTargetsLabel" type="Label" parent="VBoxContainer/ContentArea/CenterPanel/ActionPane/ActionPaneVBox"]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="LogPane" type="PanelContainer" parent="VBoxContainer/ContentArea/CenterPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.5
+
+[node name="LogPaneVBox" type="VBoxContainer" parent="VBoxContainer/ContentArea/CenterPanel/LogPane"]
+layout_mode = 2
+
+[node name="LogHeader" type="Label" parent="VBoxContainer/ContentArea/CenterPanel/LogPane/LogPaneVBox"]
 layout_mode = 2
 text = "Combat Log"
 horizontal_alignment = 1
 
-[node name="LogScroll" type="ScrollContainer" parent="VBoxContainer/ContentArea/LogPanel"]
+[node name="LogScroll" type="ScrollContainer" parent="VBoxContainer/ContentArea/CenterPanel/LogPane/LogPaneVBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="LogContainer" type="VBoxContainer" parent="VBoxContainer/ContentArea/LogPanel/LogScroll"]
+[node name="LogContainer" type="VBoxContainer" parent="VBoxContainer/ContentArea/CenterPanel/LogPane/LogPaneVBox/LogScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -65,56 +111,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 size_flags_stretch_ratio = 0.9
-
-[node name="ActionModal" type="Window" parent="."]
-title = "Action"
-size = Vector2i(400, 300)
-visible = false
-unresizable = true
-exclusive = true
-wrap_controls = true
-
-[node name="ModalVBox" type="VBoxContainer" parent="ActionModal"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="ModalTitle" type="Label" parent="ActionModal/ModalVBox"]
-layout_mode = 2
-text = "Choose Action"
-horizontal_alignment = 1
-
-[node name="TechButtonContainer" type="VBoxContainer" parent="ActionModal/ModalVBox"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="TargetModal" type="Window" parent="."]
-title = "Target"
-size = Vector2i(400, 300)
-visible = false
-unresizable = true
-exclusive = true
-wrap_controls = true
-
-[node name="ModalVBox" type="VBoxContainer" parent="TargetModal"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="ModalTitle" type="Label" parent="TargetModal/ModalVBox"]
-layout_mode = 2
-text = "Choose Target"
-horizontal_alignment = 1
-
-[node name="TargetButtonContainer" type="VBoxContainer" parent="TargetModal/ModalVBox"]
-layout_mode = 2
-size_flags_vertical = 3
 
 [node name="ResultModal" type="Window" parent="."]
 title = "Combat Over"

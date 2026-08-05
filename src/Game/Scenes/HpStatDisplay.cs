@@ -27,19 +27,19 @@ public partial class HpStatDisplay : Label
 		CombatEventBus.EntityMaxHpChanged -= OnEntityMaxHpChanged;
 	}
 
-	private void OnEntityDamaged(string targetId, string targetName, int amount, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp)
+	private void OnEntityDamaged(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp)
 	{
 		if (targetId != _entityId) return;
 		SetHp(newHp);
 	}
 
-	private void OnEntityHealed(string targetId, string targetName, int amount, string sourceId, string sourceName, int oldHp, int newHp)
+	private void OnEntityHealed(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, int oldHp, int newHp)
 	{
 		if (targetId != _entityId) return;
 		SetHp(newHp);
 	}
 
-	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp)
+	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp, string sourceId, string sourceName)
 	{
 		if (entityId != _entityId) return;
 		SetHp(newHp);
