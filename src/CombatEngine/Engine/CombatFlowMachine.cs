@@ -17,6 +17,7 @@ namespace CombatEngine.Engine
         private readonly Action<CombatCommand>     _resolveAction;
         private readonly Action                    _buildRound;
         private readonly Action                    _doRoundEnd;
+        private readonly Action                    _fireRoundStartEventsOnEntities;
         private readonly Func<CombatCommand, IReadOnlyList<CombatEntity>> _getValidTargets;
         private readonly Action<CombatCommand>     _expandAutoTargets;
         private readonly Action<CombatCommand>     _assignAiTarget;
@@ -56,8 +57,8 @@ namespace CombatEngine.Engine
             Action<CombatCommand>     expandAutoTargets,
             Action<CombatCommand>     assignAiTarget,
             Func<CombatEntity?>       nextTurn,
-            Func<int, bool, int, int> resolvePickCount
-            )
+            Func<int, bool, int, int> resolvePickCount,
+            Action fireRoundStartEventsOnEntities)
         {
             _isPlayerEntity           = isPlayerEntity;
             _resolveAction            = resolveAction;
@@ -70,6 +71,7 @@ namespace CombatEngine.Engine
             _assignAiTarget           = assignAiTarget;
             _nextTurn                 = nextTurn;
             _resolvePickCount         = resolvePickCount;
+            _fireRoundStartEventsOnEntities = fireRoundStartEventsOnEntities;
 
 
             _machine = new StateMachine<CombatFlowState, CombatFlowTrigger>(CombatFlowState.Idle);
@@ -87,6 +89,9 @@ namespace CombatEngine.Engine
                 .Permit(CombatFlowTrigger.RoundBuilt, CombatFlowState.TurnStart)
                 .OnEntry(() =>
                 {
+                    // Ticking first matters: BuildRound sorts the turn queue by Speed, so a Speed
+                    // buff expiring this round must be gone before the order is decided.
+                    _fireRoundStartEventsOnEntities();
                     _buildRound();
                     _machine.Fire(CombatFlowTrigger.RoundBuilt);
                 });

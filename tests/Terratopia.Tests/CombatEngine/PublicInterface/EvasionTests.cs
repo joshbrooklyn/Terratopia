@@ -105,7 +105,7 @@ public class EvasionTests
         bool evadeBeforeHit = false;
         bool hitBeforeEvade = false;
 
-        CombatEventBus.AttackEvaded += (_, _, targetId, _) =>
+        CombatEventBus.AttackEvaded += (_, _, targetId, _, _, _) =>
         {
             if (targetId == "defender") evadeBeforeHit = true;
         };
@@ -140,7 +140,7 @@ public class EvasionTests
         {
             if (targetId == "defender") damageReceived = true;
         };
-        CombatEventBus.AttackEvaded += (_, _, targetId, _) =>
+        CombatEventBus.AttackEvaded += (_, _, targetId, _, _, _) =>
         {
             if (targetId == "defender") evadeOccurred = true;
         };
@@ -168,7 +168,7 @@ public class EvasionTests
 
         float? capturedEvasion = null;
 
-        CombatEventBus.AttackEvaded += (_, _, targetId, _) =>
+        CombatEventBus.AttackEvaded += (_, _, targetId, _, _, _) =>
         {
             if (targetId == "defender") capturedEvasion ??= defender.Evasion;
         };
@@ -193,7 +193,7 @@ public class EvasionTests
 
         int? hpAfterFirstEvade = null;
 
-        CombatEventBus.AttackEvaded += (_, _, targetId, _) =>
+        CombatEventBus.AttackEvaded += (_, _, targetId, _, _, _) =>
         {
             if (targetId == "defender") hpAfterFirstEvade ??= defender.Hp;
         };
@@ -219,7 +219,7 @@ public class EvasionTests
 
         float? capturedEvasion = null;
 
-        CombatEventBus.AttackEvaded += (_, _, targetId, _) =>
+        CombatEventBus.AttackEvaded += (_, _, targetId, _, _, _) =>
         {
             if (targetId == "defender") capturedEvasion ??= defender.Evasion;
         };

@@ -113,4 +113,31 @@ public class CombatFunctionRegistryTests
             Assert.Equal(expected, schemaFields);
         }
     }
+
+    [Fact]
+    public void BuffDebuffSpec_MatchesSchemaSuperset()
+    {
+        // What: verifies parameters.buffsDebuffs.items in every action schema declares exactly the
+        //       fields BuffDebuffSpec exposes — the same hand-mirror guarantee as
+        //       CombatFunctionParameters_MatchesSchemaSuperset, one level deeper.
+        // How:  buffsDebuffs.items is a closed (additionalProperties: false) hand-maintained
+        //       mirror of BuffDebuffSpec, so this reflects over it, camelCases each property name,
+        //       and asserts set equality against parameters.properties.buffsDebuffs.items.properties
+        //       in each schema.
+        var expected = typeof(BuffDebuffSpec)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => CamelCase(p.Name))
+            .OrderBy(n => n)
+            .ToArray();
+
+        foreach (var resourceName in ActionSchemaResources)
+        {
+            var schemaFields = LoadSchema(resourceName)
+                .GetProperty("properties").GetProperty("parameters").GetProperty("properties")
+                .GetProperty("buffsDebuffs").GetProperty("items").GetProperty("properties")
+                .EnumerateObject().Select(p => p.Name).OrderBy(n => n).ToArray();
+
+            Assert.Equal(expected, schemaFields);
+        }
+    }
 }

@@ -17,6 +17,7 @@ public class GameSettings : IGameDataObject
     public required TurnOrderSettings TurnOrder { get; init; }
     public required KeywordBalanceSettings Keywords { get; init; }
     public required int LivingDeadReviveHp { get; init; }
+    public required double TimedBuffPct { get; init; }
 
     public class DamageFormulaSettings
     {

@@ -18,4 +18,10 @@ public class CombatFunctionParameters
     public ElementType?          Element     { get; init; }
     public DamageOrHealCalcType? CalcType    { get; init; }
     public double?               PowerFactor { get; init; }
+
+    // Timed buffs/debuffs, applied once each after the action fully resolves - after all hits, all
+    // damage/healing, and regardless of what was evaded. Each entry is self-contained (schema
+    // marks stat/type/target/rounds required) and carries its own target selector, so it need not
+    // land on the action's own targets.
+    public IReadOnlyList<BuffDebuffSpec>? BuffsDebuffs { get; init; }
 }

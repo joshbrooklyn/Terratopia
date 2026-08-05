@@ -63,8 +63,11 @@ Static event bus; the engine's only channel for reporting what happened. All eve
 | `ActionResolved` | `Action<CombatCommand, string, IReadOnlyList<string>>` | command, actorName, targetNames |
 | `EntityDamaged` | `Action<string, string, int, string, string, bool, int, int>` | targetId, targetName, amount, sourceId, sourceName, isCriticalHit, oldHp, newHp |
 | `EntityHealed` | `Action<string, string, int, string, string, int, int>` | targetId, targetName, amount, sourceId, sourceName, oldHp, newHp |
-| `AttackEvaded` | `Action<string, string, string, string>` | attackerId, attackerName, targetId, targetName |
+| `AttackEvaded` | `Action<string, string, string, string, float, float>` | attackerId, attackerName, targetId, targetName, oldEvasion, newEvasion |
 | `KeywordApplied` | `Action<string, string, string, string, string, double>` | keywordName, actorId, actorName, targetId, targetName, bonus |
+| `BuffDebuffApplied` | `Action<string, string, BuffDebuffStat, bool, int, bool, int, int>` | entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue |
+| `BuffDebuffTicked` | `Action<string, string, BuffDebuffStat, bool, int>` | entityId, entityName, stat, isPositive, roundsRemaining |
+| `BuffDebuffExpired` | `Action<string, string, BuffDebuffStat, bool, int, int>` | entityId, entityName, stat, isPositive, oldValue, newValue |
 | `EntityTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldTp, newTp |
 | `EntityMaxHpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxHp, newMaxHp |
 | `EntityMaxTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxTp, newMaxTp |

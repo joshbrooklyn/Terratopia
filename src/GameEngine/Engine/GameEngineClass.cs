@@ -82,6 +82,7 @@ public class GameEngineClass
             TeamworkBonusPerUse = s.Keywords.TeamworkBonusPerUse,
         },
         LivingDeadReviveHp = s.LivingDeadReviveHp,
+        TimedBuffPct = s.TimedBuffPct,
     };
 
     public void CompleteStartup()  => _gameFlowMachine.CompleteStartup();

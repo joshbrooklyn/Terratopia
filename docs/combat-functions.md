@@ -275,6 +275,40 @@ The fields currently available to read in `ctx.Parameters`, in
 | `Element` | `ElementType?` | Which element (`Fire`, `Ice`, `Lightning`, `Void`) the action is associated with. `null` means non-elemental (physical). |
 | `CalcType` | `DamageOrHealCalcType?` | Whether `PowerFactor` is a multiplier on the actor's `Power` stat (`StandardFormula`), a flat power value that still scales with Level and is mitigated by Defense (`FixedPower`), the entire base amount outright — skipping both Power and Level, though Defense still mitigates it (`FixedAmount`), or a fraction of the target's MaxHp used as the entire base amount, again skipping Power and Level (`PercentOfMax`). |
 | `PowerFactor` | `double?` | The action's base power modifier — the number that scales into a damage or heal amount before keyword bonuses are added. |
+| `BuffsDebuffs` | `IReadOnlyList<BuffDebuffSpec>?` | Timed buffs/debuffs this action applies, each resolved and applied once after the action fully resolves — after all hits, all damage/healing, and regardless of what was evaded. `null` or empty means the action applies none. |
+
+Each `BuffDebuffSpec` entry is fully self-contained — `Stat`, `Type` (`Positive`/`Negative`),
+`Target`, `Rounds`, and `UntilRemoved` are all mandatory C# `required` properties, so unlike the
+rest of `CombatFunctionParameters` there is no cross-field pairing left to enforce at combat time.
+`UntilRemoved: true` makes `Rounds` irrelevant — the entry never expires from the round clock, only
+via an opposite-polarity application on the same stat (see
+[`buffs-and-debuffs.md`](buffs-and-debuffs.md#no-round-based-expiration-untilremoved)). `Target`
+(`BuffDebuffTarget`) picks who the entry lands on, independent of the action's own targets:
+
+| `BuffDebuffTarget` | Resolves to |
+|---|---|
+| `SelectedTargets` | The action's own chosen targets — `ctx.Targets`, de-duplicated and filtered to the living. |
+| `Self` | The actor. |
+| `RandomAlly` | One random living ally of the actor, excluding the actor itself. Empty if there is no other living ally. |
+| `RandomEnemy` | One random living enemy of the actor. Empty if there are no living enemies. |
+| `AllAllies` | Every living entity on the actor's side, actor included. |
+| `AllEnemies` | Every living entity on the opposing side. |
+
+"Ally"/"enemy" are relative to the actor, not to the player — a monster's `AllAllies` reaches the
+other monsters. `RandomAlly`/`RandomEnemy` draw from the engine's shared `Rng`, so authoring one
+shifts the draw sequence for everything resolved after it.
+
+Use the shared `ApplyBuffsDebuffs(ctx)` helper on `CombatFunction` rather than resolving and
+applying entries by hand — call it once, after your function's own damage/healing loop. It no-ops
+when `BuffsDebuffs` is null or empty, resolves each entry's `Target` via
+`ctx.ResolveBuffDebuffTargets`, and throws `InvalidOperationException` naming `ctx.Command.ActionId`
+if two entries land on the same entity's stat (e.g. `Self` and `AllAllies` both moving `Power` for
+a solo actor) — the schema's `uniqueBy` can only reject identical `(stat, target)` pairs, not two
+different targets that happen to resolve to the same entity.
+
+See [`buffs-and-debuffs.md`](buffs-and-debuffs.md) for the full writeup — timing/evasion semantics,
+data-authoring examples, GameData Editor and migration support, and plain-English descriptions of
+the test suite.
 
 ## Reference: `CombatFunctionContext`
 
@@ -302,3 +336,5 @@ Everything available on `ctx` inside `Execute`, in
 | `CalculateHealAmount(actor, powerFactor, calcType)` | The amount an action heals for. |
 | `ApplyDamage(actor, target, amount, isCrit)` | Applies a damage amount to a target. |
 | `ApplyHeal(actor, target, amount)` | Applies a heal amount to a target. |
+| `ApplyBuffDebuff(target, stat, isPositive, rounds, untilRemoved)` | Applies a buff/debuff to one of a target's stats. Re-applying the same polarity extends it (or, if either side is `untilRemoved`, keeps it indefinite); the opposite polarity cancels the existing one out. `rounds` is ignored when `untilRemoved` is true. |
+| `ResolveBuffDebuffTargets(selector)` | The living entities a `BuffDebuffTarget` selector resolves to, relative to `Actor`. Used by the shared `ApplyBuffsDebuffs(ctx)` helper above — call that instead of this directly in almost every case. |

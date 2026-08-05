@@ -23,6 +23,8 @@ public class BasicDamageFunction : CombatFunction
 
         foreach (var target in ctx.Targets)
         {
+            // An evaded hit lands nothing at all. Any buffsDebuffs entries are unaffected - they're
+            // a property of the action, applied once after the loop regardless of evasion.
             if (ctx.TryEvade(ctx.Actor, target))
                 continue;
 
@@ -36,5 +38,7 @@ public class BasicDamageFunction : CombatFunction
 
             ctx.ApplyDamage(ctx.Actor, target, damage, isCrit);
         }
+
+        ApplyBuffsDebuffs(ctx);
     }
 }

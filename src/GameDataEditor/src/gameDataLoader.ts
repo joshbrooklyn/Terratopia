@@ -27,6 +27,11 @@ export interface JsonSchemaProperty {
 	minimum?: number;
 	maximum?: number;
 	uniqueItems?: boolean;
+	// Array-of-object items only: entries are duplicates (rejected) when they agree on every
+	// listed property, e.g. ["stat", "target"] for parameters.buffsDebuffs. A custom keyword —
+	// draft-07 can't express "unique by property" — so it's inert to the C# Json.Schema
+	// validator; the equivalent runtime check lives in CombatFunction.ApplyBuffsDebuffs.
+	uniqueBy?: string[];
 	default?: unknown;
 	const?: unknown;
 	description?: string;

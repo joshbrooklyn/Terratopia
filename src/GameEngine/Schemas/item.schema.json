@@ -18,7 +18,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 6,
+      "const": 9,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "itemId": {
@@ -101,6 +101,47 @@
           "type": "number",
           "default": 1.0,
           "description": "BasicDamage/BasicHeal: optional, defaults to 1.0."
+        },
+        "buffsDebuffs": {
+          "type": "array",
+          "uniqueBy": ["stat", "target"],
+          "description": "BasicDamage/BasicHeal: optional. Timed buffs/debuffs, each applied once after the action fully resolves — after all hits, and regardless of what was evaded. At most one entry per stat+target combination.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["stat", "type", "target", "rounds", "untilRemoved"],
+            "properties": {
+              "stat": {
+                "type": "string",
+                "enum": ["Power", "Defense", "Speed"],
+                "default": "Power",
+                "description": "Hand-maintained against CombatEngine.Enums.BuffDebuffStat."
+              },
+              "type": {
+                "type": "string",
+                "enum": ["Positive", "Negative"],
+                "default": "Positive",
+                "description": "Positive raises the stat by gameSettings.timedBuffPct, Negative lowers it by the same fraction. Hand-maintained against CombatEngine.Enums.BuffDebuffType."
+              },
+              "target": {
+                "type": "string",
+                "enum": ["SelectedTargets", "Self", "RandomAlly", "RandomEnemy", "AllAllies", "AllEnemies"],
+                "default": "SelectedTargets",
+                "description": "Who this entry lands on, relative to the actor and independent of the action's own targets. SelectedTargets is the action's chosen targets, de-duplicated. RandomAlly excludes the actor. All selectors consider living entities only. Hand-maintained against CombatEngine.Enums.BuffDebuffTarget."
+              },
+              "rounds": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 0,
+                "description": "Rounds it lasts, counted down at the start of each round. Re-applying the same type adds to the remaining rounds; the opposite type cancels it out. Ignored when untilRemoved is true."
+              },
+              "untilRemoved": {
+                "type": "boolean",
+                "default": false,
+                "description": "When true, this entry never expires from the round clock and rounds is ignored — it stays active until an opposite-polarity application on the same stat cancels it. Hand-maintained against CombatEngine.DataClasses.BuffDebuffSpec."
+              }
+            }
+          }
         }
       }
     }

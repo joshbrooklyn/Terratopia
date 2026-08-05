@@ -13,12 +13,13 @@
     "keywordCap",
     "turnOrder",
     "keywords",
-    "livingDeadReviveHp"
+    "livingDeadReviveHp",
+    "timedBuffPct"
   ],
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 1,
+      "const": 2,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "damageFormula": {
@@ -118,6 +119,10 @@
     "livingDeadReviveHp": {
       "type": "integer",
       "description": "LivingDeadPassive: Hp the entity is revived with when the passive triggers."
+    },
+    "timedBuffPct": {
+      "type": "number",
+      "description": "CombatEntity.AddBuffDebuff: global magnitude (as a fraction, e.g. 0.35 = 35%) applied by every timed buff/debuff."
     }
   }
 }

@@ -54,6 +54,16 @@ public sealed class CombatFunctionContext
     // Clamps to MaxHp, raises EntityHealed. No-ops on a dead target.
     public required Action<CombatEntity, CombatEntity, int> ApplyHeal { get; init; }
 
+    // (target, stat, isPositive, rounds, untilRemoved) => applies a buff/debuff, raising BuffDebuffApplied,
+    // or BuffDebuffExpired when an opposite-polarity entry cancels the existing one out. When
+    // untilRemoved is true, rounds is ignored and the entry never expires from the round clock.
+    public required Action<CombatEntity, BuffDebuffStat, bool, int, bool> ApplyBuffDebuff { get; init; }
+
+    // (selector) => the living entities a buffsDebuffs[] entry lands on, resolved relative to
+    // Actor and independent of Targets except for BuffDebuffTarget.SelectedTargets. RandomAlly/
+    // RandomEnemy draw from the engine's shared Rng.
+    public required Func<BuffDebuffTarget, IReadOnlyList<CombatEntity>> ResolveBuffDebuffTargets { get; init; }
+
     // Convenience: cost resolution + deduction, the first line of any function without bespoke
     // TP rules.
     public void DeductTpCost() => DeductTp(Actor, ResolveTpCost());

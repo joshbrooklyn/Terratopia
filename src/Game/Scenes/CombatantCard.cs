@@ -53,7 +53,7 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.KeywordApplied -= OnKeywordApplied;
 	}
 
-	private void OnAttackEvaded(string attackerId, string attackerName, string targetId, string targetName)
+	private void OnAttackEvaded(string attackerId, string attackerName, string targetId, string targetName, float oldEvasion, float newEvasion)
 	{
 		if (targetId != _entityId) return;
 

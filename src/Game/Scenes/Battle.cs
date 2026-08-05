@@ -68,6 +68,9 @@ public partial class Battle : Control
 		CombatEventBus.EntityHealed            += OnEntityHealed;
 		CombatEventBus.EntityTpChanged        += OnEntityTpChanged;
 		CombatEventBus.EntityRevived          += OnEntityRevived;
+		CombatEventBus.BuffDebuffApplied      += OnBuffDebuffApplied;
+		CombatEventBus.BuffDebuffTicked       += OnBuffDebuffTicked;
+		CombatEventBus.BuffDebuffExpired      += OnBuffDebuffExpired;
 		CombatEventBus.ActionResolved         += OnActionResolved;
 		CombatEventBus.CombatOver             += OnCombatOver;
 
@@ -272,6 +275,18 @@ public partial class Battle : Control
 	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp) =>
 		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} was revived! HP {oldHp} → {newHp}"));
 
+	private void OnBuffDebuffApplied(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, int oldValue, int newValue) =>
+		UiEventQueue.Enqueue(() => AddLogEntry(
+			$"{entityName}: {stat} {(isPositive ? "up" : "down")} for {roundsRemaining} round{(roundsRemaining == 1 ? "" : "s")} ({oldValue} → {newValue})"));
+
+	private void OnBuffDebuffTicked(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining) =>
+		UiEventQueue.Enqueue(() => AddLogEntry(
+			$"{entityName}: {stat} {(isPositive ? "buff" : "debuff")} — {roundsRemaining} round{(roundsRemaining == 1 ? "" : "s")} left"));
+
+	private void OnBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue) =>
+		UiEventQueue.Enqueue(() => AddLogEntry(
+			$"{entityName}: {stat} {(isPositive ? "buff" : "debuff")} wore off ({oldValue} → {newValue})"));
+
 	private void OnActionResolved(CombatCommand cmd, string actorName, IReadOnlyList<string> targetNames) =>
 		UiEventQueue.Enqueue(() =>
 		{
@@ -320,6 +335,9 @@ public partial class Battle : Control
 		CombatEventBus.EntityHealed            -= OnEntityHealed;
 		CombatEventBus.EntityTpChanged        -= OnEntityTpChanged;
 		CombatEventBus.EntityRevived          -= OnEntityRevived;
+		CombatEventBus.BuffDebuffApplied      -= OnBuffDebuffApplied;
+		CombatEventBus.BuffDebuffTicked       -= OnBuffDebuffTicked;
+		CombatEventBus.BuffDebuffExpired      -= OnBuffDebuffExpired;
 		CombatEventBus.ActionResolved         -= OnActionResolved;
 		CombatEventBus.CombatOver             -= OnCombatOver;
 	}

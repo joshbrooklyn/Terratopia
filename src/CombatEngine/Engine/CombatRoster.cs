@@ -4,13 +4,14 @@ using CombatEngine.Enums;
 namespace CombatEngine.Engine;
 
 // Who is in the fight, which side each entity is on, and every selection made over them: the
-// valid target pool for a command, auto-target expansion, and AI target assignment. Owns the
-// rosters outright - CombatEngineClass reaches through this type rather than holding entity
-// lists of its own.
+// valid target pool for a command, auto-target expansion, AI target assignment, and buff/debuff
+// target-selector resolution. Owns the rosters outright - CombatEngineClass reaches through this
+// type rather than holding entity lists of its own.
 //
 // One instance per encounter, built by CombatEngineClass.InitCombat, so a new fight starts from
-// a clean roster rather than a cleared one. Shares the engine's Random instance: the auto-target
-// and AI-target paths draw from it, so their draw order is part of the engine's overall sequence.
+// a clean roster rather than a cleared one. Shares the engine's Random instance: the auto-target,
+// AI-target, and RandomAlly/RandomEnemy buff-target paths all draw from it, so their draw order is
+// part of the engine's overall sequence.
 internal sealed class CombatRoster
 {
     private readonly Random _rng;
@@ -65,6 +66,32 @@ internal sealed class CombatRoster
             _ => throw new ArgumentOutOfRangeException(nameof(cmd)),
         };
     }
+
+    // Resolves one buffsDebuffs[] entry's target selector to the living entities it lands on,
+    // relative to actor - independent of the action's own chosen targets except for
+    // SelectedTargets. RandomAlly excludes actor; both Random* draw from the shared _rng, so using
+    // one shifts the draw sequence for everything resolved after it.
+    internal IReadOnlyList<CombatEntity> ResolveBuffDebuffTargets(
+        CombatEntity actor, BuffDebuffTarget selector, IReadOnlyList<CombatEntity> selectedTargets)
+    {
+        bool actorIsPlayer = IsPlayerEntity(actor);
+        var  allies        = actorIsPlayer ? GetLivingAllies()  : GetLivingEnemies();
+        var  enemies       = actorIsPlayer ? GetLivingEnemies() : GetLivingAllies();
+
+        return selector switch
+        {
+            BuffDebuffTarget.SelectedTargets => selectedTargets.Where(e => !e.IsDead).DistinctBy(e => e.EntityId).ToList(),
+            BuffDebuffTarget.Self             => new[] { actor },
+            BuffDebuffTarget.RandomAlly       => DrawOne(allies.Where(e => e != actor).ToList(), _rng),
+            BuffDebuffTarget.RandomEnemy      => DrawOne(enemies, _rng),
+            BuffDebuffTarget.AllAllies        => allies,
+            BuffDebuffTarget.AllEnemies       => enemies,
+            _ => throw new ArgumentOutOfRangeException(nameof(selector)),
+        };
+    }
+
+    private static IReadOnlyList<CombatEntity> DrawOne(IReadOnlyList<CombatEntity> pool, Random rng) =>
+        pool.Count == 0 ? Array.Empty<CombatEntity>() : new[] { pool[rng.Next(pool.Count)] };
 
     internal void AssignRandomAiTarget(CombatCommand cmd)
     {

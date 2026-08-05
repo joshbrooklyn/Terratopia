@@ -18,6 +18,11 @@ const MIGRATION_TARGETS: { folderName: string; schemaFile: string }[] = [
 	{ folderName: 'MonsterActions', schemaFile: 'monsteraction.schema.json' },
 ];
 
+/** GameSettings.json is a single file at the GameData root, not a folder of many entries, so it's scanned separately from MIGRATION_TARGETS. */
+const MIGRATION_SINGLE_FILE_TARGETS: { fileName: string; schemaFile: string }[] = [
+	{ fileName: 'GameSettings.json', schemaFile: 'gamesettings.schema.json' },
+];
+
 interface ScanEntry {
 	filePath: string;
 	folderName: string;
@@ -97,6 +102,14 @@ function scanAll(extensionUri: vscode.Uri, gameDataRoot: string): ScanEntry[] {
 			entries.push(scanFile(extensionUri, target.folderName, target.schemaFile, path.join(dir, fileName)));
 		}
 	}
+
+	for (const target of MIGRATION_SINGLE_FILE_TARGETS) {
+		const filePath = path.join(gameDataRoot, target.fileName);
+		if (fs.existsSync(filePath)) {
+			entries.push(scanFile(extensionUri, '(root)', target.schemaFile, filePath));
+		}
+	}
+
 	return entries;
 }
 

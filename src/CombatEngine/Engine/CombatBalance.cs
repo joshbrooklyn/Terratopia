@@ -20,6 +20,7 @@ public sealed class CombatBalance
     public TurnOrderSettings TurnOrder { get; init; } = new();
     public KeywordBalanceSettings Keywords { get; init; } = new();
     public int LivingDeadReviveHp { get; init; } = 1;
+    public double TimedBuffPct { get; init; } = 0.35;
 
     public sealed class DamageFormulaSettings
     {

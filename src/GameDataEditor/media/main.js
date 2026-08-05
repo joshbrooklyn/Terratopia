@@ -322,6 +322,9 @@
 				if (propSchema.uniqueItems) {
 					errors.push(...findDuplicateItemsClient(value, path));
 				}
+				if (propSchema.uniqueBy) {
+					errors.push(...findDuplicatesByKeysClient(value, propSchema.uniqueBy, path));
+				}
 				return errors;
 			}
 			case 'object': {
@@ -346,6 +349,25 @@
 			const key = JSON.stringify(item);
 			if (seen.has(key)) {
 				errors.push({ path: `${path}[${index}]`, message: 'Duplicate item is not allowed' });
+			}
+			seen.add(key);
+		});
+		return errors;
+	}
+
+	// Flags the second and later entry that agrees with an earlier one on every listed key, e.g.
+	// uniqueBy: ["stat", "target"] for parameters.buffsDebuffs. The error is anchored to the first
+	// listed key's field so the offending input lights up.
+	function findDuplicatesByKeysClient(value, keys, path) {
+		const seen = new Set();
+		const errors = [];
+		value.forEach((item, index) => {
+			if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+				return;
+			}
+			const key = JSON.stringify(keys.map(k => item[k]));
+			if (seen.has(key)) {
+				errors.push({ path: `${path}[${index}].${keys[0]}`, message: `Duplicate entry: another item already has the same ${keys.join(' + ')}` });
 			}
 			seen.add(key);
 		});

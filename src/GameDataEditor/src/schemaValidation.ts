@@ -88,6 +88,9 @@ function validateProperty(propSchema: JsonSchemaProperty, value: unknown, path: 
 			if (propSchema.uniqueItems) {
 				errors.push(...findDuplicateItems(value, path));
 			}
+			if (propSchema.uniqueBy) {
+				errors.push(...findDuplicatesByKeys(value, propSchema.uniqueBy, path));
+			}
 			return errors;
 		}
 		case 'object': {
@@ -114,6 +117,26 @@ function findDuplicateItems(value: unknown[], path: string): ValidationError[] {
 		const key = JSON.stringify(item);
 		if (seen.has(key)) {
 			errors.push({ path: `${path}[${index}]`, message: 'Duplicate item is not allowed' });
+		}
+		seen.add(key);
+	});
+	return errors;
+}
+
+// Flags the second and later entry that agrees with an earlier one on every listed key, e.g.
+// uniqueBy: ["stat", "target"] for parameters.buffsDebuffs. The error is anchored to the first
+// listed key's field so the offending input lights up.
+function findDuplicatesByKeys(value: unknown[], keys: string[], path: string): ValidationError[] {
+	const seen = new Set<string>();
+	const errors: ValidationError[] = [];
+	value.forEach((item, index) => {
+		if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+			return;
+		}
+		const record = item as Record<string, unknown>;
+		const key = JSON.stringify(keys.map(k => record[k]));
+		if (seen.has(key)) {
+			errors.push({ path: `${path}[${index}].${keys[0]}`, message: `Duplicate entry: another item already has the same ${keys.join(' + ')}` });
 		}
 		seen.add(key);
 	});

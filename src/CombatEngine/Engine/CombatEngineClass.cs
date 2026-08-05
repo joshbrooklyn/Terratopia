@@ -50,7 +50,8 @@ public class CombatEngineClass
             expandAutoTargets:        _roster.ExpandAutoTargets,
             assignAiTarget:           _roster.AssignRandomAiTarget,
             nextTurn:                 NextTurn,
-            resolvePickCount:         CombatRoster.ResolveRequiredPickCount
+            resolvePickCount:         CombatRoster.ResolveRequiredPickCount,
+            fireRoundStartEventsOnEntities:              FireRoundStartEventsOnEntities
         );
     }
 
@@ -131,6 +132,8 @@ public class CombatEngineClass
             CalculateHealAmount   = CombatMath.CalculateHealAmount,
             ApplyDamage           = (actor, target, damage, isCrit) => target.TakeDamage(actor, damage, isCrit),
             ApplyHeal             = (actor, target, amount)         => target.Heal(actor, amount),
+            ApplyBuffDebuff       = (target, stat, isPositive, rounds, untilRemoved) => target.AddBuffDebuff(stat, isPositive, rounds, untilRemoved),
+            ResolveBuffDebuffTargets = selector => _roster.ResolveBuffDebuffTargets(actor, selector, targets),
         });
 
         CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
@@ -176,6 +179,14 @@ public class CombatEngineClass
         bool playerWon = livingEnemies.Count == 0 && livingAllies.Count > 0;
         CombatEventBus.RaiseCombatOver(playerWon);
         return true;
+    }
+
+    internal void FireRoundStartEventsOnEntities()
+    {
+        foreach (var entity in _roster.GetLivingEntities())
+        {
+            entity.OnRoundStart();
+        }
     }
 
     private bool IsRoundOver() => _turnOrder.IsRoundOver;

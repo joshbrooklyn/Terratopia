@@ -100,17 +100,123 @@ function bumpToV5(data: Record<string, unknown>): MigrationResult {
 	return { notes: [] };
 }
 
-/** v5 → v6 (item): widens the calcType enum with PercentOfMax. Existing data's shape is unaffected, so this just bumps the version number. */
+/** v5 → v6 (item): widens the calcType enum with PercentOfMax. v5 → v6 (tech/monsteraction): adds the optional buffDebuffStat/buffDebuffIsPositive/buffDebuffRounds parameters. Existing data's shape is unaffected either way, so this just bumps the version number. */
 function bumpToV6(data: Record<string, unknown>): MigrationResult {
 	data.schemaVersion = 6;
 	return { notes: [] };
 }
 
+/** v6 → v7 (item): adds the optional buffDebuffStat/buffDebuffIsPositive/buffDebuffRounds parameters. Existing data's shape is unaffected, so this just bumps the version number. */
+function bumpToV7(data: Record<string, unknown>): MigrationResult {
+	data.schemaVersion = 7;
+	return { notes: [] };
+}
+
+interface BuffDebuffConversion {
+	notes: string[];
+	ok: boolean;
+}
+
+/**
+ * Folds the old single parameters.buffDebuffStat/buffDebuffIsPositive/buffDebuffRounds triple into
+ * one parameters.buffsDebuffs entry targeting SelectedTargets — the old implicit behaviour, since
+ * the triple always landed on the action's own targets. No authored data uses the old fields, so
+ * this is defensive. Absent buffDebuffStat is a no-op (ok: true, no notes). A buffDebuffStat
+ * present without a well-formed isPositive/rounds pair is left untouched with ok: false, so the
+ * caller doesn't stamp the version and runMigrations reports the file as needs-manual-fix instead
+ * of silently dropping half of it — the same fail-loud pattern as directEffectsToCombatFunction.
+ */
+function convertBuffDebuffToArray(data: Record<string, unknown>): BuffDebuffConversion {
+	const parameters = data.parameters as Record<string, unknown> | undefined;
+	if (!parameters || parameters.buffDebuffStat === undefined) {
+		return { notes: [], ok: true };
+	}
+
+	const stat = parameters.buffDebuffStat;
+	const isPositive = parameters.buffDebuffIsPositive;
+	const rounds = parameters.buffDebuffRounds;
+	if (typeof isPositive !== 'boolean' || typeof rounds !== 'number') {
+		return {
+			notes: ['Cannot auto-migrate: parameters.buffDebuffStat is set but buffDebuffIsPositive/buffDebuffRounds is missing or malformed. Author parameters.buffsDebuffs by hand.'],
+			ok: false,
+		};
+	}
+
+	parameters.buffsDebuffs = [{ stat, type: isPositive ? 'Positive' : 'Negative', target: 'SelectedTargets', rounds }];
+	delete parameters.buffDebuffStat;
+	delete parameters.buffDebuffIsPositive;
+	delete parameters.buffDebuffRounds;
+
+	return {
+		notes: [`Converted parameters.buffDebuffStat/buffDebuffIsPositive/buffDebuffRounds → parameters.buffsDebuffs: ${JSON.stringify(parameters.buffsDebuffs)}`],
+		ok: true,
+	};
+}
+
+/** v6 → v7 (tech/monsteraction): see convertBuffDebuffToArray. */
+function buffDebuffToArrayV7(data: Record<string, unknown>): MigrationResult {
+	const { notes, ok } = convertBuffDebuffToArray(data);
+	if (!ok) {
+		return { notes };
+	}
+	data.schemaVersion = 7;
+	return { notes };
+}
+
+/** v7 → v8 (item): same conversion as buffDebuffToArrayV7, one version later since item runs a version ahead of tech/monsteraction. */
+function buffDebuffToArrayV8(data: Record<string, unknown>): MigrationResult {
+	const { notes, ok } = convertBuffDebuffToArray(data);
+	if (!ok) {
+		return { notes };
+	}
+	data.schemaVersion = 8;
+	return { notes };
+}
+
+/**
+ * Backfills the new required parameters.buffsDebuffs[].untilRemoved on every existing entry,
+ * defaulting to false — the only meaning an entry authored before untilRemoved existed could have
+ * had. Unlike a pure bumpToVN, this can mutate data, so it's its own step.
+ */
+function backfillUntilRemoved(data: Record<string, unknown>, nextVersion: number): MigrationResult {
+	const parameters = data.parameters as Record<string, unknown> | undefined;
+	const buffsDebuffs = parameters?.buffsDebuffs;
+	const notes: string[] = [];
+	if (Array.isArray(buffsDebuffs)) {
+		for (const entry of buffsDebuffs) {
+			if (entry && typeof entry === 'object' && (entry as Record<string, unknown>).untilRemoved === undefined) {
+				(entry as Record<string, unknown>).untilRemoved = false;
+				notes.push('Set untilRemoved: false on an existing buffsDebuffs entry.');
+			}
+		}
+	}
+	data.schemaVersion = nextVersion;
+	return { notes };
+}
+
+/** v7 → v8 (tech/monsteraction): see backfillUntilRemoved. */
+function backfillUntilRemovedToV8(data: Record<string, unknown>): MigrationResult {
+	return backfillUntilRemoved(data, 8);
+}
+
+/** v8 → v9 (item): see backfillUntilRemoved. */
+function backfillUntilRemovedToV9(data: Record<string, unknown>): MigrationResult {
+	return backfillUntilRemoved(data, 9);
+}
+
+/** v1 → v2: backfills the new required `timedBuffPct`, the global magnitude for timed buffs/debuffs (CombatEntity.AddBuffDebuff). */
+function addTimedBuffPct(data: Record<string, unknown>): MigrationResult {
+	data.timedBuffPct = 0.35;
+	data.schemaVersion = 2;
+	return { notes: ['Set timedBuffPct to 0.35.'] };
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6 },
-	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5 },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5 },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9 },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8 },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8 },
+	'gamesettings.schema.json': { 1: addTimedBuffPct },
 };
 
 export interface RunMigrationsResult {

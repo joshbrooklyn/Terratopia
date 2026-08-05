@@ -31,5 +31,7 @@ public class BasicHealFunction : CombatFunction
 
             ctx.ApplyHeal(ctx.Actor, target, ctx.CalculateHealAmount(ctx.Actor, target, effectivePowerFactor, calcType));
         }
+
+        ApplyBuffsDebuffs(ctx);
     }
 }
