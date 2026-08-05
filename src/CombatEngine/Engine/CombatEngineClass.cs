@@ -123,7 +123,8 @@ public class CombatEngineClass
             GetEntity             = _roster.GetEntity,
             Rng                   = _rng,
             ResolveTpCost         = ()                => cmd.TPCost,
-            DeductTp              = (entity, amount)  => entity.SpendTp(amount),
+            // Monsters don't spend TP on actions today; MonsterAction.TPCost is reserved for a future feature.
+            DeductTp              = (entity, amount)  => { if (actorIsAlly) entity.SpendTp(amount); },
             TryEvade              = TryEvade,
             RollCrit              = RollCrit,
             ApplyCritModifier     = ApplyCritModifier,
