@@ -28,8 +28,8 @@ public class RegenDrainTests
     [Fact]
     public void Regen_Heals_ByRegenDrainHpPct_AtRoundStart()
     {
-        // What: verifies a positive Hp regen/drain heals MaxHp * RegenDrainHpPct once OnRoundStart
-        //       runs, with no elemental component and no Defense mitigation.
+        // What: verifies a positive Hp regen/drain heals MaxHp * RegenDrainHpPct once
+        //       ProcessRegensDrains runs, with no elemental component and no Defense mitigation.
         // How:  MaxHp 100 * 0.10 = 10. An entity damaged down to 50 gets a Regen and one round
         //       start; it must land at exactly 60.
         CombatEventBus.Reset();
@@ -37,7 +37,7 @@ public class RegenDrainTests
         var entity = MakeEntity(maxHp: 100, hp: 50);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(60, entity.Hp);
     }
@@ -52,7 +52,7 @@ public class RegenDrainTests
         var entity = MakeEntity(maxHp: 100, hp: 100);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(90, entity.Hp);
     }
@@ -68,7 +68,7 @@ public class RegenDrainTests
         var entity = MakeEntity(maxTp: 50, tp: 20);
         entity.AddRegenDrain(RegenDrainStat.Tp, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(25, entity.Tp);
     }
@@ -81,7 +81,7 @@ public class RegenDrainTests
         var entity = MakeEntity(maxTp: 50, tp: 20);
         entity.AddRegenDrain(RegenDrainStat.Tp, isPositive: false, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(15, entity.Tp);
     }
@@ -99,7 +99,7 @@ public class RegenDrainTests
         var entity = MakeEntity(maxTp: 0, tp: 0);
         entity.AddRegenDrain(RegenDrainStat.Tp, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(0, entity.Tp);
         Assert.False(raised);
@@ -160,7 +160,7 @@ public class RegenDrainTests
         var entity = MakeEntity(maxHp: 100, hp: 100);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 0, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(100, entity.Hp);
         Assert.False(raised);
@@ -179,7 +179,7 @@ public class RegenDrainTests
         var entity = MakeEntity(maxHp: 100, hp: 100);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 0, untilRemoved: true, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(90, entity.Hp);
         Assert.True(raised);
@@ -206,7 +206,7 @@ public class RegenDrainTests
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 2, untilRemoved: false, "test", "Test");
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 3, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(5, lastRounds);
         Assert.Equal(90, entity.Hp);
@@ -222,13 +222,13 @@ public class RegenDrainTests
         int appliedCount = 0;
         bool? expiredIsPositive = null;
         CombatEventBus.RegenDrainApplied += (_, _, _, _, _, _, _, _) => appliedCount++;
-        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _) => expiredIsPositive = isPositive;
+        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _, _, _) => expiredIsPositive = isPositive;
 
         var entity = MakeEntity(maxHp: 100, hp: 100);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true,  roundsRemaining: 2, untilRemoved: false, "test", "Test");
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 9, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(100, entity.Hp);
         Assert.Equal(1, appliedCount);
@@ -241,13 +241,13 @@ public class RegenDrainTests
         CombatEventBus.Reset();
 
         bool? expiredIsPositive = null;
-        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _) => expiredIsPositive = isPositive;
+        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _, _, _) => expiredIsPositive = isPositive;
 
         var entity = MakeEntity(maxHp: 100, hp: 100);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true,  roundsRemaining: 2, untilRemoved: true, "test", "Test");
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 9, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(100, entity.Hp);
         Assert.Equal(true, expiredIsPositive);
@@ -266,9 +266,9 @@ public class RegenDrainTests
 
         bool tickedOrExpired = false;
         CombatEventBus.RegenDrainTicked  += (_, _, _, _, _, _, _) => tickedOrExpired = true;
-        CombatEventBus.RegenDrainExpired += (_, _, _, _, _, _) => tickedOrExpired = true;
+        CombatEventBus.RegenDrainExpired += (_, _, _, _, _, _, _, _) => tickedOrExpired = true;
 
-        for (int i = 0; i < 5; i++) entity.OnRoundStart();
+        for (int i = 0; i < 5; i++) entity.ProcessRegensDrains();
 
         Assert.False(tickedOrExpired);
         Assert.Equal(50, entity.Hp); // 5 rounds of a single 10-Hp hit each: 100 -> 90 -> 80 -> 70 -> 60 -> 50
@@ -287,16 +287,16 @@ public class RegenDrainTests
         CombatEventBus.Reset();
 
         var expired = new List<bool>();
-        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _) => expired.Add(isPositive);
+        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _, _, _) => expired.Add(isPositive);
 
         var entity = MakeEntity(maxHp: 100, hp: 100);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 1, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
         Assert.Equal(90, entity.Hp);
         Assert.Equal([false], expired);
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
         Assert.Equal(90, entity.Hp); // gone - no further damage
         Assert.Equal([false], expired);
     }
@@ -309,22 +309,22 @@ public class RegenDrainTests
         var ticked  = new List<int>();
         var expired = new List<bool>();
         CombatEventBus.RegenDrainTicked  += (_, _, _, _, rounds, _, _) => ticked.Add(rounds);
-        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _) => expired.Add(isPositive);
+        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _, _, _) => expired.Add(isPositive);
 
         var entity = MakeEntity(maxHp: 100, hp: 100);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 2, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
         Assert.Equal(90, entity.Hp);
         Assert.Equal([1], ticked);
         Assert.Empty(expired);
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
         Assert.Equal(80, entity.Hp);
         Assert.Equal([1], ticked);
         Assert.Equal([false], expired);
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
         Assert.Equal(80, entity.Hp); // expired - no more damage
     }
 
@@ -336,12 +336,12 @@ public class RegenDrainTests
         var ticked  = new List<int>();
         var expired = new List<bool>();
         CombatEventBus.RegenDrainTicked  += (_, _, _, _, rounds, _, _) => ticked.Add(rounds);
-        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _) => expired.Add(isPositive);
+        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _, _, _) => expired.Add(isPositive);
 
         var entity = MakeEntity(maxHp: 1000, hp: 100);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true, roundsRemaining: 1, untilRemoved: true, "test", "Test");
 
-        for (int i = 0; i < 5; i++) entity.OnRoundStart();
+        for (int i = 0; i < 5; i++) entity.ProcessRegensDrains();
 
         Assert.Equal(600, entity.Hp); // 5 rounds of +100 (10% of 1000) each, never expiring
         Assert.Empty(ticked);
@@ -366,7 +366,7 @@ public class RegenDrainTests
         var entity = MakeEntity(maxHp: 100, hp: 5);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 1, untilRemoved: false, "test", "Test");
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(0, entity.Hp);
         Assert.True(entity.IsDead);
@@ -376,13 +376,13 @@ public class RegenDrainTests
     [Fact]
     public void ApplyRegensDrains_OnADeadEntity_IsANoOp()
     {
-        // What: verifies OnRoundStart never revives or further affects an already-dead entity, even
-        //       when it carries an active regen/drain entry.
+        // What: verifies ProcessRegensDrains never revives or further affects an already-dead
+        //       entity, even when it carries an active regen/drain entry.
         CombatEventBus.Reset();
 
         var entity = MakeEntity(maxHp: 100, hp: 5);
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 1, untilRemoved: false, "test", "Test");
-        entity.OnRoundStart(); // kills it
+        entity.ProcessRegensDrains(); // kills it
         Assert.True(entity.IsDead);
 
         entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true, roundsRemaining: 1, untilRemoved: true, "test", "Test");
@@ -390,7 +390,7 @@ public class RegenDrainTests
         bool healed = false;
         CombatEventBus.EntityHealed += (_, _, _, _, _, _, _, _, _) => healed = true;
 
-        entity.OnRoundStart();
+        entity.ProcessRegensDrains();
 
         Assert.Equal(0, entity.Hp);
         Assert.False(healed);

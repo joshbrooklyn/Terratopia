@@ -148,13 +148,16 @@ dedicated payload — so health bars and the combat log need no new wiring to re
 events cover only the status's own lifecycle:
 
 ```csharp
-public static event Action<string, string, RegenDrainStat, bool, int, bool>? RegenDrainApplied; // entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved
-public static event Action<string, string, RegenDrainStat, bool, int>?       RegenDrainTicked;  // entityId, entityName, stat, isPositive, roundsRemaining
-public static event Action<string, string, RegenDrainStat, bool>?            RegenDrainExpired; // entityId, entityName, stat, isPositive
+public static event Action<string, string, RegenDrainStat, bool, int, bool, string, string>? RegenDrainApplied; // entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName
+public static event Action<string, string, RegenDrainStat, bool, int, string, string>?       RegenDrainTicked;  // entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName
+public static event Action<string, string, RegenDrainStat, bool, string, string, string, string>? RegenDrainExpired; // entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName
 ```
 
 `RegenDrainExpired` covers both natural expiry and an opposite-polarity cancellation, exactly like
-`BuffDebuffExpired`.
+`BuffDebuffExpired`. `sourceId`/`sourceName` always identify the entry that expired; on a countering
+cancellation, `counteredBySourceId`/`counteredBySourceName` additionally identify the opposing entry
+that cancelled it (empty on a natural expiry) — this is what lets the combat log render "X countered
+by Y" instead of a generic "wore off".
 
 ## Duplicate and collision handling
 

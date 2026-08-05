@@ -194,7 +194,7 @@ public class CombatEntity
 
             _buffsDebuffs.Remove(stat);
             Logger.Debug($"[combat] AddBuffDebuff: {Name} stat={stat} isPositive={isPositive} -> cancelled existing (isPositive={existing.IsPositive}), value {oldValue} -> {GetStatValue(stat)}");
-            CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, existing.IsPositive, oldValue, GetStatValue(stat), sourceId, sourceName);
+            CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, existing.IsPositive, oldValue, GetStatValue(stat), existing.SourceId, existing.SourceName, sourceId, sourceName);
             return;
         }
 
@@ -224,7 +224,7 @@ public class CombatEntity
             {
                 _buffsDebuffs.Remove(stat);
                 Logger.Debug($"[combat] TickBuffDebuffs: {Name} stat={stat} isPositive={buff.IsPositive} -> expired, value {oldValue} -> {GetStatValue(stat)}");
-                CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, buff.IsPositive, oldValue, GetStatValue(stat), buff.SourceId, buff.SourceName);
+                CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, buff.IsPositive, oldValue, GetStatValue(stat), buff.SourceId, buff.SourceName, "", "");
             }
             else
             {
@@ -267,7 +267,7 @@ public class CombatEntity
 
             _regensDrains.Remove(stat);
             Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} -> cancelled existing (isPositive={existing.IsPositive})");
-            CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, existing.IsPositive, sourceId, sourceName);
+            CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, existing.IsPositive, existing.SourceId, existing.SourceName, sourceId, sourceName);
             return;
         }
 
@@ -337,7 +337,7 @@ public class CombatEntity
             {
                 _regensDrains.Remove(stat);
                 Logger.Debug($"[combat] TickRegensDrains: {Name} stat={stat} isPositive={regenDrain.IsPositive} -> expired");
-                CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, regenDrain.IsPositive, regenDrain.SourceId, regenDrain.SourceName);
+                CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, regenDrain.IsPositive, regenDrain.SourceId, regenDrain.SourceName, "", "");
             }
             else
             {
@@ -348,14 +348,16 @@ public class CombatEntity
         }
     }
 
-    internal void OnRoundStart()
+    // Split from the regen/drain phase so the engine can tick Speed buffs (which affect turn
+    // order) before BuildRound, while landing the regen/drain HP/TP delta - and its combat-log
+    // entries - after RoundStarted fires, so the log reads as "round begins, then regen ticks"
+    // rather than appearing to land at the tail of the previous round.
+    internal void ProcessRegensDrains()
     {
         // ApplyRegensDrains lands the HP/TP delta first, so a rounds:1 entry always fires exactly
-        // once before TickRegensDrains removes it. TickBuffDebuffs runs afterward - order between
-        // the two families doesn't matter, since they touch disjoint state.
+        // once before TickRegensDrains removes it.
         ApplyRegensDrains();
         TickRegensDrains();
-        TickBuffDebuffs();
     }
 
     private struct BuffDebuff

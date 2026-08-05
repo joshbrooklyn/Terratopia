@@ -50,8 +50,7 @@ public class CombatEngineClass
             expandAutoTargets:        _roster.ExpandAutoTargets,
             assignAiTarget:           _roster.AssignRandomAiTarget,
             nextTurn:                 NextTurn,
-            resolvePickCount:         CombatRoster.ResolveRequiredPickCount,
-            fireRoundStartEventsOnEntities:              FireRoundStartEventsOnEntities
+            resolvePickCount:         CombatRoster.ResolveRequiredPickCount
         );
     }
 
@@ -82,9 +81,18 @@ public class CombatEngineClass
 
     private void BuildRound()
     {
+        // Buff/debuff ticking must happen first: turn order is sorted by Speed, so a Speed buff
+        // expiring this round must be gone before the order is decided. Regen/drain has no
+        // bearing on turn order, so it's applied after RoundStarted fires - otherwise its HP/TP
+        // delta (and combat-log entries) would land before the round-start announcement instead
+        // of after it.
+        TickBuffDebuffsOnEntities();
+
         _roundNumber++;
         _turnOrder.BuildRound(_roster.GetLivingEntities());
         CombatEventBus.RaiseRoundStarted(_roundNumber, _turnOrder.CurrentTurnOrderIds, _turnOrder.CurrentTurnOrderNames);
+
+        ApplyRegensDrainsOnEntities();
     }
 
     private void DoRoundEnd()
@@ -112,6 +120,8 @@ public class CombatEngineClass
 
         var targets = cmd.ChosenTargets.Select(_roster.GetEntity).ToList();
 
+        CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
+
         function.Execute(new CombatFunctionContext
         {
             Command               = cmd,
@@ -137,8 +147,6 @@ public class CombatEngineClass
             ResolveBuffDebuffTargets = selector => _roster.ResolveBuffDebuffTargets(actor, selector, targets),
             ApplyRegenDrain       = (target, stat, isPositive, rounds, untilRemoved) => target.AddRegenDrain(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName),
         });
-
-        CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
     }
 
     // True when the attack is evaded. Evasion decays 25% on each successful dodge.
@@ -183,11 +191,22 @@ public class CombatEngineClass
         return true;
     }
 
-    internal void FireRoundStartEventsOnEntities()
+    // Runs before BuildRound: Speed buffs/debuffs must expire before turn order is sorted.
+    internal void TickBuffDebuffsOnEntities()
     {
         foreach (var entity in _roster.GetLivingEntities())
         {
-            entity.OnRoundStart();
+            entity.TickBuffDebuffs();
+        }
+    }
+
+    // Runs after BuildRound/RoundStarted so the regen/drain HP/TP delta - and its combat-log
+    // entries - land as part of the new round rather than the tail of the previous one.
+    internal void ApplyRegensDrainsOnEntities()
+    {
+        foreach (var entity in _roster.GetLivingEntities())
+        {
+            entity.ProcessRegensDrains();
         }
     }
 

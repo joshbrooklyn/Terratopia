@@ -410,9 +410,10 @@ public partial class Battle : Control
 		UiEventQueue.Enqueue(() => AddLogEntry(
 			$"{entityName}: {stat} {(isPositive ? "buff" : "debuff")} — {roundsRemaining} round{(roundsRemaining == 1 ? "" : "s")} left"));
 
-	private void OnBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName) =>
-		UiEventQueue.Enqueue(() => AddLogEntry(
-			$"{entityName}: {stat} {(isPositive ? "buff" : "debuff")} wore off ({oldValue} → {newValue})"));
+	private void OnBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) =>
+		UiEventQueue.Enqueue(() => AddLogEntry(string.IsNullOrEmpty(counteredBySourceName)
+			? $"{entityName}: {stat} {(isPositive ? "buff" : "debuff")} ({sourceName}) wore off ({oldValue} → {newValue})"
+			: $"{entityName}: {stat} {(isPositive ? "buff" : "debuff")} ({sourceName}) countered by {counteredBySourceName} ({oldValue} → {newValue})"));
 
 	private void OnRegenDrainApplied(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName) =>
 		UiEventQueue.Enqueue(() => AddLogEntry(
@@ -422,9 +423,10 @@ public partial class Battle : Control
 		UiEventQueue.Enqueue(() => AddLogEntry(
 			$"{entityName}: {stat} {(isPositive ? "regen" : "drain")} — {roundsRemaining} round{(roundsRemaining == 1 ? "" : "s")} left"));
 
-	private void OnRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName) =>
-		UiEventQueue.Enqueue(() => AddLogEntry(
-			$"{entityName}: {stat} {(isPositive ? "regen" : "drain")} wore off"));
+	private void OnRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) =>
+		UiEventQueue.Enqueue(() => AddLogEntry(string.IsNullOrEmpty(counteredBySourceName)
+			? $"{entityName}: {stat} {(isPositive ? "regen" : "drain")} ({sourceName}) wore off"
+			: $"{entityName}: {stat} {(isPositive ? "regen" : "drain")} ({sourceName}) countered by {counteredBySourceName}"));
 
 	private void OnActionResolved(CombatCommand cmd, string actorName, IReadOnlyList<string> targetNames) =>
 		UiEventQueue.Enqueue(() =>

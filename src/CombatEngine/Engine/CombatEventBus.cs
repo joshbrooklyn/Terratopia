@@ -26,17 +26,20 @@ public static class CombatEventBus
     public static event Action<string, string, string, string, string, double, string, string>? KeywordApplied; // keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName
 
     // Timed buffs/debuffs. Expired covers both natural expiry and an opposite-polarity application
-    // cancelling the entry out - either way the buff is gone and the stat has moved back.
+    // cancelling the entry out - either way the buff is gone and the stat has moved back. sourceId/
+    // sourceName always identify the entry that expired; counteredBySourceId/Name additionally
+    // identify the opposing effect that cancelled it out, and are empty on a natural expiry.
     public static event Action<string, string, BuffDebuffStat, bool, int, bool, int, int, string, string>? BuffDebuffApplied; // entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue, sourceId, sourceName
     public static event Action<string, string, BuffDebuffStat, bool, int, string, string>?           BuffDebuffTicked;  // entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName
-    public static event Action<string, string, BuffDebuffStat, bool, int, int, string, string>?      BuffDebuffExpired; // entityId, entityName, stat, isPositive, oldValue, newValue, sourceId, sourceName
+    public static event Action<string, string, BuffDebuffStat, bool, int, int, string, string, string, string>? BuffDebuffExpired; // entityId, entityName, stat, isPositive, oldValue, newValue, sourceId, sourceName, counteredBySourceId, counteredBySourceName
 
     // Timed regen/drain. Unlike a buff/debuff, applying an entry doesn't move a stat by itself - the
     // HP/TP delta only lands once per round, reported via the existing EntityDamaged/EntityHealed/
-    // EntityTpChanged events - so there is no oldValue/newValue here.
+    // EntityTpChanged events - so there is no oldValue/newValue here. Expired's counteredBySourceId/Name
+    // follow the same rule as BuffDebuffExpired above.
     public static event Action<string, string, RegenDrainStat, bool, int, bool, string, string>? RegenDrainApplied; // entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName
     public static event Action<string, string, RegenDrainStat, bool, int, string, string>?       RegenDrainTicked;  // entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName
-    public static event Action<string, string, RegenDrainStat, bool, string, string>?            RegenDrainExpired; // entityId, entityName, stat, isPositive, sourceId, sourceName
+    public static event Action<string, string, RegenDrainStat, bool, string, string, string, string>? RegenDrainExpired; // entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName
 
     // Entity lifecycle
     public static event Action<string, string, int, int, string, string>? EntityTpChanged;     // entityId, entityName, oldTp, newTp, sourceId, sourceName
@@ -60,10 +63,10 @@ public static class CombatEventBus
     public static void RaiseKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName) => KeywordApplied?.Invoke(keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName);
     public static void RaiseBuffDebuffApplied(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, int oldValue, int newValue, string sourceId, string sourceName) => BuffDebuffApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue, sourceId, sourceName);
     public static void RaiseBuffDebuffTicked(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => BuffDebuffTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
-    public static void RaiseBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName) => BuffDebuffExpired?.Invoke(entityId, entityName, stat, isPositive, oldValue, newValue, sourceId, sourceName);
+    public static void RaiseBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => BuffDebuffExpired?.Invoke(entityId, entityName, stat, isPositive, oldValue, newValue, sourceId, sourceName, counteredBySourceId, counteredBySourceName);
     public static void RaiseRegenDrainApplied(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName) => RegenDrainApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName);
     public static void RaiseRegenDrainTicked(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => RegenDrainTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
-    public static void RaiseRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName) => RegenDrainExpired?.Invoke(entityId, entityName, stat, isPositive, sourceId, sourceName);
+    public static void RaiseRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => RegenDrainExpired?.Invoke(entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName);
     public static void RaiseEntityTpChanged(string entityId, string entityName, int oldTp, int newTp, string sourceId, string sourceName) => EntityTpChanged?.Invoke(entityId, entityName, oldTp, newTp, sourceId, sourceName);
     public static void RaiseEntityMaxHpChanged(string entityId, string entityName, int oldMaxHp, int newMaxHp) => EntityMaxHpChanged?.Invoke(entityId, entityName, oldMaxHp, newMaxHp);
     public static void RaiseEntityMaxTpChanged(string entityId, string entityName, int oldMaxTp, int newMaxTp) => EntityMaxTpChanged?.Invoke(entityId, entityName, oldMaxTp, newMaxTp);

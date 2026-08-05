@@ -119,8 +119,8 @@ public class SourceThreadingTests
     public void RegenDrainTicked_InLaterRounds_StillReportsTheOriginatingActionsName()
     {
         // What: verifies the source recorded when a regen/drain is APPLIED survives onto its
-        //       later ticks, even though those ticks fire from CombatEntity.OnRoundStart with no
-        //       CombatCommand in scope - CombatEntity must have persisted it on the timed entry
+        //       later ticks, even though those ticks fire from CombatEntity.ProcessRegensDrains
+        //       with no CombatCommand in scope - CombatEntity must have persisted it on the timed entry
         //       itself (see AddRegenDrain storing SourceId/SourceName on the RegenDrain struct).
         // How:  ally applies a 5-round Hp regen (source "Renew") on turn 1, passes on turn 2, then
         //       finishes the enemy off from turn 3 onward - guaranteeing at least two round-start
@@ -167,5 +167,51 @@ public class SourceThreadingTests
 
         Assert.True(tickedSourceNames.Count >= 2, $"Expected at least 2 ticks, got {tickedSourceNames.Count}.");
         Assert.All(tickedSourceNames, name => Assert.Equal("Renew", name));
+    }
+
+    [Fact]
+    public void BuffDebuffExpired_OnOppositePolarityCancellation_ReportsBothTheOriginalAndCounteringSourceNames()
+    {
+        // What: verifies a countering cancellation's BuffDebuffExpired reports the ORIGINAL effect's
+        //       source (the one that wore off) as sourceName, and the NEW opposing effect's source as
+        //       counteredBySourceName - the UI needs both names at once to render "X countered by Y".
+        CombatEventBus.Reset();
+
+        (string SourceName, string CounteredBySourceName)? expired = null;
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _, _, sourceName, _, counteredBySourceName) =>
+            expired = (sourceName, counteredBySourceName);
+
+        var entity = new CombatEntity(
+            entityId: "ally", name: "Ally", level: 1,
+            maxHp: 100, hp: 100, maxTp: 50, tp: 50,
+            power: 20, defense: 0, speed: 10,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: false, roundsRemaining: 5, untilRemoved: false, "weaken", "Weaken");
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false, "powersurge", "Power Surge");
+
+        Assert.Equal(("Weaken", "Power Surge"), expired);
+    }
+
+    [Fact]
+    public void RegenDrainExpired_OnOppositePolarityCancellation_ReportsBothTheOriginalAndCounteringSourceNames()
+    {
+        // What: same guarantee as the buff/debuff case above, but for regen/drain cancellation.
+        CombatEventBus.Reset();
+
+        (string SourceName, string CounteredBySourceName)? expired = null;
+        CombatEventBus.RegenDrainExpired += (_, _, _, _, _, sourceName, _, counteredBySourceName) =>
+            expired = (sourceName, counteredBySourceName);
+
+        var entity = new CombatEntity(
+            entityId: "ally", name: "Ally", level: 1,
+            maxHp: 100, hp: 100, maxTp: 50, tp: 50,
+            power: 20, defense: 0, speed: 10,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+
+        entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 5, untilRemoved: false, "toxiccloud", "Toxic Cloud");
+        entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true, roundsRemaining: 3, untilRemoved: false, "healingaura", "Healing Aura");
+
+        Assert.Equal(("Toxic Cloud", "Healing Aura"), expired);
     }
 }

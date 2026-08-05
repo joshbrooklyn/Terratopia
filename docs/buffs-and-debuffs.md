@@ -289,7 +289,9 @@ through the real engine.
   20 — neither side wins or averages out, they annihilate each other. Exactly one
   `BuffDebuffApplied` fires (for the first buff only) and the event raised for the cancellation is
   `BuffDebuffExpired`, reporting the polarity of the entry that was *removed* (the original `true`),
-  not the incoming debuff — never a second `BuffDebuffApplied`.
+  not the incoming debuff — never a second `BuffDebuffApplied`. `sourceId`/`sourceName` on that event
+  identify the buff that wore off; `counteredBySourceId`/`counteredBySourceName` identify the debuff
+  that cancelled it — see `SourceThreadingTests.BuffDebuffExpired_OnOppositePolarityCancellation_...`.
 - **`UntilRemoved_IsCancelledByOppositePolarity`** — the same cancellation, but the existing entry is
   `UntilRemoved`. It's removed exactly like a timed entry would be, proving cancellation doesn't
   special-case duration at all.

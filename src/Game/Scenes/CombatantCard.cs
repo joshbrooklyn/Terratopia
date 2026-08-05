@@ -34,8 +34,8 @@ public partial class CombatantCard : PanelContainer
 	// to drive click-to-target selection.
 	public event Action<string>? Clicked;
 
-	private readonly Dictionary<BuffDebuffStat, (bool IsPositive, int Rounds, bool UntilRemoved, int Value)> _buffs = new();
-	private readonly Dictionary<RegenDrainStat, (bool IsPositive, int Rounds, bool UntilRemoved)> _regens = new();
+	private readonly Dictionary<BuffDebuffStat, (bool IsPositive, int Rounds, bool UntilRemoved, int Value, string SourceName)> _buffs = new();
+	private readonly Dictionary<RegenDrainStat, (bool IsPositive, int Rounds, bool UntilRemoved, string SourceName)> _regens = new();
 
 	public void Initialize(CombatantSeed seed, bool showTp)
 	{
@@ -240,7 +240,7 @@ public partial class CombatantCard : PanelContainer
 
 		UiEventQueue.Enqueue(() =>
 		{
-			_buffs[stat] = (isPositive, roundsRemaining, untilRemoved, newValue);
+			_buffs[stat] = (isPositive, roundsRemaining, untilRemoved, newValue, sourceName);
 			RenderStat(stat);
 			RenderEffects();
 		});
@@ -253,12 +253,12 @@ public partial class CombatantCard : PanelContainer
 		UiEventQueue.Enqueue(() =>
 		{
 			if (!_buffs.TryGetValue(stat, out var existing)) return;
-			_buffs[stat] = existing with { Rounds = roundsRemaining };
+			_buffs[stat] = existing with { Rounds = roundsRemaining, SourceName = sourceName };
 			RenderEffects();
 		});
 	}
 
-	private void OnBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName)
+	private void OnBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName)
 	{
 		if (entityId != _entityId) return;
 
@@ -276,7 +276,7 @@ public partial class CombatantCard : PanelContainer
 
 		UiEventQueue.Enqueue(() =>
 		{
-			_regens[stat] = (isPositive, roundsRemaining, untilRemoved);
+			_regens[stat] = (isPositive, roundsRemaining, untilRemoved, sourceName);
 			RenderEffects();
 		});
 	}
@@ -288,12 +288,12 @@ public partial class CombatantCard : PanelContainer
 		UiEventQueue.Enqueue(() =>
 		{
 			if (!_regens.TryGetValue(stat, out var existing)) return;
-			_regens[stat] = existing with { Rounds = roundsRemaining };
+			_regens[stat] = existing with { Rounds = roundsRemaining, SourceName = sourceName };
 			RenderEffects();
 		});
 	}
 
-	private void OnRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName)
+	private void OnRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName)
 	{
 		if (entityId != _entityId) return;
 
@@ -335,7 +335,7 @@ public partial class CombatantCard : PanelContainer
 		{
 			var label = new Label
 			{
-				Text = $"{StatAbbrev(stat)} {(e.IsPositive ? "↑" : "↓")} {Duration(e.Rounds, e.UntilRemoved)}",
+				Text = $"{StatAbbrev(stat)} {(e.IsPositive ? "↑" : "↓")} {Duration(e.Rounds, e.UntilRemoved)} ({e.SourceName})",
 			};
 			label.AddThemeColorOverride("font_color", e.IsPositive ? PositiveColor : NegativeColor);
 			_effectsContainer.AddChild(label);
@@ -345,7 +345,7 @@ public partial class CombatantCard : PanelContainer
 		{
 			var label = new Label
 			{
-				Text = $"{ResourceAbbrev(stat)} {(e.IsPositive ? "regen" : "drain")} {Duration(e.Rounds, e.UntilRemoved)}",
+				Text = $"{ResourceAbbrev(stat)} {(e.IsPositive ? "regen" : "drain")} {Duration(e.Rounds, e.UntilRemoved)} ({e.SourceName})",
 			};
 			label.AddThemeColorOverride("font_color", e.IsPositive ? PositiveColor : NegativeColor);
 			_effectsContainer.AddChild(label);

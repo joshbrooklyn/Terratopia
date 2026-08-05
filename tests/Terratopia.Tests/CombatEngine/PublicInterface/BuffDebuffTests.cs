@@ -148,7 +148,7 @@ public class BuffDebuffTests
         int appliedCount = 0;
         (bool IsPositive, int Old, int New)? expired = null;
         CombatEventBus.BuffDebuffApplied += (_, _, _, _, _, _, _, _, _, _) => appliedCount++;
-        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue, _, _) =>
+        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue, _, _, _, _) =>
             expired = (isPositive, oldValue, newValue);
 
         var entity = MakeEntity();
@@ -170,7 +170,7 @@ public class BuffDebuffTests
         CombatEventBus.Reset();
 
         (bool IsPositive, int Old, int New)? expired = null;
-        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue, _, _) =>
+        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue, _, _, _, _) =>
             expired = (isPositive, oldValue, newValue);
 
         var entity = MakeEntity();
@@ -196,7 +196,7 @@ public class BuffDebuffTests
 
         bool tickedOrExpired = false;
         CombatEventBus.BuffDebuffTicked  += (_, _, _, _, _, _, _) => tickedOrExpired = true;
-        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _, _, _) => tickedOrExpired = true;
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _, _, _, _, _) => tickedOrExpired = true;
 
         for (int i = 0; i < 5; i++) entity.TickBuffDebuffs();
 
@@ -219,7 +219,7 @@ public class BuffDebuffTests
 
         bool tickedOrExpired = false;
         CombatEventBus.BuffDebuffTicked  += (_, _, _, _, _, _, _) => tickedOrExpired = true;
-        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _, _, _) => tickedOrExpired = true;
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _, _, _, _, _) => tickedOrExpired = true;
 
         for (int i = 0; i < 5; i++) entity.TickBuffDebuffs();
 
@@ -245,7 +245,7 @@ public class BuffDebuffTests
         var ticked  = new List<int>();
         var expired = new List<(int Old, int New)>();
         CombatEventBus.BuffDebuffTicked  += (_, _, _, _, rounds, _, _) => ticked.Add(rounds);
-        CombatEventBus.BuffDebuffExpired += (_, _, _, _, oldValue, newValue, _, _) => expired.Add((oldValue, newValue));
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, oldValue, newValue, _, _, _, _) => expired.Add((oldValue, newValue));
 
         var entity = MakeEntity();
         entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test");
@@ -276,7 +276,7 @@ public class BuffDebuffTests
         var ticked  = new List<int>();
         var expired = new List<(int Old, int New)>();
         CombatEventBus.BuffDebuffTicked  += (_, _, _, _, rounds, _, _) => ticked.Add(rounds);
-        CombatEventBus.BuffDebuffExpired += (_, _, _, _, oldValue, newValue, _, _) => expired.Add((oldValue, newValue));
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, oldValue, newValue, _, _, _, _) => expired.Add((oldValue, newValue));
 
         var entity = MakeEntity();
         entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 1, untilRemoved: true, "test", "Test");
