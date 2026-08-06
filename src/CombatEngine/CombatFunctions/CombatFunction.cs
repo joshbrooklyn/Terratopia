@@ -45,7 +45,8 @@ public abstract class CombatFunction
                     throw new InvalidOperationException(
                         $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two buffsDebuffs entries both target {entity.Name}'s {spec.Stat}.");
 
-                ctx.ApplyBuffDebuff(entity, spec.Stat, spec.Type == BuffDebuffType.Positive, spec.Rounds, spec.UntilRemoved);
+                ctx.ApplyBuffDebuff(entity, spec.Stat, spec.Type == BuffDebuffType.Positive, spec.Rounds, spec.UntilRemoved,
+                    spec.CancelOnEntityDeath, spec.CancelOnApplierDeath);
             }
         }
     }
@@ -70,7 +71,8 @@ public abstract class CombatFunction
                     throw new InvalidOperationException(
                         $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two regensDrains entries both target {entity.Name}'s {spec.Stat}.");
 
-                ctx.ApplyRegenDrain(entity, spec.Stat, spec.Type == RegenDrainType.Positive, spec.Rounds, spec.UntilRemoved);
+                ctx.ApplyRegenDrain(entity, spec.Stat, spec.Type == RegenDrainType.Positive, spec.Rounds, spec.UntilRemoved,
+                    spec.CancelOnEntityDeath, spec.CancelOnApplierDeath);
             }
         }
     }

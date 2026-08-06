@@ -275,6 +275,146 @@ public class RegenDrainTests
     }
 
     // ---------------------------------------------------------------
+    // Cancellation on death
+    // ---------------------------------------------------------------
+
+    [Fact]
+    public void CancelOnEntityDeath_True_ClearsTheEntryTheMomentItsHolderDies()
+    {
+        // What: mirrors BuffDebuffTests' equivalent - a CancelOnEntityDeath: true entry is removed
+        //       the moment its holder dies, raising RegenDrainExpired with empty counteredBy
+        //       fields, and is genuinely gone rather than inert. TickRegensDrains (unlike
+        //       ApplyRegensDrains) never gates on IsDead, so calling it directly afterward is a
+        //       reliable way to prove the entry is truly gone, not merely dormant.
+        CombatEventBus.Reset();
+
+        (bool IsPositive, string CounteredById, string CounteredByName)? expired = null;
+        CombatEventBus.RegenDrainExpired += (_, _, _, isPositive, _, _, counteredById, counteredByName) =>
+            expired = (isPositive, counteredById, counteredByName);
+
+        var entity = MakeEntity(maxHp: 100, hp: 100);
+        entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true, roundsRemaining: 5, untilRemoved: false, "test", "Test",
+            cancelOnEntityDeath: true);
+
+        entity.TakeDamage(entity, entity.Hp, "test", "Test");
+
+        Assert.True(entity.IsDead);
+        Assert.Equal((true, "", ""), expired);
+
+        bool tickedOrExpiredAfterDeath = false;
+        CombatEventBus.RegenDrainTicked  += (_, _, _, _, _, _, _) => tickedOrExpiredAfterDeath = true;
+        CombatEventBus.RegenDrainExpired += (_, _, _, _, _, _, _, _) => tickedOrExpiredAfterDeath = true;
+        entity.TickRegensDrains();
+        Assert.False(tickedOrExpiredAfterDeath); // nothing left to tick - the entry is really gone
+    }
+
+    [Fact]
+    public void CancelOnEntityDeath_False_LeavesTheEntryInPlaceOnDeath()
+    {
+        // What: verifies a CancelOnEntityDeath: false entry survives its holder's death untouched -
+        //       no RegenDrainExpired fires on death, and the entry is still tickable afterward
+        //       (TickRegensDrains doesn't gate on IsDead, unlike ApplyRegensDrains).
+        CombatEventBus.Reset();
+
+        bool expiredOnDeath = false;
+        CombatEventBus.RegenDrainExpired += (_, _, _, _, _, _, _, _) => expiredOnDeath = true;
+
+        var entity = MakeEntity(maxHp: 100, hp: 100);
+        entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true, roundsRemaining: 5, untilRemoved: false, "test", "Test",
+            cancelOnEntityDeath: false);
+
+        entity.TakeDamage(entity, entity.Hp, "test", "Test");
+
+        Assert.True(entity.IsDead);
+        Assert.False(expiredOnDeath);
+
+        int? tickedRounds = null;
+        CombatEventBus.RegenDrainTicked += (_, _, _, _, rounds, _, _) => tickedRounds = rounds;
+        entity.TickRegensDrains();
+        Assert.Equal(4, tickedRounds); // still there: 5 rounds ticked down to 4
+    }
+
+    [Fact]
+    public void CancelOnApplierDeath_True_ClearsOtherEntitysEntry_WhenApplierDies()
+    {
+        // What: verifies CancelOnApplierDeath removes an entry from the entity HOLDING it once the
+        //       entity that APPLIED it dies, even though the holder stays alive - the
+        //       CombatRoster-mediated cross-entity path, not HandleDefeat's own-death sweep. A bare
+        //       CombatRoster is constructed directly, same as BuffDebuffTargetResolutionTests does.
+        //       Applier and holder need distinct EntityIds - CombatRoster keys its lookup
+        //       dictionary by EntityId.
+        CombatEventBus.Reset();
+
+        var applier = new CombatEntity(entityId: "applier", name: "Applier", level: 1,
+            maxHp: 100, hp: 100, maxTp: 0, tp: 0, power: 20, defense: 20, speed: 20,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+        var holder = new CombatEntity(entityId: "holder", name: "Holder", level: 1,
+            maxHp: 100, hp: 100, maxTp: 0, tp: 0, power: 20, defense: 20, speed: 20,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+        _ = new CombatRoster(allies: [applier], enemies: [holder], new Random(0));
+
+        holder.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 5, untilRemoved: false, "test", "Test",
+            applierId: applier.EntityId, cancelOnEntityDeath: true, cancelOnApplierDeath: true);
+
+        applier.TakeDamage(applier, applier.Hp, "test", "Test");
+
+        Assert.True(applier.IsDead);
+        Assert.False(holder.IsDead);
+
+        holder.ProcessRegensDrains();
+        Assert.Equal(100, holder.Hp); // no drain applied - the entry was cleared before it could tick
+    }
+
+    [Fact]
+    public void CancelOnApplierDeath_False_LeavesOtherEntitysEntry_WhenApplierDies()
+    {
+        // What: verifies CancelOnApplierDeath: false is the status quo - an entry outlives the
+        //       applier that cast it.
+        CombatEventBus.Reset();
+
+        var applier = new CombatEntity(entityId: "applier", name: "Applier", level: 1,
+            maxHp: 100, hp: 100, maxTp: 0, tp: 0, power: 20, defense: 20, speed: 20,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+        var holder = new CombatEntity(entityId: "holder", name: "Holder", level: 1,
+            maxHp: 100, hp: 100, maxTp: 0, tp: 0, power: 20, defense: 20, speed: 20,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+        _ = new CombatRoster(allies: [applier], enemies: [holder], new Random(0));
+
+        holder.AddRegenDrain(RegenDrainStat.Hp, isPositive: false, roundsRemaining: 5, untilRemoved: false, "test", "Test",
+            applierId: applier.EntityId, cancelOnEntityDeath: true, cancelOnApplierDeath: false);
+
+        applier.TakeDamage(applier, applier.Hp, "test", "Test");
+
+        Assert.True(applier.IsDead);
+
+        holder.ProcessRegensDrains();
+        Assert.Equal(90, holder.Hp); // drain still active: -10 (10% of MaxHp 100)
+    }
+
+    [Fact]
+    public void SamePolarityRefresh_CarriesForwardTheNewestCancelFlags()
+    {
+        // What: verifies CancelOnEntityDeath/CancelOnApplierDeath follow the same "newest
+        //       application wins on refresh" rule already proven for SourceId/SourceName.
+        CombatEventBus.Reset();
+
+        var entity = MakeEntity(maxHp: 100, hp: 100);
+        entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test",
+            cancelOnEntityDeath: false);
+        entity.AddRegenDrain(RegenDrainStat.Hp, isPositive: true, roundsRemaining: 3, untilRemoved: false, "test", "Test",
+            cancelOnEntityDeath: true);
+
+        entity.TakeDamage(entity, entity.Hp, "test", "Test");
+        Assert.True(entity.IsDead);
+
+        bool tickedOrExpired = false;
+        CombatEventBus.RegenDrainTicked  += (_, _, _, _, _, _, _) => tickedOrExpired = true;
+        CombatEventBus.RegenDrainExpired += (_, _, _, _, _, _, _, _) => tickedOrExpired = true;
+        entity.TickRegensDrains();
+        Assert.False(tickedOrExpired); // cleared on death - the refreshed (true) flag won, not the original (false) one
+    }
+
+    // ---------------------------------------------------------------
     // Ticking down / the round-start ordering
     // ---------------------------------------------------------------
 
@@ -479,7 +619,7 @@ public class RegenDrainTests
                 PowerFactor  = 1.0,
                 RegensDrains =
                 [
-                    new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Negative, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false },
+                    new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Negative, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };
@@ -510,7 +650,7 @@ public class RegenDrainTests
                 PowerFactor  = 1.0,
                 RegensDrains =
                 [
-                    new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Positive, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false },
+                    new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Positive, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };
@@ -547,8 +687,8 @@ public class RegenDrainTests
                 PowerFactor  = 1.0,
                 RegensDrains =
                 [
-                    new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Positive, Target = BuffDebuffTarget.Self,      Rounds = 2, UntilRemoved = false },
-                    new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Positive, Target = BuffDebuffTarget.AllAllies, Rounds = 2, UntilRemoved = false },
+                    new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Positive, Target = BuffDebuffTarget.Self,      Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
+                    new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Positive, Target = BuffDebuffTarget.AllAllies, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };

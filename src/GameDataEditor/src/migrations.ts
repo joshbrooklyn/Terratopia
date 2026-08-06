@@ -257,11 +257,53 @@ function bumpToV11(data: Record<string, unknown>): MigrationResult {
 	return { notes: [] };
 }
 
+/**
+ * Backfills the new required parameters.buffsDebuffs[]/regensDrains[].cancelOnEntityDeath and
+ * .cancelOnApplierDeath on every existing entry, defaulting to true/false respectively - matching
+ * the GameData Editor's new-entry defaults and the only meaning an entry authored before these
+ * flags existed could have had. Unlike a pure bumpToVN, this can mutate data, so it's its own step.
+ */
+function backfillCancelOnDeathFlags(data: Record<string, unknown>, nextVersion: number): MigrationResult {
+	const parameters = data.parameters as Record<string, unknown> | undefined;
+	const notes: string[] = [];
+
+	for (const arrayName of ['buffsDebuffs', 'regensDrains'] as const) {
+		const entries = parameters?.[arrayName];
+		if (!Array.isArray(entries)) continue;
+
+		for (const entry of entries) {
+			if (!entry || typeof entry !== 'object') continue;
+			const e = entry as Record<string, unknown>;
+			if (e.cancelOnEntityDeath === undefined) {
+				e.cancelOnEntityDeath = true;
+				notes.push(`Set cancelOnEntityDeath: true on an existing ${arrayName} entry.`);
+			}
+			if (e.cancelOnApplierDeath === undefined) {
+				e.cancelOnApplierDeath = false;
+				notes.push(`Set cancelOnApplierDeath: false on an existing ${arrayName} entry.`);
+			}
+		}
+	}
+
+	data.schemaVersion = nextVersion;
+	return { notes };
+}
+
+/** v10 → v11 (tech): see backfillCancelOnDeathFlags. */
+function backfillCancelOnDeathFlagsToV11(data: Record<string, unknown>): MigrationResult {
+	return backfillCancelOnDeathFlags(data, 11);
+}
+
+/** v11 → v12 (item/monsteraction): see backfillCancelOnDeathFlags. */
+function backfillCancelOnDeathFlagsToV12(data: Record<string, unknown>): MigrationResult {
+	return backfillCancelOnDeathFlags(data, 12);
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10, 10: bumpToV11 },
-	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9, 9: bumpToV10 },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11 },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12 },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9, 9: bumpToV10, 10: backfillCancelOnDeathFlagsToV11 },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12 },
 	'gamesettings.schema.json': { 1: addTimedBuffPct, 2: addRegenDrainPct },
 };
 

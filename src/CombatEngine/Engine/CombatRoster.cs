@@ -25,6 +25,23 @@ internal sealed class CombatRoster
         _allies.AddRange(allies);
         _enemies.AddRange(enemies);
         _allEntities = _allies.Concat(_enemies).ToDictionary(e => e.EntityId);
+
+        // Cross-entity CancelOnApplierDeath cancellation: when any entity dies, every OTHER
+        // still-living entity gets a chance to drop entries sourced from the one that just died.
+        // The subscription's lifetime is bounded by CombatEventBus.Reset() at the top of the next
+        // CombatEngineClass.InitCombat, the same lifetime every other CombatEventBus subscriber
+        // already relies on - no explicit unsubscribe needed.
+        CombatEventBus.EntityDeath += OnEntityDeath;
+    }
+
+    // MarkDead() runs before CombatEntity.HandleDefeat raises EntityDeath, so GetLivingEntities()
+    // here already excludes the entity that just died.
+    private void OnEntityDeath(string entityId, string entityName, string sourceId, string sourceName)
+    {
+        foreach (var entity in GetLivingEntities())
+        {
+            entity.CancelEffectsAppliedBy(entityId);
+        }
     }
 
     internal IReadOnlyDictionary<string, CombatEntity> AllEntities => _allEntities;

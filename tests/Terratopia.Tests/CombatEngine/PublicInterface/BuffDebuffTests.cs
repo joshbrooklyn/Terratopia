@@ -228,6 +228,135 @@ public class BuffDebuffTests
     }
 
     // ---------------------------------------------------------------
+    // Cancellation on death
+    // ---------------------------------------------------------------
+
+    [Fact]
+    public void CancelOnEntityDeath_True_ClearsTheEntryTheMomentItsHolderDies()
+    {
+        // What: verifies a CancelOnEntityDeath: true entry is removed the moment its holder dies -
+        //       raising BuffDebuffExpired with empty counteredBy fields, the same shape a natural
+        //       tick-expiry uses - and is genuinely gone (not merely inert), so the stat getter
+        //       reads base immediately, before anything else has a chance to observe it.
+        CombatEventBus.Reset();
+
+        (bool IsPositive, int Old, int New, string CounteredById, string CounteredByName)? expired = null;
+        CombatEventBus.BuffDebuffExpired += (_, _, _, isPositive, oldValue, newValue, _, _, counteredById, counteredByName) =>
+            expired = (isPositive, oldValue, newValue, counteredById, counteredByName);
+
+        var entity = MakeEntity();
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 5, untilRemoved: false, "test", "Test",
+            cancelOnEntityDeath: true);
+
+        entity.TakeDamage(entity, entity.Hp, "test", "Test");
+
+        Assert.True(entity.IsDead);
+        Assert.Equal((true, 27, 20), (expired!.Value.IsPositive, expired.Value.Old, expired.Value.New));
+        Assert.Equal("", expired.Value.CounteredById);
+        Assert.Equal("", expired.Value.CounteredByName);
+        Assert.Equal(20, entity.Power);
+    }
+
+    [Fact]
+    public void CancelOnEntityDeath_False_LeavesTheEntryInPlaceOnDeath()
+    {
+        // What: verifies a CancelOnEntityDeath: false entry survives its holder's death untouched -
+        //       no BuffDebuffExpired fires, and the stat getter (which never special-cases IsDead)
+        //       still reflects it.
+        CombatEventBus.Reset();
+
+        bool expired = false;
+        CombatEventBus.BuffDebuffExpired += (_, _, _, _, _, _, _, _, _, _) => expired = true;
+
+        var entity = MakeEntity();
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 5, untilRemoved: false, "test", "Test",
+            cancelOnEntityDeath: false);
+
+        entity.TakeDamage(entity, entity.Hp, "test", "Test");
+
+        Assert.True(entity.IsDead);
+        Assert.False(expired);
+        Assert.Equal(27, entity.Power);
+    }
+
+    [Fact]
+    public void CancelOnApplierDeath_True_ClearsOtherEntitysEntry_WhenApplierDies()
+    {
+        // What: verifies CancelOnApplierDeath removes an entry from the entity HOLDING it once the
+        //       entity that APPLIED it dies, even though the holder itself stays alive - the
+        //       CombatRoster-mediated cross-entity path (CombatRoster subscribes to
+        //       CombatEventBus.EntityDeath and calls CancelEffectsAppliedBy on every other living
+        //       entity), not HandleDefeat's own-death sweep. A bare CombatRoster is constructed
+        //       directly, the same way BuffDebuffTargetResolutionTests exercises CombatRoster in
+        //       isolation from a full engine fight. Applier and holder need distinct EntityIds -
+        //       CombatRoster keys its lookup dictionary by EntityId.
+        CombatEventBus.Reset();
+
+        var applier = new CombatEntity(entityId: "applier", name: "Applier", level: 1,
+            maxHp: 100, hp: 100, maxTp: 0, tp: 0, power: 20, defense: 20, speed: 20,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+        var holder = new CombatEntity(entityId: "holder", name: "Holder", level: 1,
+            maxHp: 100, hp: 100, maxTp: 0, tp: 0, power: 20, defense: 20, speed: 20,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+        _ = new CombatRoster(allies: [applier], enemies: [holder], new Random(0));
+
+        holder.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 5, untilRemoved: false, "test", "Test",
+            applierId: applier.EntityId, cancelOnEntityDeath: true, cancelOnApplierDeath: true);
+        Assert.Equal(27, holder.Power);
+
+        applier.TakeDamage(applier, applier.Hp, "test", "Test");
+
+        Assert.True(applier.IsDead);
+        Assert.False(holder.IsDead);
+        Assert.Equal(20, holder.Power);
+    }
+
+    [Fact]
+    public void CancelOnApplierDeath_False_LeavesOtherEntitysEntry_WhenApplierDies()
+    {
+        // What: verifies CancelOnApplierDeath: false is the status quo - an entry outlives the
+        //       applier that cast it, same as before this feature existed.
+        CombatEventBus.Reset();
+
+        var applier = new CombatEntity(entityId: "applier", name: "Applier", level: 1,
+            maxHp: 100, hp: 100, maxTp: 0, tp: 0, power: 20, defense: 20, speed: 20,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+        var holder = new CombatEntity(entityId: "holder", name: "Holder", level: 1,
+            maxHp: 100, hp: 100, maxTp: 0, tp: 0, power: 20, defense: 20, speed: 20,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+        _ = new CombatRoster(allies: [applier], enemies: [holder], new Random(0));
+
+        holder.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 5, untilRemoved: false, "test", "Test",
+            applierId: applier.EntityId, cancelOnEntityDeath: true, cancelOnApplierDeath: false);
+
+        applier.TakeDamage(applier, applier.Hp, "test", "Test");
+
+        Assert.True(applier.IsDead);
+        Assert.Equal(27, holder.Power);
+    }
+
+    [Fact]
+    public void SamePolarityRefresh_CarriesForwardTheNewestCancelFlags()
+    {
+        // What: verifies CancelOnEntityDeath/CancelOnApplierDeath follow the same "newest
+        //       application wins on refresh" rule already proven for SourceId/SourceName - applying
+        //       once with both flags false, then refreshing with both true, must behave as if the
+        //       entry had always been authored with the newer flags.
+        CombatEventBus.Reset();
+
+        var entity = MakeEntity();
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 2, untilRemoved: false, "test", "Test",
+            cancelOnEntityDeath: false);
+        entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false, "test", "Test",
+            cancelOnEntityDeath: true);
+
+        entity.TakeDamage(entity, entity.Hp, "test", "Test");
+
+        Assert.True(entity.IsDead);
+        Assert.Equal(20, entity.Power); // cleared on death - the refreshed (true) flag won, not the original (false) one
+    }
+
+    // ---------------------------------------------------------------
     // Ticking down
     // ---------------------------------------------------------------
 
@@ -385,7 +514,7 @@ public class BuffDebuffTests
                 PowerFactor  = 1.0,
                 BuffsDebuffs =
                 [
-                    new BuffDebuffSpec { Stat = BuffDebuffStat.Defense, Type = BuffDebuffType.Negative, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false },
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Defense, Type = BuffDebuffType.Negative, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };
@@ -428,7 +557,7 @@ public class BuffDebuffTests
                 PowerFactor  = 1.0,
                 BuffsDebuffs =
                 [
-                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false },
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };
@@ -467,8 +596,8 @@ public class BuffDebuffTests
                 PowerFactor  = 1.0,
                 BuffsDebuffs =
                 [
-                    new BuffDebuffSpec { Stat = BuffDebuffStat.Defense, Type = BuffDebuffType.Negative, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false },
-                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power,   Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.Self,            Rounds = 2, UntilRemoved = false },
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Defense, Type = BuffDebuffType.Negative, Target = BuffDebuffTarget.SelectedTargets, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power,   Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.Self,            Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };
@@ -507,7 +636,7 @@ public class BuffDebuffTests
                 PowerFactor  = 1.0,
                 BuffsDebuffs =
                 [
-                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.Self, Rounds = 2, UntilRemoved = false },
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.Self, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };
@@ -552,7 +681,7 @@ public class BuffDebuffTests
                 PowerFactor  = 1.0,
                 BuffsDebuffs =
                 [
-                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.RandomAlly, Rounds = 2, UntilRemoved = false },
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.RandomAlly, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };
@@ -593,8 +722,8 @@ public class BuffDebuffTests
                 PowerFactor  = 1.0,
                 BuffsDebuffs =
                 [
-                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.Self,      Rounds = 2, UntilRemoved = false },
-                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.AllAllies, Rounds = 2, UntilRemoved = false },
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.Self,      Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.AllAllies, Rounds = 2, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false },
                 ],
             },
         };

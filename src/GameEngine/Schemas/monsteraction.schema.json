@@ -19,7 +19,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 11,
+      "const": 12,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "monsterActionId": {
@@ -106,7 +106,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["stat", "type", "target", "rounds", "untilRemoved"],
+            "required": ["stat", "type", "target", "rounds", "untilRemoved", "cancelOnEntityDeath", "cancelOnApplierDeath"],
             "properties": {
               "stat": {
                 "type": "string",
@@ -136,6 +136,16 @@
                 "type": "boolean",
                 "default": false,
                 "description": "When true, this entry never expires from the round clock and rounds is ignored — it stays active until an opposite-polarity application on the same stat cancels it. Hand-maintained against CombatEngine.DataClasses.BuffDebuffSpec."
+              },
+              "cancelOnEntityDeath": {
+                "type": "boolean",
+                "default": true,
+                "description": "When true, this entry is removed the moment the afflicted entity dies, before EntityDeath is raised, and never survives a later Revive. When false, it's left in place through death. Hand-maintained against CombatEngine.DataClasses.BuffDebuffSpec."
+              },
+              "cancelOnApplierDeath": {
+                "type": "boolean",
+                "default": false,
+                "description": "When true, this entry is removed the moment the entity that applied it dies, even if the afflicted entity is someone else and stays alive. When false, it outlives its applier. Hand-maintained against CombatEngine.DataClasses.BuffDebuffSpec."
               }
             }
           }
@@ -147,7 +157,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["stat", "type", "target", "rounds", "untilRemoved"],
+            "required": ["stat", "type", "target", "rounds", "untilRemoved", "cancelOnEntityDeath", "cancelOnApplierDeath"],
             "properties": {
               "stat": {
                 "type": "string",
@@ -177,6 +187,16 @@
                 "type": "boolean",
                 "default": false,
                 "description": "When true, this entry never expires from the round clock and rounds is ignored — it stays active until an opposite-polarity application on the same stat cancels it. Hand-maintained against CombatEngine.DataClasses.RegenDrainSpec."
+              },
+              "cancelOnEntityDeath": {
+                "type": "boolean",
+                "default": true,
+                "description": "When true, this entry is removed the moment the afflicted entity dies, before EntityDeath is raised, and never survives a later Revive. When false, it's left in place through death. Hand-maintained against CombatEngine.DataClasses.RegenDrainSpec."
+              },
+              "cancelOnApplierDeath": {
+                "type": "boolean",
+                "default": false,
+                "description": "When true, this entry is removed the moment the entity that applied it dies, even if the afflicted entity is someone else and stays alive. When false, it outlives its applier. Hand-maintained against CombatEngine.DataClasses.RegenDrainSpec."
               }
             }
           }

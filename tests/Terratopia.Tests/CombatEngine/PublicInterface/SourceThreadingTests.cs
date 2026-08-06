@@ -136,7 +136,7 @@ public class SourceThreadingTests
             {
                 CalcType     = DamageOrHealCalcType.StandardFormula,
                 PowerFactor  = 0.0,
-                RegensDrains = [new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Positive, Target = BuffDebuffTarget.SelectedTargets, Rounds = 5, UntilRemoved = false }],
+                RegensDrains = [new RegenDrainSpec { Stat = RegenDrainStat.Hp, Type = RegenDrainType.Positive, Target = BuffDebuffTarget.SelectedTargets, Rounds = 5, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = false }],
             },
             SourceId       = "renew",
             SourceName     = "Renew",
@@ -191,6 +191,120 @@ public class SourceThreadingTests
         entity.AddBuffDebuff(BuffDebuffStat.Power, isPositive: true, roundsRemaining: 3, untilRemoved: false, "powersurge", "Power Surge");
 
         Assert.Equal(("Weaken", "Power Surge"), expired);
+    }
+
+    [Fact]
+    public void CancelOnApplierDeath_ThreadsTheActorsEntityId_NotTheCommandsSourceId()
+    {
+        // What: verifies the "applier" identity CancelOnApplierDeath keys off is
+        //       CombatCommand.ActorId (surfaced as ctx.Actor.EntityId, closed over in
+        //       CombatEngineClass.ResolveAction), not CombatCommand.SourceId/SourceName - the
+        //       tech/item identity a buff's SourceId/SourceName already report separately.
+        //       SourceId is deliberately authored as "buffspell", a string matching no entity's
+        //       EntityId, so cancellation could only have worked via the actor's own identity.
+        // How:  ally1 casts an AoE buff (TargetingType.All over its own side) that lands on both
+        //       itself and ally2, each entry authored with CancelOnApplierDeath: true. ally1 then
+        //       kills itself. ally2's copy of the buff - sourced from an action ally1 cast, not
+        //       ally2's own - must be cleared once ally1 (the applier) dies.
+        CombatEventBus.Reset();
+
+        var ally1 = new CombatEntity(
+            entityId: "ally1", name: "Ally1", level: 1,
+            maxHp: 100, hp: 100, maxTp: 50, tp: 50,
+            power: 20, defense: 0, speed: 10,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+
+        var ally2 = new CombatEntity(
+            entityId: "ally2", name: "Ally2", level: 1,
+            maxHp: 100, hp: 100, maxTp: 50, tp: 50,
+            power: 20, defense: 0, speed: 9,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+
+        var enemy = new CombatEntity(
+            entityId: "enemy", name: "Enemy", level: 1,
+            maxHp: 1000, hp: 1000, maxTp: 0, tp: 0,
+            power: 0, defense: 20, speed: 1,
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
+
+        var engine = new CombatEngineClass(new Random(0));
+        engine.InitCombat(allies: [ally1, ally2], enemies: [enemy]);
+
+        var buffCast = new CombatCommand
+        {
+            ActorId        = "ally1",
+            TargetingType  = TargetingType.All,
+            ValidTargets   = ValidTarget.Allies,
+            LivingOrDead   = LivingOrDead.Living,
+            CombatFunction = BasicHealFunction.FunctionName,
+            Parameters     = new CombatFunctionParameters
+            {
+                PowerFactor  = 0.0,
+                BuffsDebuffs =
+                [
+                    new BuffDebuffSpec { Stat = BuffDebuffStat.Power, Type = BuffDebuffType.Positive, Target = BuffDebuffTarget.SelectedTargets, Rounds = 10, UntilRemoved = false, CancelOnEntityDeath = true, CancelOnApplierDeath = true },
+                ],
+            },
+            SourceId       = "buffspell",
+            SourceName     = "Buff Spell",
+        };
+
+        var suicide = new CombatCommand
+        {
+            ActorId        = "ally1",
+            TargetingType  = TargetingType.Self,
+            ValidTargets   = ValidTarget.Allies,
+            LivingOrDead   = LivingOrDead.Living,
+            CombatFunction = BasicDamageFunction.FunctionName,
+            Parameters     = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.FixedAmount, PowerFactor = 100_000 },
+            SourceId       = "selfdestruct",
+            SourceName     = "Self-Destruct",
+        };
+
+        int ally1TurnCount = 0;
+        CombatEventBus.WaitingForTurn += (entityId, _, _, _) =>
+        {
+            if (entityId == "enemy")
+            {
+                engine.SubmitCommand(new CombatCommand { ActorId = "enemy", TargetingType = TargetingType.Self, ValidTargets = ValidTarget.Allies, LivingOrDead = LivingOrDead.Living, CombatFunction = NoOpFunction.FunctionName });
+                return;
+            }
+
+            if (entityId == "ally1")
+            {
+                ally1TurnCount++;
+                engine.SubmitCommand(ally1TurnCount == 1 ? buffCast : suicide);
+                return;
+            }
+
+            // ally2: pass until ally1 has died, then finish the enemy off to end the fight.
+            if (!ally1.IsDead)
+            {
+                engine.SubmitCommand(new CombatCommand { ActorId = "ally2", TargetingType = TargetingType.Self, ValidTargets = ValidTarget.Allies, LivingOrDead = LivingOrDead.Living, CombatFunction = NoOpFunction.FunctionName });
+                return;
+            }
+
+            engine.SubmitCommand(new CombatCommand
+            {
+                ActorId        = "ally2",
+                TargetingType  = TargetingType.Random,
+                ValidTargets   = ValidTarget.Enemies,
+                LivingOrDead   = LivingOrDead.Living,
+                CombatFunction = BasicDamageFunction.FunctionName,
+                Parameters     = new CombatFunctionParameters { CalcType = DamageOrHealCalcType.FixedAmount, PowerFactor = 100_000 },
+            });
+        };
+
+        var ally2PowerAfterBuff = new List<int>();
+        CombatEventBus.BuffDebuffApplied += (entityId, _, stat, _, _, _, _, newValue, _, _) =>
+        {
+            if (entityId == "ally2" && stat == BuffDebuffStat.Power) ally2PowerAfterBuff.Add(newValue);
+        };
+
+        engine.BeginCombat();
+
+        Assert.Equal([27], ally2PowerAfterBuff); // the buff DID land on ally2 first
+        Assert.True(ally1.IsDead);
+        Assert.Equal(20, ally2.Power); // ...then cleared once ally1 (the applier) died
     }
 
     [Fact]

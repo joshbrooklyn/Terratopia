@@ -143,9 +143,11 @@ public class CombatEngineClass
             CalculateHealAmount   = CombatMath.CalculateHealAmount,
             ApplyDamage           = (actor, target, damage, isCrit) => target.TakeDamage(actor, damage, cmd.SourceId, cmd.SourceName, isCrit),
             ApplyHeal             = (actor, target, amount)         => target.Heal(actor, amount, cmd.SourceId, cmd.SourceName),
-            ApplyBuffDebuff       = (target, stat, isPositive, rounds, untilRemoved) => target.AddBuffDebuff(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName),
+            ApplyBuffDebuff       = (target, stat, isPositive, rounds, untilRemoved, cancelOnEntityDeath, cancelOnApplierDeath) =>
+                target.AddBuffDebuff(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName, actor.EntityId, cancelOnEntityDeath, cancelOnApplierDeath),
             ResolveBuffDebuffTargets = selector => _roster.ResolveBuffDebuffTargets(actor, selector, targets),
-            ApplyRegenDrain       = (target, stat, isPositive, rounds, untilRemoved) => target.AddRegenDrain(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName),
+            ApplyRegenDrain       = (target, stat, isPositive, rounds, untilRemoved, cancelOnEntityDeath, cancelOnApplierDeath) =>
+                target.AddRegenDrain(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName, actor.EntityId, cancelOnEntityDeath, cancelOnApplierDeath),
         });
     }
 

@@ -63,6 +63,8 @@ public class BuffDebuffSpec
     public required BuffDebuffTarget Target       { get; init; }
     public required int              Rounds       { get; init; }
     public required bool             UntilRemoved { get; init; }
+    public required bool             CancelOnEntityDeath  { get; init; }
+    public required bool             CancelOnApplierDeath { get; init; }
 }
 ```
 
@@ -75,10 +77,11 @@ public IReadOnlyList<BuffDebuffSpec>? BuffsDebuffs { get; init; }
 Every field on `BuffDebuffSpec` is a mandatory C# `required` property, unlike the rest of
 `CombatFunctionParameters`, which makes everything nullable so "omitted" can be told apart from
 "authored as the default." That distinction doesn't apply inside a `BuffDebuffSpec`: the JSON
-Schema marks `stat`/`type`/`target`/`rounds`/`untilRemoved` all `required` within each array entry,
-so there's no partially-authored entry to distinguish from a complete one, and no cross-field
-pairing to validate at combat time. Only `BuffsDebuffs` itself — the list — stays nullable, so "this
-action carries no buffs/debuffs at all" is still distinguishable from "an empty list."
+Schema marks `stat`/`type`/`target`/`rounds`/`untilRemoved`/`cancelOnEntityDeath`/`cancelOnApplierDeath`
+all `required` within each array entry, so there's no partially-authored entry to distinguish from a
+complete one, and no cross-field pairing to validate at combat time. Only `BuffsDebuffs` itself — the
+list — stays nullable, so "this action carries no buffs/debuffs at all" is still distinguishable from
+"an empty list."
 
 ## No round-based expiration: `UntilRemoved`
 
@@ -102,6 +105,40 @@ Two rules govern how it interacts with the rest of the mechanic:
 `CombatEventBus.BuffDebuffApplied` carries the new `untilRemoved` flag so a listener (e.g. a HUD)
 knows up front whether to show a countdown or an indefinite indicator, without waiting to see
 whether a `BuffDebuffTicked` ever arrives.
+
+## Cancellation on death: `CancelOnEntityDeath` and `CancelOnApplierDeath`
+
+Two more independent booleans govern whether an entry survives a death, on either end of the
+buff/debuff relationship:
+
+- **`CancelOnEntityDeath`** (default `true` in the GameData Editor) — when true, the entry is
+  removed the instant the entity *holding* it dies, before `EntityDeath` is raised. When false, it
+  is simply left in place, un-cleared — without this flag, a dead entity keeps a stale entry sitting
+  inert in `CombatEntity._buffsDebuffs` forever, since nothing else ever purges it. Note that
+  `CombatEntity.Revive` does not itself clear `IsDead`: its only caller today, `LivingDeadPassive`,
+  runs *before* `MarkDead()` inside `HandleDefeat`, preventing death from ever being marked in the
+  first place, rather than reversing it after the fact — so `CancelOnEntityDeath` is not a "does
+  this survive a resurrection" flag for anything in the engine today, just "does this get cleaned up
+  once the entity is actually dead."
+- **`CancelOnApplierDeath`** (default `false`) — when true, the entry is removed the instant the
+  entity that *applied* it dies, even though the entity holding it is someone else and stays alive.
+  When false, the entry outlives its applier, same as today.
+
+Both removals raise the same `BuffDebuffExpired` event a natural tick-expiry does, with empty
+`counteredBySourceId`/`counteredBySourceName` — a death is not an opposite-polarity countering, so
+there's no "countered by" to report, the same shape `TickBuffDebuffs` already uses for natural
+expiry.
+
+`CancelOnApplierDeath` only ever affects *other* entities. A self-applied entry's fate on the
+applier's own death is governed entirely by `CancelOnEntityDeath`: the applier-death broadcast
+(`CombatRoster.OnEntityDeath`, subscribed to `CombatEventBus.EntityDeath`) only reaches entities
+still alive at the moment it fires via `CombatRoster.GetLivingEntities()`, and the entity that just
+died has already been excluded from that set — `CombatEntity.HandleDefeat` calls `MarkDead()`
+before raising `EntityDeath`.
+
+On refresh, same-polarity re-application carries the newest values of both flags forward, exactly
+like `SourceId`/`SourceName` already do — "the newest application... wins on refresh" applies here
+too.
 
 ## Target selector catalog
 
@@ -164,7 +201,7 @@ caught in two places that catch two different shapes of mistake:
 
 1. **JSON data** — `tech.schema.json`, `item.schema.json`, and `monsteraction.schema.json` each
    expose `parameters.buffsDebuffs` as an array of objects, each requiring `stat`/`type`/`target`/
-   `rounds`/`untilRemoved`.
+   `rounds`/`untilRemoved`/`cancelOnEntityDeath`/`cancelOnApplierDeath`.
 2. **Data class** — `CombatFunctionParameters.BuffsDebuffs` (`IReadOnlyList<BuffDebuffSpec>?`)
    loads straight from that JSON array.
 3. **Combat functions** — `BasicDamageFunction` and `BasicHealFunction` run their damage/healing
@@ -173,22 +210,33 @@ caught in two places that catch two different shapes of mistake:
 4. **`CombatFunction.ApplyBuffsDebuffs`** — no-ops if `BuffsDebuffs` is null or empty; otherwise,
    for each entry, resolves its `Target` via `ctx.ResolveBuffDebuffTargets(entry.Target)`, checks
    for a duplicate `(entity, stat)` pair (see above), and calls `ctx.ApplyBuffDebuff(entity,
-   entry.Stat, entry.Type == BuffDebuffType.Positive, entry.Rounds, entry.UntilRemoved)` for each
-   resolved entity.
+   entry.Stat, entry.Type == BuffDebuffType.Positive, entry.Rounds, entry.UntilRemoved,
+   entry.CancelOnEntityDeath, entry.CancelOnApplierDeath)` for each resolved entity.
 5. **`ctx.ResolveBuffDebuffTargets`** — a delegate on `CombatFunctionContext`, wired by
    `CombatEngineClass` to `CombatRoster.ResolveBuffDebuffTargets(actor, selector, targets)` (see the
    catalog above).
-6. **`ctx.ApplyBuffDebuff`** — wired to `CombatEntity.AddBuffDebuff(stat, isPositive, rounds,
-   untilRemoved)`: a stat holds at most one buff/debuff; re-applying the same polarity extends the
-   duration without compounding the magnitude (unless either side is `UntilRemoved`, see above), and
-   the opposite polarity cancels the existing entry outright.
-7. **`CombatEventBus`** — `AddBuffDebuff`/`TickBuffDebuffs` raise `BuffDebuffApplied`,
-   `BuffDebuffTicked`, and `BuffDebuffExpired` (see
+6. **`ctx.ApplyBuffDebuff`** — wired by `CombatEngineClass.ResolveAction` to
+   `CombatEntity.AddBuffDebuff(stat, isPositive, rounds, untilRemoved, sourceId, sourceName,
+   applierId, cancelOnEntityDeath, cancelOnApplierDeath)`, closing over `actor.EntityId` as
+   `applierId` (invariant for the whole action, like `cmd.SourceId`/`SourceName` already are — not
+   threaded as a per-entry delegate parameter): a stat holds at most one buff/debuff; re-applying
+   the same polarity extends the duration without compounding the magnitude (unless either side is
+   `UntilRemoved`, see above), and the opposite polarity cancels the existing entry outright.
+7. **`CombatEntity.HandleDefeat`** — after the `DeathPassive` prevention check and before
+   `MarkDead()`/`RaiseEntityDeath`, sweeps the entity's own buffs/debuffs for `CancelOnEntityDeath`
+   entries and removes them.
+8. **`CombatRoster`** — subscribes to `CombatEventBus.EntityDeath` in its constructor; on any
+   entity's death, calls `CombatEntity.CancelEffectsAppliedBy(deadEntityId)` on every other living
+   entity, which removes any entry whose `ApplierId` matches and `CancelOnApplierDeath` is set.
+9. **`CombatEventBus`** — `AddBuffDebuff`/`TickBuffDebuffs`/the two death-cancellation sweeps raise
+   `BuffDebuffApplied`, `BuffDebuffTicked`, and `BuffDebuffExpired` (see
    [`combat-engine-public-interface.md`](combat-engine-public-interface.md)). A
    `BuffDebuffType.Positive`/`Negative` entry surfaces on these events as a plain `bool isPositive`,
    since the enum is purely an authoring-format concern, converted at the `CombatFunction` boundary.
    `BuffDebuffApplied` additionally carries `untilRemoved`; `BuffDebuffTicked`/`BuffDebuffExpired`
-   are unchanged since ticking never fires for an `UntilRemoved` entry in the first place.
+   are unchanged since ticking never fires for an `UntilRemoved` entry in the first place, and a
+   death-cancellation removal reuses `BuffDebuffExpired`'s existing shape with empty
+   `counteredBySourceId`/`Name`.
 
 ## Authoring in game data
 
@@ -196,9 +244,9 @@ caught in two places that catch two different shapes of mistake:
 "parameters": {
   "powerFactor": 1.0,
   "buffsDebuffs": [
-    { "stat": "Defense", "type": "Negative", "target": "SelectedTargets", "rounds": 2, "untilRemoved": false },
-    { "stat": "Power",   "type": "Positive", "target": "Self",            "rounds": 3, "untilRemoved": false },
-    { "stat": "Speed",   "type": "Negative", "target": "SelectedTargets", "rounds": 1, "untilRemoved": true  }
+    { "stat": "Defense", "type": "Negative", "target": "SelectedTargets", "rounds": 2, "untilRemoved": false, "cancelOnEntityDeath": true, "cancelOnApplierDeath": false },
+    { "stat": "Power",   "type": "Positive", "target": "Self",            "rounds": 3, "untilRemoved": false, "cancelOnEntityDeath": true, "cancelOnApplierDeath": false },
+    { "stat": "Speed",   "type": "Negative", "target": "SelectedTargets", "rounds": 1, "untilRemoved": true,  "cancelOnEntityDeath": true, "cancelOnApplierDeath": false }
   ]
 }
 ```
@@ -212,7 +260,7 @@ The GameData Editor's form view needs no bespoke UI for this: it's fully schema-
 `renderObjectListField` (`src/GameDataEditor/media/main.js`), giving an "Add entry"/"Remove" list
 where `stat`, `type`, `target`, `rounds`, and `untilRemoved` are each editable per entry.
 
-Current schema versions: tech 10, item 11, monsteraction 11.
+Current schema versions: tech 11, item 12, monsteraction 12.
 
 ## Test coverage
 
@@ -299,6 +347,27 @@ through the real engine.
   `UntilRemoved` one of the same polarity ends up `UntilRemoved`; an `UntilRemoved` buff refreshed by
   a timed one *stays* `UntilRemoved` rather than being shortened back down to the incoming rounds.
   Either side being indefinite wins the merge, regardless of application order.
+
+**Cancellation on death**
+
+- **`CancelOnEntityDeath_True_ClearsTheEntryTheMomentItsHolderDies`** /
+  **`CancelOnEntityDeath_False_LeavesTheEntryInPlaceOnDeath`** — a buff's holder dies via
+  `TakeDamage`; the `true` case raises `BuffDebuffExpired` with empty `counteredBy` fields and the
+  stat getter (which never special-cases `IsDead`) reads base immediately, while the `false` case
+  raises nothing and the getter still reflects the buff.
+- **`CancelOnApplierDeath_True_ClearsOtherEntitysEntry_WhenApplierDies`** /
+  **`CancelOnApplierDeath_False_LeavesOtherEntitysEntry_WhenApplierDies`** — a bare `CombatRoster` is
+  constructed directly (same technique as `BuffDebuffTargetResolutionTests`) over an applier and a
+  separate holder entity; killing the applier clears the holder's `CancelOnApplierDeath: true` entry
+  through `CombatRoster`'s `EntityDeath` subscription, but leaves a `false` one in place.
+- **`SamePolarityRefresh_CarriesForwardTheNewestCancelFlags`** — an entry applied with both flags
+  `false`, then refreshed with both `true`, behaves as if authored `true` — proving the flags follow
+  the same "newest application wins" rule as `SourceId`/`SourceName`.
+- **`SourceThreadingTests.CancelOnApplierDeath_ThreadsTheActorsEntityId_NotTheCommandsSourceId`** —
+  an end-to-end test through the real engine: an actor's `SourceId` is deliberately authored as a
+  string matching no entity's `EntityId`, so a buff it casts on another entity can only be cleared on
+  the actor's death if `CancelOnApplierDeath` is keyed off `CombatCommand.ActorId` (via
+  `ctx.Actor.EntityId`), not `SourceId`/`SourceName`.
 
 **Ticking down**
 

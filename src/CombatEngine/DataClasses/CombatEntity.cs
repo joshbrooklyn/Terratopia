@@ -91,6 +91,12 @@ public class CombatEntity
                 return;
         }
 
+        // Cancel-on-own-death entries go before MarkDead()/RaiseEntityDeath, so no listener -
+        // including CombatRoster's applier-death broadcast to other entities - ever observes this
+        // entity as dead while one of its own CancelOnEntityDeath entries is still active.
+        CancelBuffsDebuffsIf(b => b.CancelOnEntityDeath);
+        CancelRegensDrainsIf(r => r.CancelOnEntityDeath);
+
         MarkDead();
         CombatEventBus.RaiseEntityDeath(EntityId, Name, sourceId, sourceName);
     }
@@ -164,7 +170,8 @@ public class CombatEntity
     // one outright, so neither survives. UntilRemoved is sticky on refresh: if either side of a
     // same-polarity merge is UntilRemoved, the result is UntilRemoved and rounds math is skipped -
     // "lasts until removed" is a stronger guarantee than "lasts N more rounds" and must win either way.
-    public void AddBuffDebuff(BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName)
+    public void AddBuffDebuff(BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName,
+        string applierId = "", bool cancelOnEntityDeath = true, bool cancelOnApplierDeath = false)
     {
         if (!untilRemoved && roundsRemaining <= 0)
         {
@@ -186,6 +193,10 @@ public class CombatEntity
                 // The newest application's source is the one the player just saw, so it wins on refresh.
                 existing.SourceId = sourceId;
                 existing.SourceName = sourceName;
+                // Same rule extends to the applier and cancel-on-death flags.
+                existing.ApplierId = applierId;
+                existing.CancelOnEntityDeath = cancelOnEntityDeath;
+                existing.CancelOnApplierDeath = cancelOnApplierDeath;
                 _buffsDebuffs[stat] = existing;
                 Logger.Debug($"[combat] AddBuffDebuff: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> refreshed to {(existing.UntilRemoved ? "untilRemoved" : existing.RoundsRemaining.ToString())}, value {oldValue} -> {GetStatValue(stat)}");
                 CombatEventBus.RaiseBuffDebuffApplied(EntityId, Name, stat, isPositive, existing.RoundsRemaining, existing.UntilRemoved, oldValue, GetStatValue(stat), sourceId, sourceName);
@@ -198,7 +209,12 @@ public class CombatEntity
             return;
         }
 
-        _buffsDebuffs[stat] = new BuffDebuff { Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved, SourceId = sourceId, SourceName = sourceName };
+        _buffsDebuffs[stat] = new BuffDebuff
+        {
+            Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved,
+            SourceId = sourceId, SourceName = sourceName,
+            ApplierId = applierId, CancelOnEntityDeath = cancelOnEntityDeath, CancelOnApplierDeath = cancelOnApplierDeath,
+        };
         Logger.Debug($"[combat] AddBuffDebuff: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> applied, value {oldValue} -> {GetStatValue(stat)}");
         CombatEventBus.RaiseBuffDebuffApplied(EntityId, Name, stat, isPositive, roundsRemaining, untilRemoved, oldValue, GetStatValue(stat), sourceId, sourceName);
     }
@@ -239,7 +255,8 @@ public class CombatEntity
     // rules as AddBuffDebuff. Unlike a buff/debuff, applying an entry changes nothing by itself -
     // the HP/TP delta only lands once ApplyRegensDrains runs - so there is no oldValue/newValue to
     // report on this event.
-    public void AddRegenDrain(RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName)
+    public void AddRegenDrain(RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName,
+        string applierId = "", bool cancelOnEntityDeath = true, bool cancelOnApplierDeath = false)
     {
         if (!untilRemoved && roundsRemaining <= 0)
         {
@@ -259,6 +276,10 @@ public class CombatEntity
                 // The newest application's source is the one the player just saw, so it wins on refresh.
                 existing.SourceId = sourceId;
                 existing.SourceName = sourceName;
+                // Same rule extends to the applier and cancel-on-death flags.
+                existing.ApplierId = applierId;
+                existing.CancelOnEntityDeath = cancelOnEntityDeath;
+                existing.CancelOnApplierDeath = cancelOnApplierDeath;
                 _regensDrains[stat] = existing;
                 Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> refreshed to {(existing.UntilRemoved ? "untilRemoved" : existing.RoundsRemaining.ToString())}");
                 CombatEventBus.RaiseRegenDrainApplied(EntityId, Name, stat, isPositive, existing.RoundsRemaining, existing.UntilRemoved, sourceId, sourceName);
@@ -271,7 +292,12 @@ public class CombatEntity
             return;
         }
 
-        _regensDrains[stat] = new RegenDrain { Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved, SourceId = sourceId, SourceName = sourceName };
+        _regensDrains[stat] = new RegenDrain
+        {
+            Stat = stat, IsPositive = isPositive, RoundsRemaining = roundsRemaining, UntilRemoved = untilRemoved,
+            SourceId = sourceId, SourceName = sourceName,
+            ApplierId = applierId, CancelOnEntityDeath = cancelOnEntityDeath, CancelOnApplierDeath = cancelOnApplierDeath,
+        };
         Logger.Debug($"[combat] AddRegenDrain: {Name} stat={stat} isPositive={isPositive} rounds={roundsRemaining} untilRemoved={untilRemoved} -> applied");
         CombatEventBus.RaiseRegenDrainApplied(EntityId, Name, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName);
     }
@@ -288,7 +314,9 @@ public class CombatEntity
         if (IsDead)
             return;
 
-        foreach (var regenDrain in _regensDrains.Values)
+        // Snapshot the values: a lethal Hp Drain below can synchronously reach HandleDefeat's
+        // own-death sweep, which mutates _regensDrains mid-loop.
+        foreach (var regenDrain in _regensDrains.Values.ToList())
         {
             switch (regenDrain.Stat)
             {
@@ -348,6 +376,50 @@ public class CombatEntity
         }
     }
 
+    // Shared by HandleDefeat's own-death sweep and CancelEffectsAppliedBy's cross-entity sweep.
+    // Mirrors TickBuffDebuffs/TickRegensDrains's snapshot-then-remove shape, and raises the same
+    // *Expired events a natural tick-expiry would, with empty counteredBy fields - a cancellation
+    // caused by a death is not an opposite-polarity countering.
+    private void CancelBuffsDebuffsIf(Func<BuffDebuff, bool> predicate)
+    {
+        foreach (var stat in _buffsDebuffs.Keys.ToList())
+        {
+            var buff = _buffsDebuffs[stat];
+            if (!predicate(buff))
+                continue;
+
+            int oldValue = GetStatValue(stat);
+            _buffsDebuffs.Remove(stat);
+            Logger.Debug($"[combat] CancelBuffsDebuffsIf: {Name} stat={stat} isPositive={buff.IsPositive} -> cancelled, value {oldValue} -> {GetStatValue(stat)}");
+            CombatEventBus.RaiseBuffDebuffExpired(EntityId, Name, stat, buff.IsPositive, oldValue, GetStatValue(stat), buff.SourceId, buff.SourceName, "", "");
+        }
+    }
+
+    private void CancelRegensDrainsIf(Func<RegenDrain, bool> predicate)
+    {
+        foreach (var stat in _regensDrains.Keys.ToList())
+        {
+            var regenDrain = _regensDrains[stat];
+            if (!predicate(regenDrain))
+                continue;
+
+            _regensDrains.Remove(stat);
+            Logger.Debug($"[combat] CancelRegensDrainsIf: {Name} stat={stat} isPositive={regenDrain.IsPositive} -> cancelled");
+            CombatEventBus.RaiseRegenDrainExpired(EntityId, Name, stat, regenDrain.IsPositive, regenDrain.SourceId, regenDrain.SourceName, "", "");
+        }
+    }
+
+    // Called by CombatRoster when CombatEventBus.EntityDeath fires for some OTHER entity - sweeps
+    // this entity's own buffs/debuffs and regens/drains for entries sourced from that entity
+    // (ApplierId == applierId) whose CancelOnApplierDeath is set. Never called for an entity's own
+    // death; that path is CancelOnEntityDeath's job inside HandleDefeat, run before EntityDeath is
+    // even raised.
+    public void CancelEffectsAppliedBy(string applierId)
+    {
+        CancelBuffsDebuffsIf(b => b.ApplierId == applierId && b.CancelOnApplierDeath);
+        CancelRegensDrainsIf(r => r.ApplierId == applierId && r.CancelOnApplierDeath);
+    }
+
     // Split from the regen/drain phase so the engine can tick Speed buffs (which affect turn
     // order) before BuildRound, while landing the regen/drain HP/TP delta - and its combat-log
     // entries - after RoundStarted fires, so the log reads as "round begins, then regen ticks"
@@ -368,6 +440,9 @@ public class CombatEntity
         public bool UntilRemoved;
         public string SourceId;
         public string SourceName;
+        public string ApplierId;
+        public bool CancelOnEntityDeath;
+        public bool CancelOnApplierDeath;
     }
 
     private struct RegenDrain
@@ -378,6 +453,9 @@ public class CombatEntity
         public bool UntilRemoved;
         public string SourceId;
         public string SourceName;
+        public string ApplierId;
+        public bool CancelOnEntityDeath;
+        public bool CancelOnApplierDeath;
     }
 
     public void ConsumePassive(string passiveName) => _consumedPassives.Add(passiveName);

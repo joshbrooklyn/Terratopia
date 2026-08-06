@@ -57,6 +57,8 @@ public class RegenDrainSpec
     public required BuffDebuffTarget Target       { get; init; }
     public required int              Rounds       { get; init; }
     public required bool             UntilRemoved { get; init; }
+    public required bool             CancelOnEntityDeath  { get; init; }
+    public required bool             CancelOnApplierDeath { get; init; }
 }
 ```
 
@@ -67,10 +69,10 @@ public IReadOnlyList<RegenDrainSpec>? RegensDrains { get; init; }
 ```
 
 Every field on `RegenDrainSpec` is `required`, for the same reason `BuffDebuffSpec`'s fields are:
-the schema marks `stat`/`type`/`target`/`rounds`/`untilRemoved` all required within each array
-entry, so there's no partially-authored entry to distinguish from a complete one. Only
-`RegensDrains` itself stays nullable, so "no regen/drain authored" is distinguishable from "an
-empty list."
+the schema marks `stat`/`type`/`target`/`rounds`/`untilRemoved`/`cancelOnEntityDeath`/
+`cancelOnApplierDeath` all required within each array entry, so there's no partially-authored entry
+to distinguish from a complete one. Only `RegensDrains` itself stays nullable, so "no regen/drain
+authored" is distinguishable from "an empty list."
 
 ## No round-based expiration: `UntilRemoved`
 
@@ -85,6 +87,22 @@ opposite-polarity application on the same resource cancels it.
 
 `CombatEventBus.RegenDrainApplied` carries `untilRemoved` for the same reason
 `BuffDebuffApplied` does.
+
+## Cancellation on death: `CancelOnEntityDeath` and `CancelOnApplierDeath`
+
+Identical semantics to buffs/debuffs (see
+[`buffs-and-debuffs.md`](buffs-and-debuffs.md#cancellation-on-death-cancelonentitydeath-and-cancelonapplierdeath)):
+`CancelOnEntityDeath` (default `true`) removes the entry the instant the entity holding it dies,
+before `EntityDeath` is raised. `CancelOnApplierDeath` (default `false`) removes the entry the
+instant the entity that applied it dies, even when the holder is someone else and stays alive —
+handled by `CombatRoster` subscribing to `CombatEventBus.EntityDeath` and calling
+`CombatEntity.CancelEffectsAppliedBy` on every other living entity. Both removals raise the existing
+`RegenDrainExpired` event with empty `counteredBySourceId`/`counteredBySourceName`, the same shape a
+natural tick-expiry already uses. Same-polarity refresh carries the newest values of both flags
+forward, exactly like `SourceId`/`SourceName` already do. Note `ApplyRegensDrains` no-ops entirely on
+a dead entity, but `TickRegensDrains` does not — an un-cleared (`CancelOnEntityDeath: false`) entry
+on a dead entity is inert (nothing ever calls `ApplyRegensDrains` on it again while it stays dead)
+but still technically present and tickable, which is what distinguishes it from a cleared one.
 
 ## Timing: apply-then-tick at round start
 
@@ -174,7 +192,7 @@ Identical two-layer guard to buffs/debuffs:
 
 1. **JSON data** — `tech.schema.json`, `item.schema.json`, and `monsteraction.schema.json` each
    expose `parameters.regensDrains` as an array of objects, each requiring `stat`/`type`/`target`/
-   `rounds`/`untilRemoved`.
+   `rounds`/`untilRemoved`/`cancelOnEntityDeath`/`cancelOnApplierDeath`.
 2. **Data class** — `CombatFunctionParameters.RegensDrains` (`IReadOnlyList<RegenDrainSpec>?`) loads
    straight from that JSON array.
 3. **Combat functions** — `BasicDamageFunction` and `BasicHealFunction` call
@@ -182,14 +200,24 @@ Identical two-layer guard to buffs/debuffs:
 4. **`CombatFunction.ApplyRegensDrains`** — no-ops if `RegensDrains` is null or empty; otherwise, for
    each entry, resolves its `Target` via `ctx.ResolveBuffDebuffTargets(entry.Target)`, checks for a
    duplicate `(entity, stat)` pair, and calls `ctx.ApplyRegenDrain(entity, entry.Stat, entry.Type ==
-   RegenDrainType.Positive, entry.Rounds, entry.UntilRemoved)`.
-5. **`ctx.ApplyRegenDrain`** — wired by `CombatEngineClass` to
-   `CombatEntity.AddRegenDrain(stat, isPositive, rounds, untilRemoved)`: a resource holds at most one
-   regen/drain; re-applying the same polarity extends the duration, the opposite polarity cancels
-   the existing entry outright.
-6. **`CombatEntity.OnRoundStart`** — `ApplyRegensDrains()` then `TickRegensDrains()`, described above.
-7. **`CombatEventBus`** — `AddRegenDrain`/`TickRegensDrains` raise `RegenDrainApplied`,
-   `RegenDrainTicked`, `RegenDrainExpired`.
+   RegenDrainType.Positive, entry.Rounds, entry.UntilRemoved, entry.CancelOnEntityDeath,
+   entry.CancelOnApplierDeath)`.
+5. **`ctx.ApplyRegenDrain`** — wired by `CombatEngineClass.ResolveAction` to
+   `CombatEntity.AddRegenDrain(stat, isPositive, rounds, untilRemoved, sourceId, sourceName,
+   applierId, cancelOnEntityDeath, cancelOnApplierDeath)`, closing over `actor.EntityId` as
+   `applierId` the same way `ApplyBuffDebuff` does: a resource holds at most one regen/drain;
+   re-applying the same polarity extends the duration, the opposite polarity cancels the existing
+   entry outright.
+6. **`CombatEntity.HandleDefeat`** — sweeps the entity's own regens/drains for `CancelOnEntityDeath`
+   entries before `MarkDead()`/`RaiseEntityDeath`, mirroring the buffs/debuffs sweep.
+7. **`CombatRoster`** — subscribed to `CombatEventBus.EntityDeath`, calls
+   `CombatEntity.CancelEffectsAppliedBy(deadEntityId)` on every other living entity, removing any
+   regen/drain whose `ApplierId` matches and `CancelOnApplierDeath` is set.
+8. **`CombatEntity.ProcessRegensDrains`** — `ApplyRegensDrains()` then `TickRegensDrains()`,
+   described above.
+9. **`CombatEventBus`** — `AddRegenDrain`/`TickRegensDrains`/the two death-cancellation sweeps raise
+   `RegenDrainApplied`, `RegenDrainTicked`, `RegenDrainExpired` (death cancellation reuses
+   `RegenDrainExpired`'s existing shape with empty `counteredBySourceId`/`Name`).
 
 ## Authoring in game data
 
@@ -197,7 +225,7 @@ Identical two-layer guard to buffs/debuffs:
 "parameters": {
   "powerFactor": 1.0,
   "regensDrains": [
-    { "stat": "Hp", "type": "Negative", "target": "SelectedTargets", "rounds": 3, "untilRemoved": false }
+    { "stat": "Hp", "type": "Negative", "target": "SelectedTargets", "rounds": 3, "untilRemoved": false, "cancelOnEntityDeath": true, "cancelOnApplierDeath": false }
   ]
 }
 ```
@@ -209,7 +237,7 @@ losing 10% of its MaxHp at the start of each of the next 3 rounds.
 Like `buffsDebuffs`, the GameData Editor needs no bespoke UI for `regensDrains` — it renders through
 the same generic `renderObjectListField`.
 
-Current schema versions: tech 10, item 11, monsteraction 11. `GameSettings.json` is at
+Current schema versions: tech 11, item 12, monsteraction 12. `GameSettings.json` is at
 schemaVersion 3.
 
 ## Test coverage
@@ -222,11 +250,16 @@ no-op; `RestoreTp` clamping at `MaxTp` and the now-clamped `SpendTp` flooring at
 non-positive-rounds no-op and its `UntilRemoved` override; same-polarity re-stacking (duration adds,
 but the resource still only takes one hit per round); opposite-polarity cancellation before either
 side ever applies; `UntilRemoved` merging sticky in both directions and continuing to apply every
-round without ticking; the apply-before-tick ordering pinned down via a `rounds: 1` Drain that fires
-exactly once; the normal tick-then-expire sequence for a multi-round entry; an `Hp` Drain reducing an
-entity to 0 and raising `EntityDeath`; `OnRoundStart` no-oping on an already-dead entity; and the
-end-to-end path from an authored `regensDrains` entry through both `BasicDamage` and `BasicHeal`,
-plus the same collision-throws-naming-the-action guarantee `BuffDebuffTests` has.
+round without ticking; cancellation on death (`CancelOnEntityDeath` clearing the entry the moment
+its holder dies, proven via `TickRegensDrains` - which unlike `ApplyRegensDrains` never gates on
+`IsDead` - still finding nothing left to tick; `CancelOnApplierDeath` clearing an entry on a
+*separate* holder once the applier dies via a directly-constructed `CombatRoster`; and same-polarity
+refresh carrying the newest flags forward — mirroring `BuffDebuffTests`' equivalent cases); the
+apply-before-tick ordering pinned down via a `rounds: 1` Drain that fires exactly once; the normal
+tick-then-expire sequence for a multi-round entry; an `Hp` Drain reducing an entity to 0 and raising
+`EntityDeath`; `OnRoundStart` no-oping on an already-dead entity; and the end-to-end path from an
+authored `regensDrains` entry through both `BasicDamage` and `BasicHeal`, plus the same
+collision-throws-naming-the-action guarantee `BuffDebuffTests` has.
 
 ### `tests/Terratopia.Tests/CombatEngine/Internal/CombatFunctionRegistryTests.cs`
 
