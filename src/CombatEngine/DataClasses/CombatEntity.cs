@@ -87,8 +87,17 @@ public class CombatEntity
     {
         foreach (var passive in PassiveRegistry.Resolve(Passives))
         {
-            if (passive.TryPreventDeath(this))
-                return;
+            var (deathPrevented, reviveHp) = passive.OnBeforeDeath(this);
+
+            if (deathPrevented)
+            {
+                int oldHp = Hp;
+                Hp = reviveHp;
+                Logger.Debug($"[combat] Revive: {Name} oldHp={oldHp} -> revived at hp={Hp}");
+                CombatEventBus.RaiseEntityRevived(EntityId, Name, oldHp, Hp, sourceId, sourceName);     
+
+                return; // only one passive can prevent death, so stop after the first one that does           
+            }
         }
 
         // Cancel-on-own-death entries go before MarkDead()/RaiseEntityDeath, so no listener -
@@ -156,14 +165,6 @@ public class CombatEntity
     }
 
     public void MarkDead() => IsDead = true;
-
-    public void Revive(int hp, string sourceId, string sourceName)
-    {
-        int oldHp = Hp;
-        Hp = hp;
-        Logger.Debug($"[combat] Revive: {Name} oldHp={oldHp} -> revived at hp={Hp}");
-        CombatEventBus.RaiseEntityRevived(EntityId, Name, oldHp, Hp, sourceId, sourceName);
-    }
 
     // A stat holds at most one buff/debuff. Re-applying the same polarity refreshes it - the
     // durations add up, the magnitude does not - while the opposite polarity cancels the existing

@@ -19,16 +19,22 @@ public abstract class Passive
 {
     public abstract string Name { get; }
 
-    // Returns true if death was prevented/reversed for this entity.
-    public abstract bool TryPreventDeath(CombatEntity target);
+    // Returns (deathPrevented, reviveHp). deathPrevented tells the engine whether to keep this
+    // entity alive; when true, reviveHp is the HP the engine will set the entity to.
+    public virtual (bool, int) OnBeforeDeath(CombatEntity target)
+    {
+        return (false, 0);
+    }
 }
 ```
 
-Every passive subclasses this directly and declares its registry key (`Name`) and its `OnDeath`
-behavior (`TryPreventDeath`). There is currently only one trigger category — dying — so it isn't
-broken out into a separate enum or an intermediate base class; if a second trigger category is ever
-added (e.g. "on taking damage"), that's the point at which `Trigger`/`PassiveTrigger` would come
-back, alongside a second abstract method or a per-trigger interface.
+Every passive subclasses this directly and declares its registry key (`Name`). `OnBeforeDeath` is
+`virtual` with a no-op default (death not prevented) rather than `abstract`, since not every passive
+necessarily reacts to death — a subclass only needs to override it if it does. There is currently
+only one trigger category — dying — so it isn't broken out into a separate enum or an intermediate
+base class; if a second trigger category is ever added (e.g. "on taking damage"), that's the point
+at which `Trigger`/`PassiveTrigger` would come back, alongside a second virtual method or a
+per-trigger interface.
 
 ### `PassiveRegistry`
 
@@ -95,16 +101,24 @@ private void HandleDefeat(string sourceId, string sourceName)
 {
     foreach (var passive in PassiveRegistry.Resolve(Passives))
     {
-        if (passive.TryPreventDeath(this))
-            return; // death was prevented — stop checking further passives, entity stays alive
+        var (deathPrevented, reviveHp) = passive.OnBeforeDeath(this);
+
+        if (deathPrevented)
+        {
+            Hp = reviveHp;
+            CombatEventBus.RaiseEntityRevived(EntityId, Name, oldHp, Hp, sourceId, sourceName);
+            return; // only one passive can prevent death, so stop after the first one that does
+        }
     }
     // ... no passive prevented it: mark the entity dead, raise EntityDeath, etc.
 }
 ```
 
 The loop tries each of the target's passives, in the order they appear in `Passives`, and stops as
-soon as one reports success (`TryPreventDeath` returns `true`). If none succeed (or the entity has
-no passives), the entity actually dies.
+soon as one reports success (`OnBeforeDeath` returns `deathPrevented: true`). The engine itself
+applies `reviveHp` to `Hp` and raises `EntityRevived` — the passive only decides *whether* and *at
+what HP*, it doesn't touch `Hp` or the event bus directly. If none succeed (or the entity has no
+passives), the entity actually dies.
 
 ## Catalog of implemented passives
 
@@ -116,28 +130,28 @@ public class LivingDeadPassive : Passive
     public const string PassiveName = "LivingDead";
     public override string Name => PassiveName;
 
-    public override bool TryPreventDeath(CombatEntity target)
+    public override (bool, int) OnBeforeDeath(CombatEntity target)
     {
         bool alreadyTriggered = target.HasConsumedPassive(Name);
         if (alreadyTriggered)
-            return false;
+            return (false, 0);
 
         target.ConsumePassive(Name);
-        target.Revive(CombatBalance.Current.LivingDeadReviveHp, PassiveName, PassiveName);
-        return true;
+        return (true, CombatBalance.Current.LivingDeadReviveHp);
     }
 }
 ```
 
 The first time this entity would die, `HasConsumedPassive(Name)` is still `false`, so
-`ConsumePassive(Name)` marks it fired and `Revive` brings the entity back at
-`CombatBalance.Current.LivingDeadReviveHp` (1 HP by default), raising `EntityRevived`. Every
-subsequent death attempt, `HasConsumedPassive` is already `true` — `TryPreventDeath` returns
-`false`, and the entity dies normally.
+`ConsumePassive(Name)` marks it fired and the passive reports `(true, reviveHp)` — the engine then
+sets `Hp` to `CombatBalance.Current.LivingDeadReviveHp` (1 HP by default) and raises
+`EntityRevived`. Every subsequent death attempt, `HasConsumedPassive` is already `true` —
+`OnBeforeDeath` returns `(false, 0)`, and the entity dies normally.
 
 ## Extending: adding a new passive
 
-1. Subclass `Passive` in `src/CombatEngine/Passives/` and implement `TryPreventDeath`. There's
+1. Subclass `Passive` in `src/CombatEngine/Passives/`. If the passive reacts to death, override
+   `OnBeforeDeath`; the base class's default no-op is fine for a passive that doesn't. There's
    currently only one trigger category (dying), so no separate trigger enum or intermediate base
    class to plug into — see the note under `Passive` above for what a second trigger category
    would look like.

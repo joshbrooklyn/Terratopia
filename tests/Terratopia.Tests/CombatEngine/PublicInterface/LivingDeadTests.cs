@@ -132,52 +132,54 @@ public class LivingDeadTests
 [Collection("CombatEngineSerial")]
 public class LivingDeadPassiveTests
 {
-    private static CombatEntity MakeEntity() => new(
+    private static CombatEntity MakeEntity(int hp) => new(
         entityId: "e", name: "E", level: 1,
-        maxHp: 10, hp: 0, maxTp: 0, tp: 0,
+        maxHp: 10, hp: hp, maxTp: 0, tp: 0,
         power: 0, defense: 0, speed: 0,
-        evasion: 0f, critChance: 0f, critModifier: 0f);
+        evasion: 0f, critChance: 0f, critModifier: 0f, passives: [LivingDeadPassive.PassiveName]);
 
     [Fact]
-    public void TryPreventDeath_FirstCall_RevivesAtOneHp()
+    public void HandleDefeat_FirstCall_RevivesAtOneHp()
     {
-        // What: unit-tests LivingDeadPassive.TryPreventDeath directly (bypassing the combat
-        //       engine entirely) to verify that on its first invocation it revives the entity
-        //       at 1 HP and reports success.
-        // How:  MakeEntity() builds a bare CombatEntity with hp=0, simulating "just died".
-        //       Calling passive.TryPreventDeath(entity) directly should add the passive's name
-        //       to entity.ConsumedPassives (marking it used), set entity.Hp to 1, and return
-        //       true to signal that death was prevented. The test asserts the return value is
-        //       true, entity.Hp is 1, and ConsumedPassives contains the LivingDead passive name.
-        var entity  = MakeEntity();
-        var passive = new LivingDeadPassive();
+        // What: drives LivingDeadPassive through the real combat entity (TakeDamage ->
+        //       HandleDefeat -> OnBeforeDeath) to verify that on the entity's first lethal hit
+        //       it revives at 1 HP instead of dying.
+        // How:  MakeEntity(1) builds a CombatEntity at 1 HP carrying the LivingDead passive.
+        //       killme.TakeDamage(attacker, 1, ...) brings it to 0 HP, which triggers
+        //       HandleDefeat -> LivingDeadPassive.OnBeforeDeath, which should add the passive's
+        //       name to killme.ConsumedPassives (marking it used) and report (true, 1 HP) so the
+        //       engine sets Hp back to 1 instead of marking the entity dead. The test asserts
+        //       killme is not dead, killme.Hp is 1, and ConsumedPassives contains the LivingDead
+        //       passive name.
+        var killme  = MakeEntity(1);
+        var attacker = MakeEntity(1);
 
-        bool prevented = passive.TryPreventDeath(entity);
+        killme.TakeDamage(attacker, 1, "test", "Test"); // simulate lethal damage
 
-        Assert.True(prevented);
-        Assert.Equal(1, entity.Hp);
-        Assert.Contains(LivingDeadPassive.PassiveName, entity.ConsumedPassives);
+        Assert.False(killme.IsDead);
+        Assert.Equal(1, killme.Hp);
+        Assert.Contains(LivingDeadPassive.PassiveName, killme.ConsumedPassives);
     }
 
     [Fact]
-    public void TryPreventDeath_SecondCall_ReturnsFalseAndLeavesHpUnchanged()
+    public void OnBeforeDeath_SecondCall_ReturnsFalseAndLeavesHpUnchanged()
     {
-        // What: verifies LivingDeadPassive is single-use — a second call to TryPreventDeath on
-        //       the same entity must fail and leave HP at 0, rather than reviving again.
+        // What: verifies LivingDeadPassive is single-use — a second call to OnBeforeDeath on
+        //       the same entity must report deathPrevented: false and leave HP at 0, rather than
+        //       reviving again.
         // How:  The passive is invoked once up front to consume it (mirroring the setup in
-        //       TryPreventDeath_FirstCall_RevivesAtOneHp), then entity.Hp is manually reset to
-        //       0 to simulate the entity taking a second lethal hit. Calling
-        //       TryPreventDeath(entity) again should hit the internal
-        //       `!target.ConsumedPassives.Add(Name)` guard — since the name is already in the
-        //       set, Add returns false, the guard's negation makes the condition true, and the
-        //       method returns false immediately without touching HP. The test asserts the
-        //       second call returns false and entity.Hp is still 0.
-        var entity  = MakeEntity();
+        //       HandleDefeat_FirstCall_RevivesAtOneHp), then entity.TakeDamage brings HP back to
+        //       0 to simulate a second lethal hit. Calling OnBeforeDeath(entity) again should hit
+        //       the internal `HasConsumedPassive` guard — since the name is already in
+        //       ConsumedPassives, the method returns (false, 0) immediately without touching HP.
+        //       The test asserts the second call's deathPrevented is false and entity.Hp is
+        //       still 0.
+        var entity  = MakeEntity(1);
         var passive = new LivingDeadPassive();
-        passive.TryPreventDeath(entity);
+        passive.OnBeforeDeath(entity);
 
         entity.TakeDamage(entity, entity.Hp, "test", "Test"); // simulate a second lethal hit
-        bool preventedAgain = passive.TryPreventDeath(entity);
+        var (preventedAgain, _) = passive.OnBeforeDeath(entity);
 
         Assert.False(preventedAgain);
         Assert.Equal(0, entity.Hp);

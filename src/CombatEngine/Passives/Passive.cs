@@ -6,6 +6,10 @@ public abstract class Passive
 {
     public abstract string Name { get; }
 
-    // Returns true if death was prevented/reversed for this entity.
-    public abstract bool TryPreventDeath(CombatEntity target);
+    // Returns (deathPrevented, reviveHp). When deathPrevented is true, the engine sets the
+    // entity's Hp to reviveHp instead of letting it die.
+    public virtual (bool, int) OnBeforeDeath(CombatEntity target)
+    {
+        return (false, 0); // false = death not prevented, 0 = no revive HP to apply
+    }
 }
