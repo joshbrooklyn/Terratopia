@@ -554,10 +554,10 @@ public class TargetingTests
         //       isn't handled by ExpandAutoTargets, the flow machine should transition to
         //       WaitingForTargetSelection and raise TargetSelectionRequested with the actor id,
         //       targeting type, the valid target id pool, and the requested attack count — the
-        //       test captures all of that. Critically, ActionResolved must NOT have fired yet
+        //       test captures all of that. Critically, the ally's turn must NOT have ended yet
         //       at this point, since the action can't resolve until a target is chosen. The
         //       test then asserts the request matches expectations (actor "ally", type Choose,
-        //       valid ids ["e1", "e2"], numAttacks 1) and that no action has resolved. Only
+        //       valid ids ["e1", "e2"], numAttacks 1) and that the ally's turn hasn't ended. Only
         //       after calling engine.SubmitTargets(["e2"]) should the action actually resolve
         //       and damage land on "e2" — the test asserts both of those become true only
         //       after the explicit SubmitTargets call.
@@ -571,8 +571,8 @@ public class TargetingTests
         CombatEventBus.TargetSelectionRequested += (actorId, _, type, validIds, _, numAttacks, _) =>
             request ??= (actorId, type, validIds, numAttacks);
 
-        bool actionResolved = false;
-        CombatEventBus.ActionResolved += (_, _, _) => actionResolved = true;
+        bool allyTurnEnded = false;
+        CombatEventBus.TurnEnded += (entityId, _) => allyTurnEnded |= entityId == "ally";
 
         CombatEventBus.WaitingForTurn += (entityId, _, _, isAlly) =>
         {
@@ -603,14 +603,14 @@ public class TargetingTests
         Assert.Equal(TargetingType.Choose, request.Value.type);
         Assert.Equal(["e1", "e2"], request.Value.validIds);
         Assert.Equal(1, request.Value.numAttacks);
-        Assert.False(actionResolved, "Combat must not resolve the action before targets are submitted.");
+        Assert.False(allyTurnEnded, "The ally's turn must not end before targets are submitted.");
 
         string? damagedId = null;
         CombatEventBus.EntityDamaged += (targetId, _, _, _, _, _, _, _, _, _) => damagedId ??= targetId;
 
         engine.SubmitTargets(["e2"]);
 
-        Assert.True(actionResolved);
+        Assert.True(allyTurnEnded);
         Assert.Equal("e2", damagedId);
     }
 

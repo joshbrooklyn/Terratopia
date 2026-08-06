@@ -80,7 +80,6 @@ public partial class Battle : Control
 		CombatEventBus.RegenDrainApplied      += OnRegenDrainApplied;
 		CombatEventBus.RegenDrainTicked       += OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired      += OnRegenDrainExpired;
-		CombatEventBus.ActionResolved         += OnActionResolved;
 		CombatEventBus.CombatOver             += OnCombatOver;
 
 		GameEngineClass.Instance.BeginSkirmishCombat();
@@ -428,10 +427,6 @@ public partial class Battle : Control
 			? $"{entityName}: {stat} {(isPositive ? "regen" : "drain")} ({sourceName}) wore off"
 			: $"{entityName}: {stat} {(isPositive ? "regen" : "drain")} ({sourceName}) countered by {counteredBySourceName}"));
 
-	private void OnActionResolved(CombatCommand cmd, string actorName, IReadOnlyList<string> targetNames) =>
-		UiEventQueue.Enqueue(() =>
-			AddLogEntry($"{actorName} used {cmd.SourceName} on {string.Join(", ", targetNames)} (cost {cmd.TPCost} TP)."));
-
 	private void OnCombatOver(bool playerWon) =>
 		UiEventQueue.Enqueue(() =>
 		{
@@ -476,7 +471,6 @@ public partial class Battle : Control
 		CombatEventBus.RegenDrainApplied      -= OnRegenDrainApplied;
 		CombatEventBus.RegenDrainTicked       -= OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired      -= OnRegenDrainExpired;
-		CombatEventBus.ActionResolved         -= OnActionResolved;
 		CombatEventBus.CombatOver             -= OnCombatOver;
 	}
 

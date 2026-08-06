@@ -14,10 +14,6 @@ public static class CombatEventBus
     public static event Action<string, string, TargetingType, IReadOnlyList<string>, IReadOnlyList<string>, int, bool>? TargetSelectionRequested; // actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget
     public static event Action<bool>? CombatOver; // playerWon
 
-    // Action resolution
-    public static event Action<CombatCommand, string, string>? ActionRejected; // command, actorName, reason
-    public static event Action<CombatCommand, string, IReadOnlyList<string>>? ActionResolved; // command, actorName, targetNames
-
     // Effects. sourceId/sourceName identify the Tech/Item/MonsterAction that caused the effect
     // (CombatCommand.SourceId/SourceName), distinct from actorId/actorName, the entity performing it.
     public static event Action<string, string, int, string, string, string, string, bool, int, int>? EntityDamaged; // targetId, targetName, amount, actorId, actorName, sourceId, sourceName, isCriticalHit, oldHp, newHp
@@ -48,30 +44,28 @@ public static class CombatEventBus
     public static event Action<string, string, string, string>? EntityDeath; // entityId, entityName, sourceId, sourceName
     public static event Action<string, string, int, int, string, string>? EntityRevived; // entityId, entityName, oldHp, newHp, sourceId, sourceName
 
-    public static void RaiseRoundStarted(int round, IReadOnlyList<string> turnOrderIds, IReadOnlyList<string> turnOrderNames) => RoundStarted?.Invoke(round, turnOrderIds, turnOrderNames);
-    public static void RaiseRoundEnded(int round)               => RoundEnded?.Invoke(round);
-    public static void RaiseTurnStarted(string entityId, string entityName) => TurnStarted?.Invoke(entityId, entityName);
-    public static void RaiseTurnEnded(string entityId, string entityName)   => TurnEnded?.Invoke(entityId, entityName);
-    public static void RaiseWaitingForTurn(string entityId, string entityName, int currentTp, bool isAlly) => WaitingForTurn?.Invoke(entityId, entityName, currentTp, isAlly);
-    public static void RaiseTargetSelectionRequested(string actorId, string actorName, TargetingType targetingType, IReadOnlyList<string> validTargetIds, IReadOnlyList<string> validTargetNames, int numAttacks, bool allowMultipleAttackOnSameTarget) => TargetSelectionRequested?.Invoke(actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget);
-    public static void RaiseCombatOver(bool playerWon)           => CombatOver?.Invoke(playerWon);
-    public static void RaiseActionRejected(CombatCommand c, string actorName, string reason) => ActionRejected?.Invoke(c, actorName, reason);
-    public static void RaiseActionResolved(CombatCommand c, string actorName, IReadOnlyList<string> targetNames) => ActionResolved?.Invoke(c, actorName, targetNames);
-    public static void RaiseEntityDamaged(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp) => EntityDamaged?.Invoke(targetId, targetName, amount, actorId, actorName, sourceId, sourceName, isCriticalHit, oldHp, newHp);
-    public static void RaiseEntityHealed(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, int oldHp, int newHp) => EntityHealed?.Invoke(targetId, targetName, amount, actorId, actorName, sourceId, sourceName, oldHp, newHp);
-    public static void RaiseAttackEvaded(string attackerId, string attackerName, string targetId, string targetName, float oldEvasion, float newEvasion, string sourceId, string sourceName) => AttackEvaded?.Invoke(attackerId, attackerName, targetId, targetName, oldEvasion, newEvasion, sourceId, sourceName);
-    public static void RaiseKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName) => KeywordApplied?.Invoke(keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName);
-    public static void RaiseBuffDebuffApplied(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, int oldValue, int newValue, string sourceId, string sourceName) => BuffDebuffApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue, sourceId, sourceName);
-    public static void RaiseBuffDebuffTicked(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => BuffDebuffTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
-    public static void RaiseBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => BuffDebuffExpired?.Invoke(entityId, entityName, stat, isPositive, oldValue, newValue, sourceId, sourceName, counteredBySourceId, counteredBySourceName);
-    public static void RaiseRegenDrainApplied(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName) => RegenDrainApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName);
-    public static void RaiseRegenDrainTicked(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => RegenDrainTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
-    public static void RaiseRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => RegenDrainExpired?.Invoke(entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName);
-    public static void RaiseEntityTpChanged(string entityId, string entityName, int oldTp, int newTp, string sourceId, string sourceName) => EntityTpChanged?.Invoke(entityId, entityName, oldTp, newTp, sourceId, sourceName);
-    public static void RaiseEntityMaxHpChanged(string entityId, string entityName, int oldMaxHp, int newMaxHp) => EntityMaxHpChanged?.Invoke(entityId, entityName, oldMaxHp, newMaxHp);
-    public static void RaiseEntityMaxTpChanged(string entityId, string entityName, int oldMaxTp, int newMaxTp) => EntityMaxTpChanged?.Invoke(entityId, entityName, oldMaxTp, newMaxTp);
-    public static void RaiseEntityDeath(string entityId, string entityName, string sourceId, string sourceName) => EntityDeath?.Invoke(entityId, entityName, sourceId, sourceName);
-    public static void RaiseEntityRevived(string entityId, string entityName, int oldHp, int newHp, string sourceId, string sourceName) => EntityRevived?.Invoke(entityId, entityName, oldHp, newHp, sourceId, sourceName);
+    internal static void RaiseRoundStarted(int round, IReadOnlyList<string> turnOrderIds, IReadOnlyList<string> turnOrderNames) => RoundStarted?.Invoke(round, turnOrderIds, turnOrderNames);
+    internal static void RaiseRoundEnded(int round)               => RoundEnded?.Invoke(round);
+    internal static void RaiseTurnStarted(string entityId, string entityName) => TurnStarted?.Invoke(entityId, entityName);
+    internal static void RaiseTurnEnded(string entityId, string entityName)   => TurnEnded?.Invoke(entityId, entityName);
+    internal static void RaiseWaitingForTurn(string entityId, string entityName, int currentTp, bool isAlly) => WaitingForTurn?.Invoke(entityId, entityName, currentTp, isAlly);
+    internal static void RaiseTargetSelectionRequested(string actorId, string actorName, TargetingType targetingType, IReadOnlyList<string> validTargetIds, IReadOnlyList<string> validTargetNames, int numAttacks, bool allowMultipleAttackOnSameTarget) => TargetSelectionRequested?.Invoke(actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget);
+    internal static void RaiseCombatOver(bool playerWon)           => CombatOver?.Invoke(playerWon);
+    internal static void RaiseEntityDamaged(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp) => EntityDamaged?.Invoke(targetId, targetName, amount, actorId, actorName, sourceId, sourceName, isCriticalHit, oldHp, newHp);
+    internal static void RaiseEntityHealed(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, int oldHp, int newHp) => EntityHealed?.Invoke(targetId, targetName, amount, actorId, actorName, sourceId, sourceName, oldHp, newHp);
+    internal static void RaiseAttackEvaded(string attackerId, string attackerName, string targetId, string targetName, float oldEvasion, float newEvasion, string sourceId, string sourceName) => AttackEvaded?.Invoke(attackerId, attackerName, targetId, targetName, oldEvasion, newEvasion, sourceId, sourceName);
+    internal static void RaiseKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName) => KeywordApplied?.Invoke(keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName);
+    internal static void RaiseBuffDebuffApplied(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, int oldValue, int newValue, string sourceId, string sourceName) => BuffDebuffApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue, sourceId, sourceName);
+    internal static void RaiseBuffDebuffTicked(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => BuffDebuffTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
+    internal static void RaiseBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => BuffDebuffExpired?.Invoke(entityId, entityName, stat, isPositive, oldValue, newValue, sourceId, sourceName, counteredBySourceId, counteredBySourceName);
+    internal static void RaiseRegenDrainApplied(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName) => RegenDrainApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName);
+    internal static void RaiseRegenDrainTicked(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => RegenDrainTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
+    internal static void RaiseRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => RegenDrainExpired?.Invoke(entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName);
+    internal static void RaiseEntityTpChanged(string entityId, string entityName, int oldTp, int newTp, string sourceId, string sourceName) => EntityTpChanged?.Invoke(entityId, entityName, oldTp, newTp, sourceId, sourceName);
+    internal static void RaiseEntityMaxHpChanged(string entityId, string entityName, int oldMaxHp, int newMaxHp) => EntityMaxHpChanged?.Invoke(entityId, entityName, oldMaxHp, newMaxHp);
+    internal static void RaiseEntityMaxTpChanged(string entityId, string entityName, int oldMaxTp, int newMaxTp) => EntityMaxTpChanged?.Invoke(entityId, entityName, oldMaxTp, newMaxTp);
+    internal static void RaiseEntityDeath(string entityId, string entityName, string sourceId, string sourceName) => EntityDeath?.Invoke(entityId, entityName, sourceId, sourceName);
+    internal static void RaiseEntityRevived(string entityId, string entityName, int oldHp, int newHp, string sourceId, string sourceName) => EntityRevived?.Invoke(entityId, entityName, oldHp, newHp, sourceId, sourceName);
 
     public static void Reset()
     {
@@ -82,8 +76,6 @@ public static class CombatEventBus
         WaitingForTurn         = null;
         TargetSelectionRequested = null;
         CombatOver             = null;
-        ActionRejected         = null;
-        ActionResolved         = null;
         EntityDamaged          = null;
         EntityHealed           = null;
         AttackEvaded           = null;

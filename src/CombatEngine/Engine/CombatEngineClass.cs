@@ -120,8 +120,6 @@ public class CombatEngineClass
 
         var targets = cmd.ChosenTargets.Select(_roster.GetEntity).ToList();
 
-        CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
-
         function.Execute(new CombatFunctionContext(_roster, _keywords, activeKeywords)
         {
             Command     = cmd,
