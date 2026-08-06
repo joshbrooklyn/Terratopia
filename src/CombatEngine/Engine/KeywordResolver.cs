@@ -23,7 +23,10 @@ internal sealed class KeywordResolver : IKeywordUsageStore
     internal void NotifyKeywordsUsed(List<PowerKeyword> activeKeywords, CombatEntity actor, bool actorIsAlly, string actionId)
     {
         foreach (var keyword in activeKeywords)
+        {
             keyword.OnUsed(actor, actorIsAlly, actionId, this);
+            Logger.Debug($"[keyword] {keyword.Name} used: {actor.Name} actionId={actionId}");
+        }
     }
 
     // Each active keyword's bonus is capped independently against this action's own base power
@@ -47,7 +50,10 @@ internal sealed class KeywordResolver : IKeywordUsageStore
             double applied = Math.Min(raw, cap);
             Logger.Debug($"[keyword] {keyword.Name}: raw={raw:F3} applied={applied:F3}");
             if (applied > 0)
-                CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied, actionId, sourceName);
+            {
+                int useCount = keyword.UsageKey(actor, actorIsAlly, actionId) is { } key ? GetCount(key) : 0;
+                CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied, actionId, sourceName, useCount);
+            }
             totalBonus += applied;
         }
         Logger.Debug($"[keyword] ApplyKeywordBonuses: {actor.Name} -> {target.Name} totalBonus={totalBonus:F3}");

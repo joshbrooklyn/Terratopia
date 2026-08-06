@@ -205,6 +205,31 @@ public class TeamworkTests
     }
 
     [Fact]
+    public void KeywordApplied_ReportsRunningUseCountPerSide()
+    {
+        // What: verifies KeywordApplied's useCount tracks the acting side's Teamwork counter -
+        //       the same number the battle UI's Teamwork row polls - and climbs one per use
+        //       exactly like SecondTeamworkUse_StacksToTenPercentBonus's damage sequence does.
+        // How:  Same two-ally setup as SecondTeamworkUse_StacksToTenPercentBonus. ally1's hit is
+        //       the ally side's first Teamwork use (useCount=1, bonus=0.05); ally2's hit is the
+        //       second (useCount=2, bonus=0.10).
+        var (engine, enemy) = SetupAlliesVsEnemy(
+            [
+                ("ally1", teamwork: true, powerFactor: 1.0),
+                ("ally2", teamwork: true, powerFactor: 1.0),
+            ],
+            enemyHp: 53);
+
+        var applied = new List<(int UseCount, double Bonus)>();
+        CombatEventBus.KeywordApplied += (_, _, _, _, _, bonus, _, _, useCount) => applied.Add((useCount, bonus));
+
+        engine.BeginCombat();
+
+        Assert.Equal([(1, 0.05), (2, 0.10)], applied);
+        Assert.True(enemy.IsDead);
+    }
+
+    [Fact]
     public void AllyAndEnemySideCounters_AreIndependent()
     {
         // What: verifies the ally-side and enemy-side Teamwork counters are tracked

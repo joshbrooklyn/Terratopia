@@ -19,7 +19,10 @@ public static class CombatEventBus
     public static event Action<string, string, int, string, string, string, string, bool, int, int>? EntityDamaged; // targetId, targetName, amount, actorId, actorName, sourceId, sourceName, isCriticalHit, oldHp, newHp
     public static event Action<string, string, int, string, string, string, string, int, int>? EntityHealed;     // targetId, targetName, amount, actorId, actorName, sourceId, sourceName, oldHp, newHp
     public static event Action<string, string, string, string, float, float, string, string>? AttackEvaded; // attackerId, attackerName, targetId, targetName, oldEvasion, newEvasion, sourceId, sourceName
-    public static event Action<string, string, string, string, string, double, string, string>? KeywordApplied; // keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName
+    // keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName, useCount.
+    // useCount is the keyword's running counter total for its own scope (PowerKeyword.UsageKey),
+    // 0 for the stateless HP-threshold keywords which keep no counter.
+    public static event Action<string, string, string, string, string, double, string, string, int>? KeywordApplied;
 
     // Timed buffs/debuffs. Expired covers both natural expiry and an opposite-polarity application
     // cancelling the entry out - either way the buff is gone and the stat has moved back. sourceId/
@@ -52,7 +55,7 @@ public static class CombatEventBus
     internal static void RaiseEntityDamaged(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp) => EntityDamaged?.Invoke(targetId, targetName, amount, actorId, actorName, sourceId, sourceName, isCriticalHit, oldHp, newHp);
     internal static void RaiseEntityHealed(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, int oldHp, int newHp) => EntityHealed?.Invoke(targetId, targetName, amount, actorId, actorName, sourceId, sourceName, oldHp, newHp);
     internal static void RaiseAttackEvaded(string attackerId, string attackerName, string targetId, string targetName, float oldEvasion, float newEvasion, string sourceId, string sourceName) => AttackEvaded?.Invoke(attackerId, attackerName, targetId, targetName, oldEvasion, newEvasion, sourceId, sourceName);
-    internal static void RaiseKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName) => KeywordApplied?.Invoke(keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName);
+    internal static void RaiseKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName, int useCount) => KeywordApplied?.Invoke(keywordName, actorId, actorName, targetId, targetName, bonus, sourceId, sourceName, useCount);
     internal static void RaiseBuffDebuffApplied(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, int oldValue, int newValue, string sourceId, string sourceName) => BuffDebuffApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, oldValue, newValue, sourceId, sourceName);
     internal static void RaiseBuffDebuffTicked(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => BuffDebuffTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
     internal static void RaiseBuffDebuffExpired(string entityId, string entityName, BuffDebuffStat stat, bool isPositive, int oldValue, int newValue, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => BuffDebuffExpired?.Invoke(entityId, entityName, stat, isPositive, oldValue, newValue, sourceId, sourceName, counteredBySourceId, counteredBySourceName);

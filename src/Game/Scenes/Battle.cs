@@ -5,6 +5,7 @@ using CombatEngine;
 using CombatEngine.Engine;
 using CombatEngine.DataClasses;
 using CombatEngine.Enums;
+using CombatEngine.Keywords;
 using GameEngine;
 using GameEngine.DataClasses;
 using GameEngine.Engine;
@@ -17,6 +18,7 @@ public partial class Battle : Control
 
 	private Label         _roundLabel           = null!;
 	private Label         _turnOrderLabel       = null!;
+	private Label         _teamworkLabel        = null!;
 	private Label         _actionPaneTitle      = null!;
 	private VBoxContainer _actionContainer      = null!;
 	private Label         _selectedTargetsLabel = null!;
@@ -40,10 +42,14 @@ public partial class Battle : Control
 	private List<string> _currentTurnOrderIds   = new();
 	private List<string> _currentTurnOrderNames = new();
 
+	private readonly HashSet<string> _allyIds = new();
+	private readonly Dictionary<(string ActorId, string SourceId), double> _growthBonuses = new();
+
 	public override void _Ready()
 	{
 		_roundLabel           = GetNode<Label>("VBoxContainer/ContentArea/CenterPanel/RoundPane/RoundPaneVBox/RoundLabel");
 		_turnOrderLabel       = GetNode<Label>("VBoxContainer/ContentArea/CenterPanel/RoundPane/RoundPaneVBox/TurnOrderLabel");
+		_teamworkLabel        = GetNode<Label>("VBoxContainer/ContentArea/CenterPanel/TeamworkPane/TeamworkLabel");
 		_actionPaneTitle      = GetNode<Label>("VBoxContainer/ContentArea/CenterPanel/ActionPane/ActionPaneVBox/ActionPaneTitle");
 		_actionContainer      = GetNode<VBoxContainer>("VBoxContainer/ContentArea/CenterPanel/ActionPane/ActionPaneVBox/ActionScroll/ActionContainer");
 		_selectedTargetsLabel = GetNode<Label>("VBoxContainer/ContentArea/CenterPanel/ActionPane/ActionPaneVBox/SelectedTargetsLabel");
@@ -70,6 +76,7 @@ public partial class Battle : Control
 		CombatEventBus.TurnEnded              += OnTurnEnded;
 		CombatEventBus.WaitingForTurn          += OnWaitingForTurn;
 		CombatEventBus.TargetSelectionRequested += OnTargetSelectionRequested;
+		CombatEventBus.KeywordApplied          += OnKeywordApplied;
 		CombatEventBus.EntityDamaged           += OnEntityDamaged;
 		CombatEventBus.EntityHealed            += OnEntityHealed;
 		CombatEventBus.EntityTpChanged        += OnEntityTpChanged;
@@ -118,7 +125,10 @@ public partial class Battle : Control
 			_alliesColumn.AddChild(card);
 			card.Initialize(seed, showTp: true);
 			RegisterCard(seed, card);
+			_allyIds.Add(seed.EntityId);
 		}
+
+		RenderTeamwork();
 	}
 
 	private void RegisterCard(CombatantSeed seed, CombatantCard card)
@@ -172,6 +182,36 @@ public partial class Battle : Control
 		_turnOrderLabel.Text = string.Join(", ", parts);
 	}
 
+	// Tracks the Teamwork/Growth stacking-keyword counters as CombatEventBus reports them, so the
+	// action pane and combat cards can show a running bonus instead of only the floating "+N%"
+	// label that fades after the hit lands.
+	private void OnKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName, int useCount) =>
+		UiEventQueue.Enqueue(() =>
+		{
+			if (keywordName == TeamworkKeyword.KeywordName && _allyIds.Contains(actorId))
+				RenderTeamwork(useCount, bonus);
+
+			if (keywordName != GrowthKeyword.KeywordName) return;
+
+			// Fires once per target hit by the same command; only rebuild cards when the number
+			// actually moved.
+			var key = (actorId, sourceId);
+			if (_growthBonuses.TryGetValue(key, out var cached) && cached == bonus) return;
+			_growthBonuses[key] = bonus;
+			foreach (var card in _cardsById.Values)
+				card.RefreshInventory(_growthBonuses);
+		});
+
+	private void RenderTeamwork(int useCount = 0, double bonus = 0.0)
+	{
+		if (useCount == 0)
+		{
+			_teamworkLabel.Text = "Teamwork: 0 uses";
+			return;
+		}
+		_teamworkLabel.Text = $"Teamwork: {useCount} use{(useCount == 1 ? "" : "s")} (+{bonus:P0})";
+	}
+
 	// ---------------------------------------------------------------
 	// Action pane
 	// ---------------------------------------------------------------
@@ -203,7 +243,7 @@ public partial class Battle : Control
 			var row  = actionRowScene.Instantiate<ActionRow>();
 			_actionContainer.AddChild(row);
 			row.Initialize($"{tech.Name}  (TP: {tech.TpCost})", tech.Description,
-				FormatBonuses(tech.Parameters, tech.Keywords, tech.NumAttacks), currentTp < tech.TpCost);
+				FormatBonuses(entityId, techId, tech.Parameters, tech.Keywords, tech.NumAttacks), currentTp < tech.TpCost);
 
 			var capturedActorId = entityId;
 			var capturedTechId  = techId;
@@ -229,7 +269,7 @@ public partial class Battle : Control
 			var row       = actionRowScene.Instantiate<ActionRow>();
 			_actionContainer.AddChild(row);
 			row.Initialize($"{item.Name}  ({remaining}/{item.MaxUses})", item.Description,
-				FormatBonuses(item.Parameters, item.Keywords, item.NumAttacks), remaining <= 0);
+				FormatBonuses(entityId, itemId, item.Parameters, item.Keywords, item.NumAttacks), remaining <= 0);
 
 			var capturedActorId = entityId;
 			var capturedItemId  = itemId;
@@ -250,9 +290,9 @@ public partial class Battle : Control
 	}
 
 	// Bonuses summary shown under a tech/item's description: element, power, calc type when it's
-	// not the plain formula, multi-hit count, active keywords, and one line per buffsDebuffs/
-	// regensDrains entry the action carries.
-	private static string FormatBonuses(CombatFunctionParameters parameters, List<string> keywords, int numAttacks)
+	// not the plain formula, multi-hit count, active keywords (Growth annotated with its current
+	// stacked bonus), and one line per buffsDebuffs/regensDrains entry the action carries.
+	private string FormatBonuses(string actorId, string sourceId, CombatFunctionParameters parameters, List<string> keywords, int numAttacks)
 	{
 		var lines = new List<string>();
 
@@ -265,7 +305,9 @@ public partial class Battle : Control
 		if (numAttacks > 1)
 			lines.Add($"{numAttacks} hits");
 		if (keywords.Count > 0)
-			lines.Add(string.Join(", ", keywords));
+			lines.Add(string.Join(", ", keywords.Select(k => k == GrowthKeyword.KeywordName
+				? $"{k} +{_growthBonuses.GetValueOrDefault((actorId, sourceId)):P0}"
+				: k)));
 
 		foreach (var spec in parameters.BuffsDebuffs ?? [])
 		{
@@ -461,6 +503,7 @@ public partial class Battle : Control
 		CombatEventBus.TurnEnded              -= OnTurnEnded;
 		CombatEventBus.WaitingForTurn          -= OnWaitingForTurn;
 		CombatEventBus.TargetSelectionRequested -= OnTargetSelectionRequested;
+		CombatEventBus.KeywordApplied          -= OnKeywordApplied;
 		CombatEventBus.EntityDamaged           -= OnEntityDamaged;
 		CombatEventBus.EntityHealed            -= OnEntityHealed;
 		CombatEventBus.EntityTpChanged        -= OnEntityTpChanged;

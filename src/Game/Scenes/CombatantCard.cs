@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CombatEngine;
 using CombatEngine.Enums;
+using CombatEngine.Keywords;
 using GameEngine.DataClasses;
 using Godot;
 
@@ -23,6 +25,9 @@ public partial class CombatantCard : PanelContainer
 
 	private VBoxContainer _effectsContainer   = null!;
 	private VBoxContainer _inventoryContainer = null!;
+	private IReadOnlyList<CombatantInventoryEntry> _inventoryEntries = [];
+	private IReadOnlyDictionary<(string ActorId, string SourceId), double> _growthBonuses =
+		new Dictionary<(string, string), double>();
 
 	private StyleBoxFlat _normalStyle     = null!;
 	private StyleBoxFlat _activeStyle     = null!;
@@ -76,7 +81,8 @@ public partial class CombatantCard : PanelContainer
 
 		_effectsContainer   = GetNode<VBoxContainer>("Columns/EffectsColumn/EffectsContainer");
 		_inventoryContainer = GetNode<VBoxContainer>("Columns/InventoryColumn/InventoryContainer");
-		RenderInventory(seed);
+		_inventoryEntries   = seed.Techs.Concat(seed.Items).ToList();
+		RenderInventory();
 
 		_normalStyle = (StyleBoxFlat)GetThemeStylebox("panel").Duplicate();
 
@@ -144,17 +150,30 @@ public partial class CombatantCard : PanelContainer
 	private void RefreshCardStyle() =>
 		AddThemeStyleboxOverride("panel", _targetable ? _targetableStyle : _isActiveTurn ? _activeStyle : _normalStyle);
 
-	private void RenderInventory(CombatantSeed seed)
+	// Pushed by Battle after a KeywordApplied event moves this actor's Growth stack, so the
+	// inventory list re-renders with the current bonus instead of only the floating "+N%" label.
+	public void RefreshInventory(IReadOnlyDictionary<(string ActorId, string SourceId), double> growthBonuses)
 	{
-		foreach (var entry in seed.Techs)
-			AddInventoryLabel(entry.Name);
-		foreach (var entry in seed.Items)
-			AddInventoryLabel(entry.Name);
+		_growthBonuses = growthBonuses;
+		RenderInventory();
 	}
 
-	private void AddInventoryLabel(string name)
+	private void RenderInventory()
 	{
-		var label = new Label { Text = name, AutowrapMode = TextServer.AutowrapMode.Word };
+		foreach (Node child in _inventoryContainer.GetChildren())
+			child.QueueFree();
+
+		foreach (var entry in _inventoryEntries)
+			AddInventoryLabel(entry);
+	}
+
+	private void AddInventoryLabel(CombatantInventoryEntry entry)
+	{
+		var text = entry.Name;
+		if (entry.Keywords.Contains(GrowthKeyword.KeywordName))
+			text += $"  Growth +{_growthBonuses.GetValueOrDefault((_entityId, entry.EntityId)):P0}";
+
+		var label = new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.Word };
 		_inventoryContainer.AddChild(label);
 	}
 
@@ -195,7 +214,7 @@ public partial class CombatantCard : PanelContainer
 		});
 	}
 
-	private void OnKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName)
+	private void OnKeywordApplied(string keywordName, string actorId, string actorName, string targetId, string targetName, double bonus, string sourceId, string sourceName, int useCount)
 	{
 		if (targetId != _entityId) return;
 

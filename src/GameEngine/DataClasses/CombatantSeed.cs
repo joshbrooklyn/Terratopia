@@ -1,6 +1,6 @@
 namespace GameEngine.DataClasses;
 
-public record CombatantInventoryEntry(string EntityId, string Name, string Description);
+public record CombatantInventoryEntry(string EntityId, string Name, string Description, IReadOnlyList<string> Keywords);
 
 public record CombatantSeed(
     string EntityId, string Name,

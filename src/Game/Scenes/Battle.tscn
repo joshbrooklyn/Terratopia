@@ -60,6 +60,17 @@ layout_mode = 2
 autowrap_mode = 2
 horizontal_alignment = 1
 
+[node name="TeamworkPane" type="PanelContainer" parent="VBoxContainer/ContentArea/CenterPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.3
+
+[node name="TeamworkLabel" type="Label" parent="VBoxContainer/ContentArea/CenterPanel/TeamworkPane"]
+layout_mode = 2
+autowrap_mode = 2
+horizontal_alignment = 1
+text = "Teamwork: 0 uses"
+
 [node name="ActionPane" type="PanelContainer" parent="VBoxContainer/ContentArea/CenterPanel"]
 layout_mode = 2
 size_flags_vertical = 3

@@ -61,6 +61,26 @@ public class TeamworkKeywordTests
     }
 
     [Fact]
+    public void UsageKey_ReportsRunningCount()
+    {
+        // What: verifies PowerKeyword.UsageKey resolves to a key whose store count tracks the
+        //       same side-scoped counter GetBonus reads.
+        // How:  Fresh store reads 0 for the ally-side key. After one OnUsed by an ally, the
+        //       ally-side key's count is 1, while the enemy-side key stays at 0.
+        var store = new FakeUsageStore();
+        var keyword = new TeamworkKeyword();
+        var actor = MakeEntity("ally1");
+
+        string allyKey  = keyword.UsageKey(actor, actorIsAlly: true, actionId: "")!;
+        string enemyKey = keyword.UsageKey(actor, actorIsAlly: false, actionId: "")!;
+        Assert.Equal(0, store.GetCount(allyKey));
+
+        keyword.OnUsed(actor, actorIsAlly: true, actionId: "", store);
+        Assert.Equal(1, store.GetCount(allyKey));
+        Assert.Equal(0, store.GetCount(enemyKey));
+    }
+
+    [Fact]
     public void PowerKeywordRegistry_ResolvesTeamworkByName()
     {
         // What: verifies the registry maps the literal "Teamwork" string to a TeamworkKeyword

@@ -57,7 +57,7 @@ public class KeywordEventBusTests
         };
 
         var applied = new List<(string keyword, string actorId, string targetId, double bonus)>();
-        CombatEventBus.KeywordApplied += (keywordName, actorId, _, targetId, _, bonus, _, _) =>
+        CombatEventBus.KeywordApplied += (keywordName, actorId, _, targetId, _, bonus, _, _, _) =>
             applied.Add((keywordName, actorId, targetId, bonus));
 
         engine.BeginCombat();
@@ -112,7 +112,7 @@ public class KeywordEventBusTests
         };
 
         var applied = new List<string>();
-        CombatEventBus.KeywordApplied += (keywordName, _, _, _, _, _, _, _) => applied.Add(keywordName);
+        CombatEventBus.KeywordApplied += (keywordName, _, _, _, _, _, _, _, _) => applied.Add(keywordName);
 
         engine.BeginCombat();
 
@@ -169,7 +169,7 @@ public class KeywordEventBusTests
         };
 
         var applied = new List<(string keyword, double bonus)>();
-        CombatEventBus.KeywordApplied += (keywordName, _, _, _, _, bonus, _, _) => applied.Add((keywordName, bonus));
+        CombatEventBus.KeywordApplied += (keywordName, _, _, _, _, bonus, _, _, _) => applied.Add((keywordName, bonus));
 
         engine.BeginCombat();
 
@@ -242,7 +242,7 @@ public class KeywordEventBusTests
         };
 
         var bonuses = new List<double>();
-        CombatEventBus.KeywordApplied += (_, _, _, _, _, bonus, _, _) => bonuses.Add(bonus);
+        CombatEventBus.KeywordApplied += (_, _, _, _, _, bonus, _, _, _) => bonuses.Add(bonus);
 
         engine.BeginCombat();
 

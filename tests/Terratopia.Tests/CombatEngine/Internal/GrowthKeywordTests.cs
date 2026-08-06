@@ -115,6 +115,25 @@ public class GrowthKeywordTests
     }
 
     [Fact]
+    public void UsageKey_ReportsRunningCount()
+    {
+        // What: verifies PowerKeyword.UsageKey resolves to a key whose store count tracks the
+        //       same counter GetBonus reads - this is what KeywordResolver polls to attach a
+        //       display use-count to KeywordApplied.
+        // How:  Fresh store reads 0. After one OnUsed, the key's count is 1 (the triggering use
+        //       itself, matching GetBonus's "usesIncludingThisOne" before it subtracts one).
+        var store = new FakeUsageStore();
+        var keyword = new GrowthKeyword();
+        var actor = MakeEntity("actor");
+
+        string key = keyword.UsageKey(actor, actorIsAlly: true, actionId: "tech1")!;
+        Assert.Equal(0, store.GetCount(key));
+
+        keyword.OnUsed(actor, actorIsAlly: true, actionId: "tech1", store);
+        Assert.Equal(1, store.GetCount(key));
+    }
+
+    [Fact]
     public void PowerKeywordRegistry_ResolvesGrowthByName()
     {
         // What: verifies the registry maps the literal "Growth" string to a GrowthKeyword

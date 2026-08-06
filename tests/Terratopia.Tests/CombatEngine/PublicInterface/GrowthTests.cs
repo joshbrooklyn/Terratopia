@@ -100,6 +100,28 @@ public class GrowthTests
     }
 
     [Fact]
+    public void KeywordApplied_ReportsRunningUseCountAlongsideBonus()
+    {
+        // What: verifies KeywordApplied's useCount tracks the actor+action Growth counter, in
+        //       step with the bonus it reports - this is what the battle UI polls to show a
+        //       running "Growth +N%" on the action itself, ahead of the floating combat-log label.
+        // How:  Same repeated-use setup as RepeatedUsesOfSameAction_StackGrowthByTenPercentPerPriorUse.
+        //       The first use applies a 0.0 bonus and so raises nothing (see
+        //       KeywordEventBusTests.GrowthStacking_FirstUseDoesNotRaise...); useCount for the
+        //       second and third uses should read 2 and 3 respectively - the counter as it
+        //       stands right after OnUsed, matching store.GetCount's own semantics.
+        var (engine, _, enemy) = SetupGrowthDuel(enemyHp: 81, powerFactor: 1.0);
+
+        var applied = new List<(int UseCount, double Bonus)>();
+        CombatEventBus.KeywordApplied += (_, _, _, _, _, bonus, _, _, useCount) => applied.Add((useCount, bonus));
+
+        engine.BeginCombat();
+
+        Assert.Equal([(2, 0.10), (3, 0.20)], applied);
+        Assert.True(enemy.IsDead);
+    }
+
+    [Fact]
     public void Bonus_CapsAtBasePowerFactorWhenGrowthStacksExceedIt()
     {
         // What: verifies the shared power-keyword cap (min(basePowerFactor*2, basePowerFactor+0.5))

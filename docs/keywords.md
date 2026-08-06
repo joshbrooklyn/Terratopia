@@ -25,6 +25,11 @@ public abstract class PowerKeyword
     // Raw, uncapped bonus fraction for one (effect, target) pair. The caller
     // applies the shared cap — see "Resolution order" below.
     public abstract double GetBonus(CombatEntity actor, CombatEntity target, bool actorIsAlly, string actionId, IKeywordUsageStore store);
+
+    // The IKeywordUsageStore key this keyword's counter lives under, or null for
+    // stateless keywords. Lets KeywordResolver attach a running use-count to
+    // KeywordApplied without knowing each stacking keyword's own key scheme.
+    public virtual string? UsageKey(CombatEntity actor, bool actorIsAlly, string actionId) => null;
 }
 ```
 
@@ -161,7 +166,7 @@ Step by step:
 
 ## Event bus notification
 
-Every time a keyword's capped contribution is greater than zero, `KeywordResolver.ApplyKeywordBonuses` also calls `CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied)`, where `applied` is the same capped bonus (`Math.Min(raw, cap)`) that fed `effectivePowerFactor`. This fires once per (keyword, target) pair, same granularity as `GetBonus` itself — a command with multiple effects or targets can raise it multiple times per keyword. A keyword whose condition isn't met (bonus of 0, e.g. `Cruel` against a healthy target) never raises the event. UI (`CombatantCard.cs`) and other listeners subscribe to `CombatEventBus.KeywordApplied` the same way they subscribe to `EntityDamaged`/`AttackEvaded`.
+Every time a keyword's capped contribution is greater than zero, `KeywordResolver.ApplyKeywordBonuses` also calls `CombatEventBus.RaiseKeywordApplied(keyword.Name, actor.EntityId, actor.Name, target.EntityId, target.Name, applied, actionId, sourceName, useCount)`, where `applied` is the same capped bonus (`Math.Min(raw, cap)`) that fed `effectivePowerFactor`, and `useCount` is `store.GetCount(keyword.UsageKey(...))` — the keyword's own running counter total, or `0` for a stateless keyword whose `UsageKey` returns `null`. This fires once per (keyword, target) pair, same granularity as `GetBonus` itself — a command with multiple effects or targets can raise it multiple times per keyword. A keyword whose condition isn't met (bonus of 0, e.g. `Cruel` against a healthy target) never raises the event — so `useCount` can silently lag behind the true counter for a few uses (e.g. a `PowerFactor` 0 action still increments the store but applies nothing); the next event that *does* fire always reports the correct total, since `useCount` is read from the store, not accumulated by listeners. UI (`Battle.cs`, `CombatantCard.cs`) subscribes to `CombatEventBus.KeywordApplied` the same way it subscribes to `EntityDamaged`/`AttackEvaded`, using `useCount` and `applied` to show a running Growth/Teamwork bonus on the action itself, ahead of the floating combat-log label.
 
 ## Capping rules
 
@@ -211,6 +216,6 @@ If you're looking for these and can't find them, that's why — they aren't wire
 
 ## Extending: adding a new keyword
 
-1. Create a new class in `src/CombatEngine/Keywords/` that subclasses `PowerKeyword`, implementing `Name` and `GetBonus` (and `OnUsed` if it needs to track usage).
+1. Create a new class in `src/CombatEngine/Keywords/` that subclasses `PowerKeyword`, implementing `Name` and `GetBonus` (and `OnUsed`/`UsageKey` if it needs to track usage — see `GrowthKeyword`/`TeamworkKeyword` for the pattern; `UsageKey`'s only job is letting `KeywordApplied`'s `useCount` find the right counter).
 2. Add an instance of it to the array in `PowerKeywordRegistry`.
 3. Hand-add the class's `KeywordName` to the `keywords.items.enum` array in `tech.schema.json`, `item.schema.json`, and `monsteraction.schema.json` under `src/GameEngine/Schemas/` (the canonical schemas), then run `npm run copy-schemas` in `GameDataEditor` to propagate the change to its schema copy. Game data can then reference the new keyword's `Name`.

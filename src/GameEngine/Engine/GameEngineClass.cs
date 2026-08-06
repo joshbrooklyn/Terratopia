@@ -118,15 +118,15 @@ public class GameEngineClass
             var techs = a.TechsIds
                 .Select(id => _allTechs.Lookup(id))
                 .Where(t => t != null)
-                .Select(t => new CombatantInventoryEntry(t.TechId, t.Name, t.Description))
+                .Select(t => new CombatantInventoryEntry(t.TechId, t.Name, t.Description, t.Keywords))
                 .ToList();
             if (a.CanUseFightAction)
-                techs.Add(new CombatantInventoryEntry("fight", "Fight", "A basic physical attack."));
+                techs.Add(new CombatantInventoryEntry("fight", "Fight", "A basic physical attack.", []));
 
             var items = a.ItemIds
                 .Select(id => _allItems.Lookup(id))
                 .Where(i => i != null)
-                .Select(i => new CombatantInventoryEntry(i.ItemId, i.Name, i.Description))
+                .Select(i => new CombatantInventoryEntry(i.ItemId, i.Name, i.Description, i.Keywords))
                 .ToList();
 
             allySeeds.Add(new CombatantSeed(
@@ -164,10 +164,10 @@ public class GameEngineClass
             var actions = monster.MonsterActionIds
                 .Select(id => _allMonsterActions.Lookup(id))
                 .Where(a => a != null)
-                .Select(a => new CombatantInventoryEntry(a.MonsterActionId, a.Name, a.Description))
+                .Select(a => new CombatantInventoryEntry(a.MonsterActionId, a.Name, a.Description, a.Keywords))
                 .ToList();
             if (monster.CanUseFightAction)
-                actions.Add(new CombatantInventoryEntry("fight", "Fight", "A basic physical attack."));
+                actions.Add(new CombatantInventoryEntry("fight", "Fight", "A basic physical attack.", []));
 
             enemySeeds.Add(new CombatantSeed(
                 entityId, displayName,
