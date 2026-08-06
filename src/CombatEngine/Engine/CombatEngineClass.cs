@@ -30,28 +30,15 @@ public class CombatEngineClass
 
     public void InitCombat(
         IReadOnlyList<CombatEntity> allies,
-        IReadOnlyList<CombatEntity> enemies,
-        bool isBossFight = false)
+        IReadOnlyList<CombatEntity> enemies)
     {
         CombatEventBus.Reset();
-        this.Reset();
+        _roundNumber = 0;
 
         _roster   = new CombatRoster(allies, enemies, _rng);
         _keywords = new KeywordResolver();
 
-        _combatFlowMachine = new CombatFlowMachine(
-            isPlayerEntity:           _roster.IsPlayerEntity,
-            resolveAction:            ResolveAction,
-            buildRound:               BuildRound,
-            doRoundEnd:               DoRoundEnd,
-            isRoundOver:              IsRoundOver,
-            evaluateWinCondition:     EvaluateWinCondition,
-            getValidTargets:          _roster.GetValidTargets,
-            expandAutoTargets:        _roster.ExpandAutoTargets,
-            assignAiTarget:           _roster.AssignRandomAiTarget,
-            nextTurn:                 NextTurn,
-            resolvePickCount:         CombatRoster.ResolveRequiredPickCount
-        );
+        _combatFlowMachine = new CombatFlowMachine(this, _roster, _turnOrder);
     }
 
     public void SubmitTargets(List<string> chosenTargetIds) =>
@@ -65,49 +52,39 @@ public class CombatEngineClass
         _combatFlowMachine.Start();
     }
 
-    // The roster and keyword counters are rebuilt outright by InitCombat rather than cleared, so
-    // Reset only has to drop the previous encounter's collaborators.
-    private void Reset()
-    {
-        CombatEventBus.Reset();
-        _roundNumber       = 0;
-        _roster            = null!;
-        _keywords          = null!;
-        _combatFlowMachine = null!;
-    }
-
     internal IReadOnlyList<CombatEntity> GetValidTargets(CombatCommand cmd) =>
         _roster.GetValidTargets(cmd);
 
-    private void BuildRound()
+    internal void BuildRound()
     {
         // Buff/debuff ticking must happen first: turn order is sorted by Speed, so a Speed buff
         // expiring this round must be gone before the order is decided. Regen/drain has no
         // bearing on turn order, so it's applied after RoundStarted fires - otherwise its HP/TP
         // delta (and combat-log entries) would land before the round-start announcement instead
         // of after it.
-        TickBuffDebuffsOnEntities();
+        foreach (var entity in _roster.GetLivingEntities())
+        {
+            entity.TickBuffDebuffs();
+        }
 
         _roundNumber++;
         _turnOrder.BuildRound(_roster.GetLivingEntities());
         CombatEventBus.RaiseRoundStarted(_roundNumber, _turnOrder.CurrentTurnOrderIds, _turnOrder.CurrentTurnOrderNames);
 
-        ApplyRegensDrainsOnEntities();
+        // Runs after RoundStarted fires so the regen/drain HP/TP delta - and its combat-log
+        // entries - land as part of the new round rather than the tail of the previous one.
+        foreach (var entity in _roster.GetLivingEntities())
+        {
+            entity.ProcessRegensDrains();
+        }
     }
 
-    private void DoRoundEnd()
+    internal void DoRoundEnd()
     {
         CombatEventBus.RaiseRoundEnded(_roundNumber);
     }
 
-    private CombatEntity? NextTurn()
-    {
-        var entity = _turnOrder.NextTurn();
-        return entity;
-    }
-
-
-    private void ResolveAction(CombatCommand cmd)
+    internal void ResolveAction(CombatCommand cmd)
     {
         if (!_roster.AllEntities.TryGetValue(cmd.ActorId, out var actor) || actor == null)
             throw new InvalidOperationException($"Actor with ID {cmd.ActorId} not found among combat entities.");
@@ -130,7 +107,7 @@ public class CombatEngineClass
         });
     }
 
-    private bool EvaluateWinCondition()
+    internal bool EvaluateWinCondition()
     {
         var livingAllies  = _roster.GetLivingAllies();
         var livingEnemies = _roster.GetLivingEnemies();
@@ -142,25 +119,4 @@ public class CombatEngineClass
         CombatEventBus.RaiseCombatOver(playerWon);
         return true;
     }
-
-    // Runs before BuildRound: Speed buffs/debuffs must expire before turn order is sorted.
-    internal void TickBuffDebuffsOnEntities()
-    {
-        foreach (var entity in _roster.GetLivingEntities())
-        {
-            entity.TickBuffDebuffs();
-        }
-    }
-
-    // Runs after BuildRound/RoundStarted so the regen/drain HP/TP delta - and its combat-log
-    // entries - land as part of the new round rather than the tail of the previous one.
-    internal void ApplyRegensDrainsOnEntities()
-    {
-        foreach (var entity in _roster.GetLivingEntities())
-        {
-            entity.ProcessRegensDrains();
-        }
-    }
-
-    private bool IsRoundOver() => _turnOrder.IsRoundOver;
 }

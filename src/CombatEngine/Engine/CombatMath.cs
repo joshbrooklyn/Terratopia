@@ -40,8 +40,7 @@ internal static class CombatMath
         double baseDamage = CalculateBaseAmount(actor, target, effectivePowerFactor, calcType);
         var    formula    = CombatBalance.Current.DamageFormula;
 
-        double rawDamage;
-        rawDamage = (baseDamage / ((target.Defense + formula.DefenseMitigationConstant) / formula.DefenseMitigationConstant)) - (target.Defense / formula.DefenseFlatDivisor);
+        double rawDamage = (baseDamage / ((target.Defense + formula.DefenseMitigationConstant) / formula.DefenseMitigationConstant)) - (target.Defense / formula.DefenseFlatDivisor);
 
         int damage = (int)Math.Max(0f, rawDamage);
 

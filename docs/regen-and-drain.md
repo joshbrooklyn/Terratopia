@@ -199,16 +199,14 @@ Identical two-layer guard to buffs/debuffs:
    loop via the shared `CalculateAndApplyDamage(ctx)`/`CalculateAndApplyHealing(ctx)` helpers, then
    call `ApplyBuffsDebuffs(ctx); ApplyRegensDrains(ctx);` once, after.
 4. **`CombatFunction.ApplyRegensDrains`** — no-ops if `RegensDrains` is null or empty; otherwise, for
-   each entry, resolves its `Target` via `ctx.ResolveBuffDebuffTargets(entry.Target)`, checks for a
-   duplicate `(entity, stat)` pair, and calls `ctx.ApplyRegenDrain(entity, entry.Stat, entry.Type ==
-   RegenDrainType.Positive, entry.Rounds, entry.UntilRemoved, entry.CancelOnEntityDeath,
-   entry.CancelOnApplierDeath)`.
-5. **`ctx.ApplyRegenDrain`** — wired by `CombatEngineClass.ResolveAction` to
-   `CombatEntity.AddRegenDrain(stat, isPositive, rounds, untilRemoved, sourceId, sourceName,
-   applierId, cancelOnEntityDeath, cancelOnApplierDeath)`, closing over `actor.EntityId` as
-   `applierId` the same way `ApplyBuffDebuff` does: a resource holds at most one regen/drain;
-   re-applying the same polarity extends the duration, the opposite polarity cancels the existing
-   entry outright.
+   each entry, resolves its `Target` via `ctx.Roster.ResolveBuffDebuffTargets(ctx.Actor,
+   entry.Target, ctx.Targets)`, checks for a duplicate `(entity, stat)` pair, and calls
+   `entity.AddRegenDrain(entry.Stat, entry.Type == RegenDrainType.Positive, entry.Rounds,
+   entry.UntilRemoved, ctx.Command.SourceId, ctx.Command.SourceName, ctx.Actor.EntityId,
+   entry.CancelOnEntityDeath, entry.CancelOnApplierDeath)`.
+5. **`CombatEntity.AddRegenDrain`** — `applierId` is `Actor.EntityId`, the same way
+   `AddBuffDebuff` closes over it: a resource holds at most one regen/drain; re-applying the same
+   polarity extends the duration, the opposite polarity cancels the existing entry outright.
 6. **`CombatEntity.HandleDefeat`** — sweeps the entity's own regens/drains for `CancelOnEntityDeath`
    entries before `MarkDead()`/`RaiseEntityDeath`, mirroring the buffs/debuffs sweep.
 7. **`CombatRoster`** — subscribed to `CombatEventBus.EntityDeath`, calls
@@ -273,8 +271,7 @@ collision-throws-naming-the-action guarantee `BuffDebuffTests` has.
 
 - [`buffs-and-debuffs.md`](buffs-and-debuffs.md) — the sibling feature this one mirrors; the target
   selector catalog, the collision-guard rationale, and the `UntilRemoved` rules are shared verbatim.
-- [`combat-functions.md`](combat-functions.md) — the `CombatFunctionParameters` and
-  `CombatFunctionContext` reference tables document `RegensDrains`/`ApplyRegenDrain` inline as well;
-  keep the two in sync.
+- [`combat-functions.md`](combat-functions.md) — the `CombatFunctionParameters` reference table
+  documents `RegensDrains` inline as well; keep the two in sync.
 - [`combat-engine-public-interface.md`](combat-engine-public-interface.md) — the
   `RegenDrainApplied`/`RegenDrainTicked`/`RegenDrainExpired` event signatures.

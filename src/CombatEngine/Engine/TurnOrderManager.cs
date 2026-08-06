@@ -10,9 +10,9 @@ public class TurnOrderManager
     public IReadOnlyList<string> CurrentTurnOrderIds => _queue.Select(e => e.EntityId).ToList();
     public IReadOnlyList<string> CurrentTurnOrderNames => _queue.Select(e => e.Name).ToList();
 
-    public TurnOrderManager(Random? rng = null)
+    public TurnOrderManager(Random rng)
     {
-        _rng = rng ?? new Random();
+        _rng = rng;
     }
 
     public void BuildRound(IReadOnlyList<CombatEntity> entities)

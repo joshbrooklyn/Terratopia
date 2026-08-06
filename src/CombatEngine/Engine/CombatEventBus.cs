@@ -39,8 +39,6 @@ public static class CombatEventBus
 
     // Entity lifecycle
     public static event Action<string, string, int, int, string, string>? EntityTpChanged;     // entityId, entityName, oldTp, newTp, sourceId, sourceName
-    public static event Action<string, string, int, int>? EntityMaxHpChanged;  // entityId, entityName, oldMaxHp, newMaxHp
-    public static event Action<string, string, int, int>? EntityMaxTpChanged;  // entityId, entityName, oldMaxTp, newMaxTp
     public static event Action<string, string, string, string>? EntityDeath; // entityId, entityName, sourceId, sourceName
     public static event Action<string, string, int, int, string, string>? EntityRevived; // entityId, entityName, oldHp, newHp, sourceId, sourceName
 
@@ -62,8 +60,6 @@ public static class CombatEventBus
     internal static void RaiseRegenDrainTicked(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => RegenDrainTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
     internal static void RaiseRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => RegenDrainExpired?.Invoke(entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName);
     internal static void RaiseEntityTpChanged(string entityId, string entityName, int oldTp, int newTp, string sourceId, string sourceName) => EntityTpChanged?.Invoke(entityId, entityName, oldTp, newTp, sourceId, sourceName);
-    internal static void RaiseEntityMaxHpChanged(string entityId, string entityName, int oldMaxHp, int newMaxHp) => EntityMaxHpChanged?.Invoke(entityId, entityName, oldMaxHp, newMaxHp);
-    internal static void RaiseEntityMaxTpChanged(string entityId, string entityName, int oldMaxTp, int newMaxTp) => EntityMaxTpChanged?.Invoke(entityId, entityName, oldMaxTp, newMaxTp);
     internal static void RaiseEntityDeath(string entityId, string entityName, string sourceId, string sourceName) => EntityDeath?.Invoke(entityId, entityName, sourceId, sourceName);
     internal static void RaiseEntityRevived(string entityId, string entityName, int oldHp, int newHp, string sourceId, string sourceName) => EntityRevived?.Invoke(entityId, entityName, oldHp, newHp, sourceId, sourceName);
 
@@ -87,8 +83,6 @@ public static class CombatEventBus
         RegenDrainTicked       = null;
         RegenDrainExpired      = null;
         EntityTpChanged        = null;
-        EntityMaxHpChanged     = null;
-        EntityMaxTpChanged     = null;
         EntityDeath            = null;
         EntityRevived          = null;
     }

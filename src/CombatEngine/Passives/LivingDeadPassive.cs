@@ -3,7 +3,7 @@ using CombatEngine.Engine;
 
 namespace CombatEngine.Passives;
 
-public class LivingDeadPassive : DeathPassive
+public class LivingDeadPassive : Passive
 {
     public const string PassiveName = "LivingDead";
 

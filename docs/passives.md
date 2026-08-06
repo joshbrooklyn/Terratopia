@@ -18,39 +18,17 @@ This is a different mechanism from **[Keywords](keywords.md)**: passives live on
 public abstract class Passive
 {
     public abstract string Name { get; }
-    public abstract PassiveTrigger Trigger { get; }
-}
-```
-
-Every passive subclasses this (usually via a more specific base like `DeathPassive`) and declares its registry key (`Name`) and which event category it responds to (`Trigger`).
-
-### `PassiveTrigger`
-
-```csharp
-public enum PassiveTrigger
-{
-    OnDeath,
-}
-```
-
-Currently a single value. This is the enum that categorizes *when* a passive can fire; adding a new trigger category (e.g. "on taking damage", "on round start") means adding a new value here and a new base class like `DeathPassive` for it.
-
-### `DeathPassive` (abstract, `OnDeath` passives)
-
-```csharp
-public abstract class DeathPassive : Passive
-{
-    public override PassiveTrigger Trigger => PassiveTrigger.OnDeath;
 
     // Returns true if death was prevented/reversed for this entity.
-    public virtual bool TryPreventDeath(CombatEntity target)
-    {
-        return false;
-    }
+    public abstract bool TryPreventDeath(CombatEntity target);
 }
 ```
 
-Fixes `Trigger` to `OnDeath` and adds the hook the engine actually calls: `TryPreventDeath`, which returns whether it successfully intervened.
+Every passive subclasses this directly and declares its registry key (`Name`) and its `OnDeath`
+behavior (`TryPreventDeath`). There is currently only one trigger category — dying — so it isn't
+broken out into a separate enum or an intermediate base class; if a second trigger category is ever
+added (e.g. "on taking damage"), that's the point at which `Trigger`/`PassiveTrigger` would come
+back, alongside a second abstract method or a per-trigger interface.
 
 ### `PassiveRegistry`
 
@@ -60,25 +38,22 @@ public static class PassiveRegistry
     private static readonly Dictionary<string, Passive> _passives =
         new Passive[] { new LivingDeadPassive() }.ToDictionary(p => p.Name);
 
-    // Yields, in order, the registered passives from passiveNames that fire on `trigger`
-    // and are of type T.
-    public static IEnumerable<T> GetForTrigger<T>(IEnumerable<string> passiveNames, PassiveTrigger trigger)
-        where T : Passive
+    // Yields, in order, the registered passives from passiveNames. Unrecognised names are
+    // silently dropped, the same way PowerKeywordRegistry.Resolve treats unrecognised keywords.
+    public static IEnumerable<Passive> Resolve(IEnumerable<string> passiveNames)
     {
         foreach (var name in passiveNames)
         {
-            if (_passives.TryGetValue(name, out var passive)
-                && passive.Trigger == trigger
-                && passive is T typed)
-            {
-                yield return typed;
-            }
+            if (_passives.TryGetValue(name, out var passive))
+                yield return passive;
         }
     }
 }
 ```
 
-`GetForTrigger<T>` is how the engine turns an entity's list of passive-name strings into live, correctly-typed passive instances for a specific trigger — filtering out names that don't resolve, don't match the requested trigger, or aren't the requested subtype.
+`Resolve` is how the engine turns an entity's list of passive-name strings into live passive
+instances — filtering out any name that doesn't resolve. Shaped the same way as
+`CombatFunctionRegistry.Resolve`/`PowerKeywordRegistry.Resolve`.
 
 ## How it's wired end-to-end
 
@@ -102,56 +77,69 @@ public static class PassiveRegistry
 
 ## Trigger point
 
-Passives currently fire from exactly one place: `CombatEngineClass.HandleEntityDefeated`, called from `CombatEngineClass.ApplyDamage` right after a hit brings a target to 0 HP:
+Passives currently fire from exactly one place: `CombatEntity.HandleDefeat`, called from
+`CombatEntity.TakeDamage` right after a hit brings a target to 0 HP:
 
 ```csharp
-if (target.Hp == 0 && !target.IsDead)
-    HandleEntityDefeated(target);
+if (Hp == 0 && !IsDead)
+    HandleDefeat(sourceId, sourceName);
 ```
 
-`ApplyDamage` is the engine's standard damage-application step, handed to every `CombatFunction` through `CombatFunctionContext.ApplyDamage` — so any function that deals damage through the context gets death handling for free. A bespoke function that wrote `target.Hp` directly instead would bypass passives entirely.
+`TakeDamage` is the engine's standard damage-application step — every `CombatFunction` routes
+damage through it (directly, or via the shared `CalculateAndApplyDamage(ctx)` helper), so any
+function that deals damage this way gets death handling for free. A bespoke function that wrote
+`target.Hp` directly instead would bypass passives entirely.
 
 ```csharp
-private static void HandleEntityDefeated(CombatEntity target)
+private void HandleDefeat(string sourceId, string sourceName)
 {
-    foreach (var passive in PassiveRegistry.GetForTrigger<DeathPassive>(target.Passives, PassiveTrigger.OnDeath))
+    foreach (var passive in PassiveRegistry.Resolve(Passives))
     {
-        if (passive.TryPreventDeath(target))
+        if (passive.TryPreventDeath(this))
             return; // death was prevented — stop checking further passives, entity stays alive
     }
     // ... no passive prevented it: mark the entity dead, raise EntityDeath, etc.
 }
 ```
 
-The loop tries each of the target's `OnDeath` passives, in the order they appear in `target.Passives`, and stops as soon as one reports success (`TryPreventDeath` returns `true`). If none succeed (or the entity has no `OnDeath` passives), the entity actually dies.
+The loop tries each of the target's passives, in the order they appear in `Passives`, and stops as
+soon as one reports success (`TryPreventDeath` returns `true`). If none succeed (or the entity has
+no passives), the entity actually dies.
 
 ## Catalog of implemented passives
 
 ### `LivingDeadPassive` (`"LivingDead"`)
 
 ```csharp
-public class LivingDeadPassive : DeathPassive
+public class LivingDeadPassive : Passive
 {
     public const string PassiveName = "LivingDead";
     public override string Name => PassiveName;
 
     public override bool TryPreventDeath(CombatEntity target)
     {
-        if (!target.ConsumedPassives.Add(Name))
+        bool alreadyTriggered = target.HasConsumedPassive(Name);
+        if (alreadyTriggered)
             return false;
 
-        int oldHp = target.Hp;
-        target.Hp = 1;
-        CombatEventBus.RaiseEntityRevived(target.EntityId, target.Name, oldHp, target.Hp);
+        target.ConsumePassive(Name);
+        target.Revive(CombatBalance.Current.LivingDeadReviveHp, PassiveName, PassiveName);
         return true;
     }
 }
 ```
 
-The first time this entity would die, `ConsumedPassives.Add(Name)` succeeds (returns `true` because the name wasn't already in the set), so the entity is revived to 1 HP instead of dying, and an `EntityRevived` event is raised. Every subsequent death attempt, `Add` returns `false` (the name's already there) — `TryPreventDeath` returns `false`, and the entity dies normally.
+The first time this entity would die, `HasConsumedPassive(Name)` is still `false`, so
+`ConsumePassive(Name)` marks it fired and `Revive` brings the entity back at
+`CombatBalance.Current.LivingDeadReviveHp` (1 HP by default), raising `EntityRevived`. Every
+subsequent death attempt, `HasConsumedPassive` is already `true` — `TryPreventDeath` returns
+`false`, and the entity dies normally.
 
 ## Extending: adding a new passive
 
-1. To add another `OnDeath` behavior, subclass `DeathPassive` in `src/CombatEngine/Passives/` and override `TryPreventDeath`. For a new category of trigger entirely (e.g. "on taking damage"), add a new `PassiveTrigger` value and a new abstract base class analogous to `DeathPassive`, plus a call site analogous to `HandleEntityDefeated` where that event actually occurs.
+1. Subclass `Passive` in `src/CombatEngine/Passives/` and implement `TryPreventDeath`. There's
+   currently only one trigger category (dying), so no separate trigger enum or intermediate base
+   class to plug into — see the note under `Passive` above for what a second trigger category
+   would look like.
 2. Add an instance of the new class to the array in `PassiveRegistry`.
 3. Hand-add the new passive's name to `monster.schema.json`'s `passives.items.enum` under `src/GameEngine/Schemas/` (the canonical schema), then run `npm run copy-schemas` (in `GameDataEditor`) to propagate it, so game data can reference the new passive by name.

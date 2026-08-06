@@ -24,6 +24,7 @@ heals the actor for a percentage of the damage dealt.
 New file: `src/CombatEngine/CombatFunctions/LifeDrainFunction.cs`
 
 ```csharp
+using CombatEngine.Engine;
 using CombatEngine.Enums;
 
 namespace CombatEngine.CombatFunctions;
@@ -38,7 +39,7 @@ public class LifeDrainFunction : CombatFunction
     {
         double drainPercent = ctx.Parameters.DrainPercent
             ?? throw new InvalidOperationException(
-                $"LifeDrain ('{ctx.Command.ActionId}'): parameters.drainPercent is required.");
+                $"LifeDrain ('{ctx.Command.SourceId}'): parameters.drainPercent is required.");
 
         double               basePowerFactor = ctx.Parameters.PowerFactor ?? 1.0;
         DamageOrHealCalcType calcType        = ctx.Parameters.CalcType    ?? DamageOrHealCalcType.StandardFormula;
@@ -47,19 +48,20 @@ public class LifeDrainFunction : CombatFunction
 
         foreach (var target in ctx.Targets)
         {
-            if (ctx.TryEvade(ctx.Actor, target))
+            if (ctx.TryEvade(target))
                 continue;
 
-            double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
+            double keywordBonus = ctx.Keywords.ApplyKeywordBonuses(
+                ctx.ActiveKeywords, basePowerFactor, ctx.Actor, target, ctx.ActorIsAlly, ctx.Command.SourceId, ctx.Command.SourceName);
             double effectivePowerFactor = basePowerFactor + keywordBonus;
 
-            int  damage = ctx.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
-            bool isCrit = ctx.RollCrit(ctx.Actor);
+            int  damage = CombatMath.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
+            bool isCrit = ctx.RollCrit();
             if (isCrit)
-                damage = ctx.ApplyCritModifier(ctx.Actor, damage);
+                damage = ctx.ApplyCritModifier(damage);
 
-            ctx.ApplyDamage(ctx.Actor, target, damage, isCrit);
-            ctx.ApplyHeal(ctx.Actor, ctx.Actor, (int)(damage * drainPercent));
+            target.TakeDamage(ctx.Actor, damage, ctx.Command.SourceId, ctx.Command.SourceName, isCrit);
+            ctx.Actor.Heal(ctx.Actor, (int)(damage * drainPercent), ctx.Command.SourceId, ctx.Command.SourceName);
         }
     }
 }
@@ -72,9 +74,13 @@ Points specific to writing your own, not just this example:
   `InvalidOperationException` and naming `ctx.Command.SourceId` — the schema can't express
   per-function requirements, so this is the only place they're enforced.
 - Reuse `CombatFunctionContext`'s standard-step methods (`TryEvade`, `RollCrit`,
-  `ApplyKeywordBonuses`, `CalculateDamageAmount`/`CalculateHealAmount`, `ApplyDamage`/`ApplyHeal`,
-  `DeductTp`) wherever your function's behavior matches the standard action. Skip whichever ones
-  don't apply — e.g. a self-buff wouldn't call `TryEvade` or `RollCrit` at all.
+  `ApplyCritModifier`, `DeductTpCost`) wherever your function's behavior matches the standard
+  action, and go straight to their sources for the rest: `ctx.Keywords.ApplyKeywordBonuses(...)`
+  for keyword bonuses, `CombatMath.CalculateDamageAmount`/`CalculateHealAmount` for the damage/heal
+  formula, and the target's own `TakeDamage`/`Heal`/`AddBuffDebuff`/`AddRegenDrain` to apply the
+  result. `CombatFunctionContext` only wraps the handful of standard steps that read `ctx`'s own
+  per-command state (`Actor`, `Rng`, TP cost) — skip whichever ones don't apply, e.g. a self-buff
+  wouldn't call `TryEvade` or `RollCrit` at all.
 - If your entire damage or healing step is the standard one, call the shared
   `CalculateAndApplyDamage(ctx)` / `CalculateAndApplyHealing(ctx)` helpers on `CombatFunction`
   instead of writing the per-target loop yourself — see `BasicDamageFunction`/`BasicHealFunction`.
@@ -307,10 +313,11 @@ shifts the draw sequence for everything resolved after it.
 Use the shared `ApplyBuffsDebuffs(ctx)` helper on `CombatFunction` rather than resolving and
 applying entries by hand — call it once, after your function's own damage/healing loop. It no-ops
 when `BuffsDebuffs` is null or empty, resolves each entry's `Target` via
-`ctx.ResolveBuffDebuffTargets`, and throws `InvalidOperationException` naming `ctx.Command.ActionId`
-if two entries land on the same entity's stat (e.g. `Self` and `AllAllies` both moving `Power` for
-a solo actor) — the schema's `uniqueBy` can only reject identical `(stat, target)` pairs, not two
-different targets that happen to resolve to the same entity.
+`ctx.Roster.ResolveBuffDebuffTargets(ctx.Actor, entry.Target, ctx.Targets)`, and throws
+`InvalidOperationException` naming `ctx.Command.SourceId` if two entries land on the same entity's
+stat (e.g. `Self` and `AllAllies` both moving `Power` for a solo actor) — the schema's `uniqueBy`
+can only reject identical `(stat, target)` pairs, not two different targets that happen to resolve
+to the same entity.
 
 See [`buffs-and-debuffs.md`](buffs-and-debuffs.md) for the full writeup — timing/evasion semantics,
 data-authoring examples, GameData Editor and migration support, and plain-English descriptions of
@@ -319,39 +326,41 @@ through the analogous `ApplyRegensDrains(ctx)` helper; see
 [`regen-and-drain.md`](regen-and-drain.md) for its full writeup.
 
 Two more `CombatFunction` statics cover the standard damage/healing loop itself:
-`CalculateAndApplyDamage(ctx)` (per target: `TryEvade`, `ApplyKeywordBonuses`,
-`CalculateDamageAmount`, `RollCrit`/`ApplyCritModifier`, `ApplyDamage`) and
-`CalculateAndApplyHealing(ctx)` (per living target: `ApplyKeywordBonuses`, `CalculateHealAmount`,
-`ApplyHeal`) — both reading `PowerFactor`/`CalcType` off `ctx.Parameters` the same way. `BasicDamageFunction`
-and `BasicHealFunction` are each just `DeductTpCost()` + one of these + `ApplyBuffsDebuffs(ctx)` +
-`ApplyRegensDrains(ctx)`.
+`CalculateAndApplyDamage(ctx)` (per target: `ctx.TryEvade`, `ctx.Keywords.ApplyKeywordBonuses`,
+`CombatMath.CalculateDamageAmount`, `ctx.RollCrit`/`ctx.ApplyCritModifier`, `target.TakeDamage`) and
+`CalculateAndApplyHealing(ctx)` (per living target: `ctx.Keywords.ApplyKeywordBonuses`,
+`CombatMath.CalculateHealAmount`, `target.Heal`) — both reading `PowerFactor`/`CalcType` off
+`ctx.Parameters` the same way. `BasicDamageFunction` and `BasicHealFunction` are each just
+`DeductTpCost()` + one of these + `ApplyBuffsDebuffs(ctx)` + `ApplyRegensDrains(ctx)`.
 
 ## Reference: `CombatFunctionContext`
 
 Everything available on `ctx` inside `Execute`, in
-`src/CombatEngine/CombatFunctions/CombatFunctionContext.cs`.
+`src/CombatEngine/CombatFunctions/CombatFunctionContext.cs`. This type only wraps the standard
+steps that need `ctx`'s own per-command state (`Actor`, `Rng`, TP cost); anything that's really just
+a call to another type's method — the damage/heal formula, keyword bonuses, applying a buff/regen —
+is called directly on that type instead (`CombatMath`, `ctx.Keywords`, the target entity), which is
+why those don't appear here. See the worked example above.
 
 | Member | Conveys |
 |---|---|
-| `Command` | The full `CombatCommand` being resolved — targeting rules, keyword list, action id, raw TP cost, and anything else not already broken out below. |
+| `Command` | The full `CombatCommand` being resolved — targeting rules, keyword list, source id/name, raw TP cost, and anything else not already broken out below. |
 | `Actor` | The entity performing the action. |
 | `ActorIsAlly` | Whether the actor is on the player's side or the enemy's. |
 | `Parameters` | The action's parameters as authored in game data (see the table above). |
 | `Targets` | The entities this action is resolving against, in order, including repeats for a multi-hit action that can strike the same target twice. |
-| `AllEntities` | Every entity currently in the fight, keyed by id — for an effect that reaches beyond the chosen targets. |
-| `GetEntity(id)` | Looks up any entity in the fight by id. |
 | `Rng` | The combat's shared random source, for a roll with no standard equivalent below. |
-| `ResolveTpCost()` | The TP cost this action should charge. |
-| `DeductTp(entity, amount)` | Charges a TP amount to an entity. |
-| `DeductTpCost()` | Convenience for `DeductTp(Actor, ResolveTpCost())` — charges the actor the action's own TP cost. |
-| `TryEvade(actor, target)` | Whether an attack against the given target is dodged. |
-| `RollCrit(actor)` | Whether the actor's next hit lands as a critical hit. |
-| `ApplyCritModifier(actor, amount)` | The amount after the actor's critical-hit bonus is applied. |
-| `ApplyKeywordBonuses(basePowerFactor, actor, target)` | The extra power the action's keywords contribute against the given target. |
-| `CalculateDamageAmount(actor, target, powerFactor, calcType)` | The damage an attack deals. |
-| `CalculateHealAmount(actor, target, powerFactor, calcType)` | The amount an action heals for. |
-| `ApplyDamage(actor, target, amount, isCrit)` | Applies a damage amount to a target. |
-| `ApplyHeal(actor, target, amount)` | Applies a heal amount to a target. |
-| `ApplyBuffDebuff(target, stat, isPositive, rounds, untilRemoved, cancelOnEntityDeath, cancelOnApplierDeath)` | Applies a buff/debuff to one of a target's stats. Re-applying the same polarity extends it (or, if either side is `untilRemoved`, keeps it indefinite); the opposite polarity cancels the existing one out. `rounds` is ignored when `untilRemoved` is true. |
-| `ResolveBuffDebuffTargets(selector)` | The living entities a `BuffDebuffTarget` selector resolves to, relative to `Actor`. Used by the shared `ApplyBuffsDebuffs(ctx)`/`ApplyRegensDrains(ctx)` helpers above — call that instead of this directly in almost every case. |
-| `ApplyRegenDrain(target, stat, isPositive, rounds, untilRemoved, cancelOnEntityDeath, cancelOnApplierDeath)` | Applies a regen/drain to one of a target's resources (`Hp`/`Tp`). Same re-apply/cancel rules as `ApplyBuffDebuff`. |
+| `Roster` (internal) | The full `CombatRoster` for the fight — reach through it (e.g. `ctx.Roster.ResolveBuffDebuffTargets(...)`) for anything beyond `ctx.Targets`. |
+| `Keywords` / `ActiveKeywords` (internal) | The engine's `KeywordResolver` and this command's resolved keyword list — pass both to `Keywords.ApplyKeywordBonuses(ActiveKeywords, ...)` to get the action's keyword bonus. |
+| `DeductTpCost()` | Charges the actor the action's own TP cost (`Command.TPCost`); no-ops for a non-player actor. Safe to call unconditionally. |
+| `TryEvade(target)` | Whether an attack from `Actor` against the given target is dodged. |
+| `RollCrit()` | Whether `Actor`'s next hit lands as a critical hit. |
+| `ApplyCritModifier(amount)` | The amount after `Actor`'s critical-hit bonus is applied. |
+
+To apply a computed result, call the target's own methods directly: `target.TakeDamage(actor,
+amount, sourceId, sourceName, isCrit)`, `target.Heal(actor, amount, sourceId, sourceName)`,
+`target.AddBuffDebuff(stat, isPositive, rounds, untilRemoved, sourceId, sourceName, applierId,
+cancelOnEntityDeath, cancelOnApplierDeath)`, `target.AddRegenDrain(...)` (same shape as
+`AddBuffDebuff`). All four live on `CombatEntity`
+(`src/CombatEngine/DataClasses/CombatEntity.cs`) — `sourceId`/`sourceName` are
+`ctx.Command.SourceId`/`SourceName`, and `applierId` is `ctx.Actor.EntityId`.

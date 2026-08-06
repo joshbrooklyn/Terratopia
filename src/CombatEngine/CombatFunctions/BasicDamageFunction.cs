@@ -1,6 +1,3 @@
-using CombatEngine.Engine;
-using CombatEngine.Enums;
-
 namespace CombatEngine.CombatFunctions;
 
 // The pre-CombatFunction engine behaviour, verbatim: deduct TP, then for each chosen target roll

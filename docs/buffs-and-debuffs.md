@@ -208,20 +208,19 @@ caught in two places that catch two different shapes of mistake:
    loop via the shared `CalculateAndApplyDamage(ctx)`/`CalculateAndApplyHealing(ctx)` helpers (also
    defined on `CombatFunction`), then call the shared `ApplyBuffsDebuffs(ctx)` helper once, after.
 4. **`CombatFunction.ApplyBuffsDebuffs`** — no-ops if `BuffsDebuffs` is null or empty; otherwise,
-   for each entry, resolves its `Target` via `ctx.ResolveBuffDebuffTargets(entry.Target)`, checks
-   for a duplicate `(entity, stat)` pair (see above), and calls `ctx.ApplyBuffDebuff(entity,
-   entry.Stat, entry.Type == BuffDebuffType.Positive, entry.Rounds, entry.UntilRemoved,
+   for each entry, resolves its `Target` via `ctx.Roster.ResolveBuffDebuffTargets(ctx.Actor,
+   entry.Target, ctx.Targets)`, checks for a duplicate `(entity, stat)` pair (see above), and calls
+   `entity.AddBuffDebuff(entry.Stat, entry.Type == BuffDebuffType.Positive, entry.Rounds,
+   entry.UntilRemoved, ctx.Command.SourceId, ctx.Command.SourceName, ctx.Actor.EntityId,
    entry.CancelOnEntityDeath, entry.CancelOnApplierDeath)` for each resolved entity.
-5. **`ctx.ResolveBuffDebuffTargets`** — a method on `CombatFunctionContext` that forwards to
-   `CombatRoster.ResolveBuffDebuffTargets(Actor, selector, Targets)` (see the catalog above).
-6. **`ctx.ApplyBuffDebuff`** — forwards to `CombatEntity.AddBuffDebuff(stat, isPositive, rounds,
-   untilRemoved, sourceId, sourceName, applierId, cancelOnEntityDeath, cancelOnApplierDeath)`,
-   passing `Actor.EntityId` as `applierId` (invariant for the whole action, like
-   `Command.SourceId`/`SourceName` already are — not threaded as a per-entry parameter): a stat
-   holds at most one buff/debuff; re-applying the same polarity extends the duration without
-   compounding the magnitude (unless either side is `UntilRemoved`, see above), and the opposite
-   polarity cancels the existing entry outright.
-7. **`CombatEntity.HandleDefeat`** — after the `DeathPassive` prevention check and before
+5. **`CombatRoster.ResolveBuffDebuffTargets`** — reached through the `Roster` field on
+   `CombatFunctionContext` (see the catalog above).
+6. **`CombatEntity.AddBuffDebuff`** — `applierId` is `Actor.EntityId` (invariant for the whole
+   action, like `Command.SourceId`/`SourceName` already are — not threaded as a per-entry
+   parameter): a stat holds at most one buff/debuff; re-applying the same polarity extends the
+   duration without compounding the magnitude (unless either side is `UntilRemoved`, see above),
+   and the opposite polarity cancels the existing entry outright.
+7. **`CombatEntity.HandleDefeat`** — after the passive prevention check and before
    `MarkDead()`/`RaiseEntityDeath`, sweeps the entity's own buffs/debuffs for `CancelOnEntityDeath`
    entries and removes them.
 8. **`CombatRoster`** — subscribes to `CombatEventBus.EntityDeath` in its constructor; on any
@@ -438,9 +437,8 @@ test and a scripted follow-up move finishing the enemy off so the fight terminat
 
 ## See also
 
-- [`combat-functions.md`](combat-functions.md) — the `CombatFunctionParameters` and
-  `CombatFunctionContext` reference tables document `BuffsDebuffs` and `ResolveBuffDebuffTargets`
-  inline as well; keep the two in sync.
+- [`combat-functions.md`](combat-functions.md) — the `CombatFunctionParameters` reference table
+  documents `BuffsDebuffs` inline as well; keep the two in sync.
 - [`combat-engine-public-interface.md`](combat-engine-public-interface.md) — the
   `BuffDebuffApplied`/`BuffDebuffTicked`/`BuffDebuffExpired` event signatures, which this feature
   doesn't change.

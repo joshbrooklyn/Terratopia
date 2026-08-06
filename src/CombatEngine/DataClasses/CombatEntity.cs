@@ -85,7 +85,7 @@ public class CombatEntity
 
     private void HandleDefeat(string sourceId, string sourceName)
     {
-        foreach (var passive in PassiveRegistry.GetForTrigger<DeathPassive>(Passives, PassiveTrigger.OnDeath))
+        foreach (var passive in PassiveRegistry.Resolve(Passives))
         {
             if (passive.TryPreventDeath(this))
                 return;

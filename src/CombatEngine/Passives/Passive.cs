@@ -1,9 +1,11 @@
-using CombatEngine.Enums;
+using CombatEngine.DataClasses;
 
 namespace CombatEngine.Passives;
 
 public abstract class Passive
 {
     public abstract string Name { get; }
-    public abstract PassiveTrigger Trigger { get; }
+
+    // Returns true if death was prevented/reversed for this entity.
+    public abstract bool TryPreventDeath(CombatEntity target);
 }

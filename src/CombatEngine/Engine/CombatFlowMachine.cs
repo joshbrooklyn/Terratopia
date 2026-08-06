@@ -4,28 +4,18 @@ using CombatEngine.DataClasses;
 
 namespace CombatEngine.Engine
 {
-    
+
     internal class CombatFlowMachine
     {
         private readonly StateMachine<CombatFlowState, CombatFlowTrigger> _machine;
+        private readonly CombatEngineClass _engine;
+        private readonly CombatRoster      _roster;
+        private readonly TurnOrderManager  _turnOrder;
+
         private CombatCommand? _pendingCommand;
         private CombatEntity?  _currentEntity;
         private bool _winConditionMet;
         private bool _roundIsOver;
-
-        private readonly Func<CombatEntity, bool>  _isPlayerEntity;
-        private readonly Action<CombatCommand>     _resolveAction;
-        private readonly Action                    _buildRound;
-        private readonly Action                    _doRoundEnd;
-        private readonly Func<CombatCommand, IReadOnlyList<CombatEntity>> _getValidTargets;
-        private readonly Action<CombatCommand>     _expandAutoTargets;
-        private readonly Action<CombatCommand>     _assignAiTarget;
-        private readonly Func<bool>                _isRoundOver;
-        private readonly Func<bool>                _evaluateWinCondition;
-        private readonly Func<CombatEntity?>       _nextTurn;
-        private readonly Func<int, bool, int, int> _resolvePickCount;
-
-        public CombatFlowState CurrentState => _machine.State;
 
         internal void SubmitCommand(CombatCommand cmd)
         {
@@ -35,7 +25,7 @@ namespace CombatEngine.Engine
 
         internal void SubmitTargets(List<string> chosenTargets)
         {
-            var validIds = _getValidTargets(_pendingCommand!).Select(e => e.EntityId).ToHashSet();
+            var validIds = _roster.GetValidTargets(_pendingCommand!).Select(e => e.EntityId).ToHashSet();
             var invalid  = chosenTargets.Where(id => !validIds.Contains(id)).ToList();
             if (invalid.Count > 0)
                 throw new InvalidOperationException(
@@ -45,36 +35,17 @@ namespace CombatEngine.Engine
             _machine.Fire(CombatFlowTrigger.TargetsSubmitted);
         }
 
-        public CombatFlowMachine(
-            Func<CombatEntity, bool>  isPlayerEntity,
-            Action<CombatCommand>     resolveAction,
-            Action                    buildRound,
-            Action                    doRoundEnd,
-            Func<bool>                isRoundOver,
-            Func<bool>                evaluateWinCondition,
-            Func<CombatCommand, IReadOnlyList<CombatEntity>> getValidTargets,
-            Action<CombatCommand>     expandAutoTargets,
-            Action<CombatCommand>     assignAiTarget,
-            Func<CombatEntity?>       nextTurn,
-            Func<int, bool, int, int> resolvePickCount)
+        public CombatFlowMachine(CombatEngineClass engine, CombatRoster roster, TurnOrderManager turnOrder)
         {
-            _isPlayerEntity           = isPlayerEntity;
-            _resolveAction            = resolveAction;
-            _buildRound               = buildRound;
-            _doRoundEnd               = doRoundEnd;
-            _isRoundOver              = isRoundOver;
-            _evaluateWinCondition     = evaluateWinCondition;
-            _getValidTargets          = getValidTargets;
-            _expandAutoTargets        = expandAutoTargets;
-            _assignAiTarget           = assignAiTarget;
-            _nextTurn                 = nextTurn;
-            _resolvePickCount         = resolvePickCount;
+            _engine    = engine;
+            _roster    = roster;
+            _turnOrder = turnOrder;
 
             _machine = new StateMachine<CombatFlowState, CombatFlowTrigger>(CombatFlowState.Idle);
             ConfigureMachine();
         }
 
-        public void Start() => _machine.Fire(CombatFlowTrigger.CombatStarted);        
+        public void Start() => _machine.Fire(CombatFlowTrigger.CombatStarted);
 
         private void ConfigureMachine()
         {
@@ -85,7 +56,7 @@ namespace CombatEngine.Engine
                 .Permit(CombatFlowTrigger.RoundBuilt, CombatFlowState.TurnStart)
                 .OnEntry(() =>
                 {
-                    _buildRound();
+                    _engine.BuildRound();
                     _machine.Fire(CombatFlowTrigger.RoundBuilt);
                 });
 
@@ -94,7 +65,7 @@ namespace CombatEngine.Engine
                     () => _currentEntity!.IsDead ? CombatFlowState.CheckWinCondition : CombatFlowState.WaitingForTurn)
                 .OnEntry(() =>
                 {
-                    _currentEntity = _nextTurn();
+                    _currentEntity = _turnOrder.NextTurn();
 
                     // Dying doesn't vacate a queue slot built for the round - an entity killed
                     // earlier this round can still be dequeued for "its" turn. Skip it silently:
@@ -112,33 +83,33 @@ namespace CombatEngine.Engine
             _machine.Configure(CombatFlowState.WaitingForTurn)
                 .PermitDynamic(CombatFlowTrigger.CommandSubmitted, () =>
                 {
-                    if (!_isPlayerEntity(_currentEntity!))
+                    if (!_roster.IsPlayerEntity(_currentEntity!))
                     {
-                        _assignAiTarget(_pendingCommand!);
+                        _roster.AssignRandomAiTarget(_pendingCommand!);
                         return CombatFlowState.ResolvingAction;
                     }
 
                     if (_pendingCommand!.TargetingType is TargetingType.Choose)
                         return CombatFlowState.WaitingForTargetSelection;
 
-                    _expandAutoTargets(_pendingCommand!);
+                    _roster.ExpandAutoTargets(_pendingCommand!);
                     return CombatFlowState.ResolvingAction;
                 })
                 .OnEntry(() =>
                 {
                     CombatEventBus.RaiseWaitingForTurn(
                         _currentEntity!.EntityId, _currentEntity!.Name, _currentEntity!.Tp,
-                        _isPlayerEntity(_currentEntity!));
+                        _roster.IsPlayerEntity(_currentEntity!));
                 });
 
             _machine.Configure(CombatFlowState.WaitingForTargetSelection)
                 .Permit(CombatFlowTrigger.TargetsSubmitted, CombatFlowState.ResolvingAction)
                 .OnEntry(() =>
                 {
-                    var validTargets = _getValidTargets(_pendingCommand!);
+                    var validTargets = _roster.GetValidTargets(_pendingCommand!);
                     var validIds   = validTargets.Select(e => e.EntityId).ToList();
                     var validNames = validTargets.Select(e => e.Name).ToList();
-                    int numAttacks = _resolvePickCount(
+                    int numAttacks = CombatRoster.ResolveRequiredPickCount(
                         _pendingCommand!.NumAttacks, _pendingCommand!.AllowMultipleAttackOnSameTarget, validTargets.Count);
                     CombatEventBus.RaiseTargetSelectionRequested(
                         _pendingCommand!.ActorId, _currentEntity!.Name, _pendingCommand!.TargetingType,
@@ -149,7 +120,7 @@ namespace CombatEngine.Engine
                 .Permit(CombatFlowTrigger.ActionResolved, CombatFlowState.TurnEnd)
                 .OnEntry(() =>
                 {
-                    _resolveAction(_pendingCommand!);
+                    _engine.ResolveAction(_pendingCommand!);
                     _machine.Fire(CombatFlowTrigger.ActionResolved);
                 });
 
@@ -166,7 +137,7 @@ namespace CombatEngine.Engine
                 .Permit(CombatFlowTrigger.RoundComplete, CombatFlowState.RoundStart)
                 .OnEntry(() =>
                 {
-                    _doRoundEnd();
+                    _engine.DoRoundEnd();
                     _machine.Fire(CombatFlowTrigger.RoundComplete);
                 });
 
@@ -182,15 +153,15 @@ namespace CombatEngine.Engine
                         () => !_winConditionMet && !_roundIsOver)
                 .OnEntry(() =>
                 {
-                    _winConditionMet = _evaluateWinCondition();
-                    _roundIsOver     = _isRoundOver();
+                    _winConditionMet = _engine.EvaluateWinCondition();
+                    _roundIsOver     = _turnOrder.IsRoundOver;
                     _machine.Fire(CombatFlowTrigger.WinConditionChecked);
                 });
 
-            _machine.Configure(CombatFlowState.CombatOver);                
+            _machine.Configure(CombatFlowState.CombatOver);
 
             _machine.OnTransitioned(t =>
                 Console.WriteLine($"[flow] {t.Source} → {t.Destination}"));
-        }        
+        }
     }
 }

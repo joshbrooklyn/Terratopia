@@ -14,26 +14,17 @@ public partial class TpStatDisplay : Label
 		_maxTp = maxTp;
 		Text = $"TP: {currentTp} / {maxTp}";
 		CombatEventBus.EntityTpChanged += OnEntityTpChanged;
-		CombatEventBus.EntityMaxTpChanged += OnEntityMaxTpChanged;
 	}
 
 	public override void _ExitTree()
 	{
 		CombatEventBus.EntityTpChanged -= OnEntityTpChanged;
-		CombatEventBus.EntityMaxTpChanged -= OnEntityMaxTpChanged;
 	}
 
 	private void OnEntityTpChanged(string entityId, string entityName, int oldTp, int newTp, string sourceId, string sourceName)
 	{
 		if (entityId != _entityId) return;
 		_currentTp = newTp;
-		Text = $"TP: {_currentTp} / {_maxTp}";
-	}
-
-	private void OnEntityMaxTpChanged(string entityId, string entityName, int oldMaxTp, int newMaxTp)
-	{
-		if (entityId != _entityId) return;
-		_maxTp = newMaxTp;
 		Text = $"TP: {_currentTp} / {_maxTp}";
 	}
 }

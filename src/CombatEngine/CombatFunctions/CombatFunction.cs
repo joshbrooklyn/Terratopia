@@ -41,14 +41,14 @@ public abstract class CombatFunction
 
         foreach (var spec in specs)
         {
-            foreach (var entity in ctx.ResolveBuffDebuffTargets(spec.Target))
+            foreach (var entity in ctx.Roster.ResolveBuffDebuffTargets(ctx.Actor, spec.Target, ctx.Targets))
             {
                 if (!applied.Add((entity.EntityId, spec.Stat)))
                     throw new InvalidOperationException(
                         $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two buffsDebuffs entries both target {entity.Name}'s {spec.Stat}.");
 
-                ctx.ApplyBuffDebuff(entity, spec.Stat, spec.Type == BuffDebuffType.Positive, spec.Rounds, spec.UntilRemoved,
-                    spec.CancelOnEntityDeath, spec.CancelOnApplierDeath);
+                entity.AddBuffDebuff(spec.Stat, spec.Type == BuffDebuffType.Positive, spec.Rounds, spec.UntilRemoved,
+                    ctx.Command.SourceId, ctx.Command.SourceName, ctx.Actor.EntityId, spec.CancelOnEntityDeath, spec.CancelOnApplierDeath);
             }
         }
     }
@@ -67,14 +67,14 @@ public abstract class CombatFunction
 
         foreach (var spec in specs)
         {
-            foreach (var entity in ctx.ResolveBuffDebuffTargets(spec.Target))
+            foreach (var entity in ctx.Roster.ResolveBuffDebuffTargets(ctx.Actor, spec.Target, ctx.Targets))
             {
                 if (!applied.Add((entity.EntityId, spec.Stat)))
                     throw new InvalidOperationException(
                         $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two regensDrains entries both target {entity.Name}'s {spec.Stat}.");
 
-                ctx.ApplyRegenDrain(entity, spec.Stat, spec.Type == RegenDrainType.Positive, spec.Rounds, spec.UntilRemoved,
-                    spec.CancelOnEntityDeath, spec.CancelOnApplierDeath);
+                entity.AddRegenDrain(spec.Stat, spec.Type == RegenDrainType.Positive, spec.Rounds, spec.UntilRemoved,
+                    ctx.Command.SourceId, ctx.Command.SourceName, ctx.Actor.EntityId, spec.CancelOnEntityDeath, spec.CancelOnApplierDeath);
             }
         }
     }
@@ -90,18 +90,19 @@ public abstract class CombatFunction
         {
             // An evaded hit lands nothing at all. Any buffsDebuffs entries are unaffected - they're
             // a property of the action, applied once after the loop regardless of evasion.
-            if (ctx.TryEvade(ctx.Actor, target))
+            if (ctx.TryEvade(target))
                 continue;
 
-            double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
+            double keywordBonus = ctx.Keywords.ApplyKeywordBonuses(
+                ctx.ActiveKeywords, basePowerFactor, ctx.Actor, target, ctx.ActorIsAlly, ctx.Command.SourceId, ctx.Command.SourceName);
             double effectivePowerFactor = basePowerFactor + keywordBonus;
 
-            int  damage = ctx.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
-            bool isCrit = ctx.RollCrit(ctx.Actor);
+            int  damage = CombatMath.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
+            bool isCrit = ctx.RollCrit();
             if (isCrit)
-                damage = ctx.ApplyCritModifier(ctx.Actor, damage);
+                damage = ctx.ApplyCritModifier(damage);
 
-            ctx.ApplyDamage(ctx.Actor, target, damage, isCrit);
+            target.TakeDamage(ctx.Actor, damage, ctx.Command.SourceId, ctx.Command.SourceName, isCrit);
         }
     }
 
@@ -117,11 +118,12 @@ public abstract class CombatFunction
             if (target.IsDead)
                 continue;
 
-            double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
+            double keywordBonus = ctx.Keywords.ApplyKeywordBonuses(
+                ctx.ActiveKeywords, basePowerFactor, ctx.Actor, target, ctx.ActorIsAlly, ctx.Command.SourceId, ctx.Command.SourceName);
             double effectivePowerFactor = basePowerFactor + keywordBonus;
 
-            int amount = ctx.CalculateHealAmount(ctx.Actor, target, effectivePowerFactor, calcType);
-            ctx.ApplyHeal(ctx.Actor, target, amount);
+            int amount = CombatMath.CalculateHealAmount(ctx.Actor, target, effectivePowerFactor, calcType);
+            target.Heal(ctx.Actor, amount, ctx.Command.SourceId, ctx.Command.SourceName);
         }
-    }    
+    }
 }

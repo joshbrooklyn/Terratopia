@@ -1,6 +1,3 @@
-using CombatEngine.Engine;
-using CombatEngine.Enums;
-
 namespace CombatEngine.CombatFunctions;
 
 // Restores Hp using the standard formula minus the Defense divisor. Deliberately narrower than

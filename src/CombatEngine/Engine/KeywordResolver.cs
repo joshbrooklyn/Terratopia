@@ -12,10 +12,10 @@ internal sealed class KeywordResolver : IKeywordUsageStore
 {
     private readonly Dictionary<string, int> _usageCounts = new();
 
-    int IKeywordUsageStore.Increment(string key) =>
+    public int Increment(string key) =>
         _usageCounts[key] = _usageCounts.GetValueOrDefault(key) + 1;
 
-    int IKeywordUsageStore.GetCount(string key) =>
+    public int GetCount(string key) =>
         _usageCounts.GetValueOrDefault(key);
 
     // Fires once per active keyword, per command - before any target is touched. This is the

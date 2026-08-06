@@ -16,7 +16,6 @@ public partial class HpStatDisplay : Label
 		CombatEventBus.EntityDamaged += OnEntityDamaged;
 		CombatEventBus.EntityHealed += OnEntityHealed;
 		CombatEventBus.EntityRevived += OnEntityRevived;
-		CombatEventBus.EntityMaxHpChanged += OnEntityMaxHpChanged;
 	}
 
 	public override void _ExitTree()
@@ -24,7 +23,6 @@ public partial class HpStatDisplay : Label
 		CombatEventBus.EntityDamaged -= OnEntityDamaged;
 		CombatEventBus.EntityHealed -= OnEntityHealed;
 		CombatEventBus.EntityRevived -= OnEntityRevived;
-		CombatEventBus.EntityMaxHpChanged -= OnEntityMaxHpChanged;
 	}
 
 	private void OnEntityDamaged(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp)
@@ -48,13 +46,6 @@ public partial class HpStatDisplay : Label
 	private void SetHp(int newHp)
 	{
 		_currentHp = newHp;
-		Text = $"HP: {_currentHp} / {_maxHp}";
-	}
-
-	private void OnEntityMaxHpChanged(string entityId, string entityName, int oldMaxHp, int newMaxHp)
-	{
-		if (entityId != _entityId) return;
-		_maxHp = newMaxHp;
 		Text = $"HP: {_currentHp} / {_maxHp}";
 	}
 }

@@ -99,16 +99,16 @@ internal sealed class CombatRoster
         {
             BuffDebuffTarget.SelectedTargets => selectedTargets.Where(e => !e.IsDead).DistinctBy(e => e.EntityId).ToList(),
             BuffDebuffTarget.Self             => new[] { actor },
-            BuffDebuffTarget.RandomAlly       => DrawOne(allies.Where(e => e != actor).ToList(), _rng),
-            BuffDebuffTarget.RandomEnemy      => DrawOne(enemies, _rng),
+            BuffDebuffTarget.RandomAlly       => DrawOne(allies.Where(e => e != actor).ToList()),
+            BuffDebuffTarget.RandomEnemy      => DrawOne(enemies),
             BuffDebuffTarget.AllAllies        => allies,
             BuffDebuffTarget.AllEnemies       => enemies,
             _ => throw new ArgumentOutOfRangeException(nameof(selector)),
         };
     }
 
-    private static IReadOnlyList<CombatEntity> DrawOne(IReadOnlyList<CombatEntity> pool, Random rng) =>
-        pool.Count == 0 ? Array.Empty<CombatEntity>() : new[] { pool[rng.Next(pool.Count)] };
+    private IReadOnlyList<CombatEntity> DrawOne(IReadOnlyList<CombatEntity> pool) =>
+        pool.Count == 0 ? Array.Empty<CombatEntity>() : new[] { pool[_rng.Next(pool.Count)] };
 
     internal void AssignRandomAiTarget(CombatCommand cmd)
     {
@@ -121,18 +121,8 @@ internal sealed class CombatRoster
         switch (cmd.TargetingType)
         {
             case TargetingType.All:
-            {
-                bool actorIsPlayer = IsPlayerEntity(_allEntities[cmd.ActorId]);
-                IEnumerable<CombatEntity> allPool = cmd.ValidTargets switch
-                {
-                    ValidTarget.Allies  => actorIsPlayer ? GetLivingAllies()  : GetLivingEnemies(),
-                    ValidTarget.Enemies => actorIsPlayer ? GetLivingEnemies() : GetLivingAllies(),
-                    ValidTarget.Both    => GetLivingEntities(),
-                    _ => throw new ArgumentOutOfRangeException(nameof(cmd)),
-                };
-                cmd.ChosenTargets = allPool.Select(e => e.EntityId).ToList();
+                cmd.ChosenTargets = GetValidTargets(cmd).Where(e => !e.IsDead).Select(e => e.EntityId).ToList();
                 break;
-            }
             case TargetingType.Self:
                 cmd.ChosenTargets = new List<string> { cmd.ActorId };
                 break;
@@ -143,8 +133,8 @@ internal sealed class CombatRoster
                     : GetLivingAllies();
                 int picks = ResolveRequiredPickCount(cmd.NumAttacks, cmd.AllowMultipleAttackOnSameTarget, pool.Count);
                 cmd.ChosenTargets = cmd.AllowMultipleAttackOnSameTarget
-                    ? PickWithReplacement(pool, picks, _rng)
-                    : PickDistinctWithoutReplacement(pool, picks, _rng);
+                    ? PickWithReplacement(pool, picks)
+                    : PickDistinctWithoutReplacement(pool, picks);
                 break;
             }
         }
@@ -153,21 +143,21 @@ internal sealed class CombatRoster
     internal static int ResolveRequiredPickCount(int numAttacks, bool allowMultipleAttackOnSameTarget, int poolSize) =>
         allowMultipleAttackOnSameTarget ? numAttacks : Math.Min(numAttacks, poolSize);
 
-    private static List<string> PickWithReplacement(IReadOnlyList<CombatEntity> pool, int count, Random rng)
+    private List<string> PickWithReplacement(IReadOnlyList<CombatEntity> pool, int count)
     {
         var result = new List<string>(count);
         for (int i = 0; i < count; i++)
-            result.Add(pool[rng.Next(pool.Count)].EntityId);
+            result.Add(pool[_rng.Next(pool.Count)].EntityId);
         return result;
     }
 
-    private static List<string> PickDistinctWithoutReplacement(IReadOnlyList<CombatEntity> pool, int count, Random rng)
+    private List<string> PickDistinctWithoutReplacement(IReadOnlyList<CombatEntity> pool, int count)
     {
         var remaining = pool.ToList();
         var result = new List<string>(count);
         for (int i = 0; i < count; i++)
         {
-            int idx = rng.Next(remaining.Count);
+            int idx = _rng.Next(remaining.Count);
             result.Add(remaining[idx].EntityId);
             remaining.RemoveAt(idx);
         }

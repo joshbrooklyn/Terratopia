@@ -107,9 +107,11 @@ function.Execute(new CombatFunctionContext(_roster, _keywords, activeKeywords)
 });
 ```
 
-`activeKeywords` is held by the context (passed into its constructor alongside `_keywords`), so the
-function never sees the keyword list at all — only `ctx.ApplyKeywordBonuses(basePowerFactor, actor,
-target)`, which forwards to `KeywordResolver.ApplyKeywordBonuses` with the list already bound.
+`activeKeywords` is held by the context (exposed as `ctx.ActiveKeywords`, alongside `ctx.Keywords`
+for the `KeywordResolver` itself), so a function that wants the standard bonus just calls
+`ctx.Keywords.ApplyKeywordBonuses(ctx.ActiveKeywords, basePowerFactor, actor, target, actorIsAlly,
+sourceId, sourceName)` — there's no dedicated context method wrapping this, since it's just a direct
+call to `KeywordResolver` with values `ctx` already carries.
 
 **2. The `CombatFunction`** — once per target. `CombatFunction.CalculateAndApplyDamage`, the shared
 helper `BasicDamageFunction` calls, applies it like this:
@@ -119,18 +121,19 @@ double basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;   // 
 
 foreach (var target in ctx.Targets)
 {
-    if (ctx.TryEvade(ctx.Actor, target))
+    if (ctx.TryEvade(target))
         continue;                       // evaded: no bonus applied, no KeywordApplied event
 
-    double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
+    double keywordBonus = ctx.Keywords.ApplyKeywordBonuses(
+        ctx.ActiveKeywords, basePowerFactor, ctx.Actor, target, ctx.ActorIsAlly, ctx.Command.SourceId, ctx.Command.SourceName);
     double effectivePowerFactor = basePowerFactor + keywordBonus;
 
-    int damage = ctx.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
-    // ... crit, ApplyDamage, death handling ...
+    int damage = CombatMath.CalculateDamageAmount(ctx.Actor, target, effectivePowerFactor, calcType);
+    // ... crit, target.TakeDamage, death handling ...
 }
 ```
 
-This is the seam where a bespoke function diverges: simply not calling `ctx.ApplyKeywordBonuses` makes an action ignore keywords entirely.
+This is the seam where a bespoke function diverges: simply not calling `ctx.Keywords.ApplyKeywordBonuses` makes an action ignore keywords entirely.
 
 **3. `KeywordResolver.ApplyKeywordBonuses`** — caps each contribution, then sums:
 

@@ -1,13 +1,8 @@
-using CombatEngine.Engine;
-using CombatEngine.Enums;
-
 namespace CombatEngine.CombatFunctions;
 
-// Restores Hp using the standard formula minus the Defense divisor. Deliberately narrower than
-// BasicDamage: a heal on an ally is not dodgeable and does not crit, so it consumes NO randomness
-// at all - which keeps the seeded draw order of every other test easy to reason about. Keyword
-// power bonuses DO apply. Healing a dead target is a no-op; revival is a future dedicated
-// function, not a side effect of healing.
+// Applies no damage or healing of its own - just the TP cost and any authored
+// buffsDebuffs/regensDrains riders. For actions that are pure status effects
+// (e.g. a buff-only tech) with no direct HP impact.
 public class NoDirectEffectsFunction : CombatFunction
 {
     public const string FunctionName = "NoDirectEffects";

@@ -16,10 +16,9 @@ Access point for the singleton. There is no public constructor.
 ```csharp
 public void InitCombat(
     IReadOnlyList<CombatEntity> allies,
-    IReadOnlyList<CombatEntity> enemies,
-    bool isBossFight = false)
+    IReadOnlyList<CombatEntity> enemies)
 ```
-Resets combat state and wires up a new `CombatFlowMachine` for the given roster. `isBossFight` is accepted but not currently read by the engine.
+Resets combat state and wires up a new `CombatFlowMachine` for the given roster.
 
 The engine does not decide AI actions itself. Callers subscribe to `CombatEventBus.WaitingForTurn` and, when `isAlly` is `false`, decide how to pick that entity's command themselves (in this project, via `GameEngine.GameEngineClass.Instance.ChooseAiCommand(entityId)`) before calling `SubmitCommand`. The engine still applies its own default single-random-target assignment to whatever command a non-player actor submits, regardless of the command's `TargetingType`.
 
@@ -72,8 +71,6 @@ Static event bus; the engine's only channel for reporting what happened. All eve
 | `RegenDrainTicked` | `Action<string, string, RegenDrainStat, bool, int, string, string>` | entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName |
 | `RegenDrainExpired` | `Action<string, string, RegenDrainStat, bool, string, string, string, string>` | entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName — same counteredBy rule as `BuffDebuffExpired` |
 | `EntityTpChanged` | `Action<string, string, int, int, string, string>` | entityId, entityName, oldTp, newTp, sourceId, sourceName — also raised by the per-round Hp/Tp regen/drain delta, alongside `EntityDamaged`/`EntityHealed` |
-| `EntityMaxHpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxHp, newMaxHp |
-| `EntityMaxTpChanged` | `Action<string, string, int, int>` | entityId, entityName, oldMaxTp, newMaxTp |
 | `EntityDeath` | `Action<string, string, string, string>` | entityId, entityName, sourceId, sourceName |
 | `EntityRevived` | `Action<string, string, int, int, string, string>` | entityId, entityName, oldHp, newHp, sourceId, sourceName |
 

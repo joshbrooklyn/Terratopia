@@ -61,7 +61,7 @@ damage    = max(0, rawDamage)   // CalculateDamageAmount only; CalculateHealAmou
 1. **JSON data** — `tech.schema.json`, `item.schema.json`, and `monsteraction.schema.json` each expose `parameters.calcType` as a string restricted to `["StandardFormula", "FixedPower", "FixedAmount", "PercentOfMax"]`, defaulting to `"StandardFormula"`.
 2. **Data class** — `CombatFunctionParameters.CalcType` (`DamageOrHealCalcType?`) loads straight from that JSON field.
 3. **Combat functions** — `CombatFunction.CalculateAndApplyDamage`/`CalculateAndApplyHealing` (the shared helpers `BasicDamageFunction`/`BasicHealFunction` call) default a missing value: `DamageOrHealCalcType calcType = ctx.Parameters.CalcType ?? DamageOrHealCalcType.StandardFormula;`.
-4. **`CombatMath`** — `calcType` is passed into `ctx.CalculateDamageAmount`/`ctx.CalculateHealAmount` along with `target`, which forward both to `CalculateBaseAmount`.
+4. **`CombatMath`** — `calcType` is passed into `CombatMath.CalculateDamageAmount`/`CalculateHealAmount`, called directly by `CombatFunction.CalculateAndApplyDamage`/`CalculateAndApplyHealing`, along with `target`, which forward both to `CalculateBaseAmount`.
 
 ## Worked examples
 
