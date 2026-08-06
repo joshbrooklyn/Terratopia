@@ -75,6 +75,11 @@ Points specific to writing your own, not just this example:
   `ApplyKeywordBonuses`, `CalculateDamageAmount`/`CalculateHealAmount`, `ApplyDamage`/`ApplyHeal`,
   `DeductTp`) wherever your function's behavior matches the standard action. Skip whichever ones
   don't apply — e.g. a self-buff wouldn't call `TryEvade` or `RollCrit` at all.
+- If your entire damage or healing step is the standard one, call the shared
+  `CalculateAndApplyDamage(ctx)` / `CalculateAndApplyHealing(ctx)` helpers on `CombatFunction`
+  instead of writing the per-target loop yourself — see `BasicDamageFunction`/`BasicHealFunction`.
+  Write your own loop when a step needs to happen *inside* the same per-target iteration, the way
+  `LifeDrain` above applies its heal right after each hit's damage rather than in a separate pass.
 - Keep the class stateless — the registry hands out one shared instance.
 
 ## 2. Register it
@@ -312,6 +317,14 @@ data-authoring examples, GameData Editor and migration support, and plain-Englis
 the test suite. `RegensDrains` (`IReadOnlyList<RegenDrainSpec>?`) works the same way, applied
 through the analogous `ApplyRegensDrains(ctx)` helper; see
 [`regen-and-drain.md`](regen-and-drain.md) for its full writeup.
+
+Two more `CombatFunction` statics cover the standard damage/healing loop itself:
+`CalculateAndApplyDamage(ctx)` (per target: `TryEvade`, `ApplyKeywordBonuses`,
+`CalculateDamageAmount`, `RollCrit`/`ApplyCritModifier`, `ApplyDamage`) and
+`CalculateAndApplyHealing(ctx)` (per living target: `ApplyKeywordBonuses`, `CalculateHealAmount`,
+`ApplyHeal`) — both reading `PowerFactor`/`CalcType` off `ctx.Parameters` the same way. `BasicDamageFunction`
+and `BasicHealFunction` are each just `DeductTpCost()` + one of these + `ApplyBuffsDebuffs(ctx)` +
+`ApplyRegensDrains(ctx)`.
 
 ## Reference: `CombatFunctionContext`
 

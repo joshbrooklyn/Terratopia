@@ -111,7 +111,8 @@ function.Execute(new CombatFunctionContext(_roster, _keywords, activeKeywords)
 function never sees the keyword list at all — only `ctx.ApplyKeywordBonuses(basePowerFactor, actor,
 target)`, which forwards to `KeywordResolver.ApplyKeywordBonuses` with the list already bound.
 
-**2. The `CombatFunction`** — once per target. `BasicDamageFunction` applies it like this:
+**2. The `CombatFunction`** — once per target. `CombatFunction.CalculateAndApplyDamage`, the shared
+helper `BasicDamageFunction` calls, applies it like this:
 
 ```csharp
 double basePowerFactor = ctx.Parameters.PowerFactor ?? DefaultPowerFactor;   // 1.0

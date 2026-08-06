@@ -195,8 +195,9 @@ Identical two-layer guard to buffs/debuffs:
    `rounds`/`untilRemoved`/`cancelOnEntityDeath`/`cancelOnApplierDeath`.
 2. **Data class** — `CombatFunctionParameters.RegensDrains` (`IReadOnlyList<RegenDrainSpec>?`) loads
    straight from that JSON array.
-3. **Combat functions** — `BasicDamageFunction` and `BasicHealFunction` call
-   `ApplyBuffsDebuffs(ctx); ApplyRegensDrains(ctx);` once, after their damage/healing loop.
+3. **Combat functions** — `BasicDamageFunction` and `BasicHealFunction` resolve their damage/healing
+   loop via the shared `CalculateAndApplyDamage(ctx)`/`CalculateAndApplyHealing(ctx)` helpers, then
+   call `ApplyBuffsDebuffs(ctx); ApplyRegensDrains(ctx);` once, after.
 4. **`CombatFunction.ApplyRegensDrains`** — no-ops if `RegensDrains` is null or empty; otherwise, for
    each entry, resolves its `Target` via `ctx.ResolveBuffDebuffTargets(entry.Target)`, checks for a
    duplicate `(entity, stat)` pair, and calls `ctx.ApplyRegenDrain(entity, entry.Stat, entry.Type ==

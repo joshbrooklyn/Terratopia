@@ -7,6 +7,7 @@ public static class CombatFunctionRegistry
         {
             new BasicDamageFunction(),
             new BasicHealFunction(),
+            new NoDirectEffectsFunction(),
             new NoOpFunction(),
         }.ToDictionary(f => f.Name);
 

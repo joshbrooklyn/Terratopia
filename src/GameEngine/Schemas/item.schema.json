@@ -18,7 +18,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 12,
+      "const": 13,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "itemId": {
@@ -71,7 +71,7 @@
     },
     "combatFunction": {
       "type": "string",
-      "enum": ["BasicDamage", "BasicHeal", "NoOp"],
+      "enum": ["BasicDamage", "BasicHeal", "NoDirectEffects", "NoOp"],
       "description": "Name of the CombatFunction class (src/CombatEngine/CombatFunctions) that resolves this entire action - damage, healing, statuses, bespoke effects. Hand-maintained against CombatFunctionRegistry.cs's registered FunctionName constants - keep in sync by hand. An unregistered name throws at combat time."
     },
     "parameters": {

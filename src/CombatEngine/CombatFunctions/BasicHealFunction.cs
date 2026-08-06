@@ -16,22 +16,8 @@ public class BasicHealFunction : CombatFunction
 
     public override void Execute(CombatFunctionContext ctx)
     {
-        double               basePowerFactor = ctx.Parameters.PowerFactor ?? CombatBalance.Current.DefaultPowerFactor;
-        DamageOrHealCalcType calcType        = ctx.Parameters.CalcType    ?? DamageOrHealCalcType.StandardFormula;
-
         ctx.DeductTpCost();
-
-        foreach (var target in ctx.Targets)
-        {
-            if (target.IsDead)
-                continue;
-
-            double keywordBonus         = ctx.ApplyKeywordBonuses(basePowerFactor, ctx.Actor, target);
-            double effectivePowerFactor = basePowerFactor + keywordBonus;
-
-            ctx.ApplyHeal(ctx.Actor, target, ctx.CalculateHealAmount(ctx.Actor, target, effectivePowerFactor, calcType));
-        }
-
+        CalculateAndApplyHealing(ctx);  
         ApplyBuffsDebuffs(ctx);
         ApplyRegensDrains(ctx);
     }

@@ -299,11 +299,23 @@ function backfillCancelOnDeathFlagsToV12(data: Record<string, unknown>): Migrati
 	return backfillCancelOnDeathFlags(data, 12);
 }
 
+/** v11 → v12 (tech): adds the new 'NoDirectEffect' combat function. */
+function bumpToV12(data: Record<string, unknown>): MigrationResult {
+	data.schemaVersion = 12;
+	return { notes: [] };
+}
+
+/** v12 → v13 (item/monsteraction): adds the new 'NoDirectEffect' combat function. */
+function bumpToV13(data: Record<string, unknown>): MigrationResult {
+	data.schemaVersion = 13;
+	return { notes: [] };
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12 },
-	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9, 9: bumpToV10, 10: backfillCancelOnDeathFlagsToV11 },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12 },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13 },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9, 9: bumpToV10, 10: backfillCancelOnDeathFlagsToV11, 11: bumpToV12 },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13 },
 	'gamesettings.schema.json': { 1: addTimedBuffPct, 2: addRegenDrainPct },
 };
 

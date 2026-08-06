@@ -204,9 +204,9 @@ caught in two places that catch two different shapes of mistake:
    `rounds`/`untilRemoved`/`cancelOnEntityDeath`/`cancelOnApplierDeath`.
 2. **Data class** — `CombatFunctionParameters.BuffsDebuffs` (`IReadOnlyList<BuffDebuffSpec>?`)
    loads straight from that JSON array.
-3. **Combat functions** — `BasicDamageFunction` and `BasicHealFunction` run their damage/healing
-   loop over `ctx.Targets`, then call the shared `ApplyBuffsDebuffs(ctx)` helper (defined on the
-   `CombatFunction` base class) once, after the loop.
+3. **Combat functions** — `BasicDamageFunction` and `BasicHealFunction` resolve their damage/healing
+   loop via the shared `CalculateAndApplyDamage(ctx)`/`CalculateAndApplyHealing(ctx)` helpers (also
+   defined on `CombatFunction`), then call the shared `ApplyBuffsDebuffs(ctx)` helper once, after.
 4. **`CombatFunction.ApplyBuffsDebuffs`** — no-ops if `BuffsDebuffs` is null or empty; otherwise,
    for each entry, resolves its `Target` via `ctx.ResolveBuffDebuffTargets(entry.Target)`, checks
    for a duplicate `(entity, stat)` pair (see above), and calls `ctx.ApplyBuffDebuff(entity,
