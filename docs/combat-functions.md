@@ -69,9 +69,9 @@ Points specific to writing your own, not just this example:
 - Call `ctx.DeductTpCost()` before touching any target — it no-ops on a 0-TP command, so it's
   always safe to call unconditionally.
 - Validate your own required parameters at the top of `Execute`, throwing
-  `InvalidOperationException` and naming `ctx.Command.ActionId` — the schema can't express
+  `InvalidOperationException` and naming `ctx.Command.SourceId` — the schema can't express
   per-function requirements, so this is the only place they're enforced.
-- Reuse `CombatFunctionContext`'s injected delegates (`TryEvade`, `RollCrit`,
+- Reuse `CombatFunctionContext`'s standard-step methods (`TryEvade`, `RollCrit`,
   `ApplyKeywordBonuses`, `CalculateDamageAmount`/`CalculateHealAmount`, `ApplyDamage`/`ApplyHeal`,
   `DeductTp`) wherever your function's behavior matches the standard action. Skip whichever ones
   don't apply — e.g. a self-buff wouldn't call `TryEvade` or `RollCrit` at all.
@@ -336,9 +336,9 @@ Everything available on `ctx` inside `Execute`, in
 | `ApplyCritModifier(actor, amount)` | The amount after the actor's critical-hit bonus is applied. |
 | `ApplyKeywordBonuses(basePowerFactor, actor, target)` | The extra power the action's keywords contribute against the given target. |
 | `CalculateDamageAmount(actor, target, powerFactor, calcType)` | The damage an attack deals. |
-| `CalculateHealAmount(actor, powerFactor, calcType)` | The amount an action heals for. |
+| `CalculateHealAmount(actor, target, powerFactor, calcType)` | The amount an action heals for. |
 | `ApplyDamage(actor, target, amount, isCrit)` | Applies a damage amount to a target. |
 | `ApplyHeal(actor, target, amount)` | Applies a heal amount to a target. |
-| `ApplyBuffDebuff(target, stat, isPositive, rounds, untilRemoved)` | Applies a buff/debuff to one of a target's stats. Re-applying the same polarity extends it (or, if either side is `untilRemoved`, keeps it indefinite); the opposite polarity cancels the existing one out. `rounds` is ignored when `untilRemoved` is true. |
+| `ApplyBuffDebuff(target, stat, isPositive, rounds, untilRemoved, cancelOnEntityDeath, cancelOnApplierDeath)` | Applies a buff/debuff to one of a target's stats. Re-applying the same polarity extends it (or, if either side is `untilRemoved`, keeps it indefinite); the opposite polarity cancels the existing one out. `rounds` is ignored when `untilRemoved` is true. |
 | `ResolveBuffDebuffTargets(selector)` | The living entities a `BuffDebuffTarget` selector resolves to, relative to `Actor`. Used by the shared `ApplyBuffsDebuffs(ctx)`/`ApplyRegensDrains(ctx)` helpers above — call that instead of this directly in almost every case. |
-| `ApplyRegenDrain(target, stat, isPositive, rounds, untilRemoved)` | Applies a regen/drain to one of a target's resources (`Hp`/`Tp`). Same re-apply/cancel rules as `ApplyBuffDebuff`. |
+| `ApplyRegenDrain(target, stat, isPositive, rounds, untilRemoved, cancelOnEntityDeath, cancelOnApplierDeath)` | Applies a regen/drain to one of a target's resources (`Hp`/`Tp`). Same re-apply/cancel rules as `ApplyBuffDebuff`. |

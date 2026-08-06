@@ -122,62 +122,14 @@ public class CombatEngineClass
 
         CombatEventBus.RaiseActionResolved(cmd, actor.Name, targets.Select(t => t.Name).ToList());
 
-        function.Execute(new CombatFunctionContext
+        function.Execute(new CombatFunctionContext(_roster, _keywords, activeKeywords)
         {
-            Command               = cmd,
-            Actor                 = actor,
-            ActorIsAlly           = actorIsAlly,
-            Parameters            = cmd.Parameters,
-            Targets               = targets,
-            AllEntities           = _roster.AllEntities,
-            GetEntity             = _roster.GetEntity,
-            Rng                   = _rng,
-            ResolveTpCost         = ()                => cmd.TPCost,
-            // Monsters don't spend TP on actions today; MonsterAction.TPCost is reserved for a future feature.
-            DeductTp              = (entity, amount)  => { if (actorIsAlly) entity.SpendTp(amount, cmd.SourceId, cmd.SourceName); },
-            TryEvade              = (a, t) => TryEvade(a, t, cmd.SourceId, cmd.SourceName),
-            RollCrit              = RollCrit,
-            ApplyCritModifier     = ApplyCritModifier,
-            ApplyKeywordBonuses   = (basePower, a, t) => _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.SourceId, cmd.SourceName),
-            CalculateDamageAmount = CombatMath.CalculateDamageAmount,
-            CalculateHealAmount   = CombatMath.CalculateHealAmount,
-            ApplyDamage           = (actor, target, damage, isCrit) => target.TakeDamage(actor, damage, cmd.SourceId, cmd.SourceName, isCrit),
-            ApplyHeal             = (actor, target, amount)         => target.Heal(actor, amount, cmd.SourceId, cmd.SourceName),
-            ApplyBuffDebuff       = (target, stat, isPositive, rounds, untilRemoved, cancelOnEntityDeath, cancelOnApplierDeath) =>
-                target.AddBuffDebuff(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName, actor.EntityId, cancelOnEntityDeath, cancelOnApplierDeath),
-            ResolveBuffDebuffTargets = selector => _roster.ResolveBuffDebuffTargets(actor, selector, targets),
-            ApplyRegenDrain       = (target, stat, isPositive, rounds, untilRemoved, cancelOnEntityDeath, cancelOnApplierDeath) =>
-                target.AddRegenDrain(stat, isPositive, rounds, untilRemoved, cmd.SourceId, cmd.SourceName, actor.EntityId, cancelOnEntityDeath, cancelOnApplierDeath),
+            Command     = cmd,
+            Actor       = actor,
+            ActorIsAlly = actorIsAlly,
+            Targets     = targets,
+            Rng         = _rng,
         });
-    }
-
-    // True when the attack is evaded. Evasion decays 25% on each successful dodge.
-    private bool TryEvade(CombatEntity actor, CombatEntity target, string sourceId, string sourceName)
-    {
-        float roll = _rng.NextSingle();
-        if (roll >= target.Evasion)
-        {
-            Logger.Debug($"[combat] TryEvade: {target.Name} roll={roll:F3} vs evasion={target.Evasion:F3} -> not evaded");
-            return false;
-        }
-
-        target.RegisterEvasion(actor, roll, sourceId, sourceName);
-        return true;
-    }
-
-    private bool RollCrit(CombatEntity a)
-    {
-        float roll = _rng.NextSingle();
-        bool isCrit = roll < a.CritChance;
-        Logger.Debug($"[combat] RollCrit: {a.Name} roll={roll:F3} vs critChance={a.CritChance:F3} -> {(isCrit ? "crit" : "no crit")}");
-        return isCrit;
-    }
-
-    private static int ApplyCritModifier(CombatEntity a, int damage)
-    {
-        int result = (int)(damage * (CombatBalance.Current.CritBaseMultiplier + a.CritModifier));
-        Logger.Debug($"[combat] ApplyCritModifier: {a.Name} damage={damage} critModifier={a.CritModifier:F3} -> {result}");
-        return result;
     }
 
     private bool EvaluateWinCondition()

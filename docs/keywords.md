@@ -101,15 +101,15 @@ bool actorIsAlly    = _roster.IsPlayerEntity(actor);
 var  activeKeywords = PowerKeywordRegistry.Resolve(cmd.Keywords).ToList();
 _keywords.NotifyKeywordsUsed(activeKeywords, actor, actorIsAlly, cmd.SourceId);
 
-function.Execute(new CombatFunctionContext
+function.Execute(new CombatFunctionContext(_roster, _keywords, activeKeywords)
 {
-    // ... other injected steps ...
-    ApplyKeywordBonuses = (basePower, a, t) =>
-        _keywords.ApplyKeywordBonuses(activeKeywords, basePower, a, t, actorIsAlly, cmd.SourceId, cmd.SourceName),
+    Command = cmd, Actor = actor, ActorIsAlly = actorIsAlly, Targets = targets, Rng = _rng,
 });
 ```
 
-`activeKeywords` is captured by the closure, so the function never sees the keyword list at all — only a `(basePowerFactor, actor, target) => bonus` callback.
+`activeKeywords` is held by the context (passed into its constructor alongside `_keywords`), so the
+function never sees the keyword list at all — only `ctx.ApplyKeywordBonuses(basePowerFactor, actor,
+target)`, which forwards to `KeywordResolver.ApplyKeywordBonuses` with the list already bound.
 
 **2. The `CombatFunction`** — once per target. `BasicDamageFunction` applies it like this:
 

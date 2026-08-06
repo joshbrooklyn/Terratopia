@@ -38,11 +38,19 @@ doesn't recognise — acceptable, because the action just loses a bonus. `Combat
 throws, because the CombatFunction *is* the action: dropping it would turn a Tech into a silent
 no-op instead of surfacing the typo.
 
-**The engine injects its standard steps rather than being subclassed.** `CombatFunctionContext`
-hands the function delegates for each standard step (`TryEvade`, `RollCrit`, `ApplyKeywordBonuses`,
-`CalculateDamage`, `ApplyDamage`, …). A function overrides behaviour by *declining to call* one of
-them, not by inheriting from the engine. This follows the pattern `CombatFlowMachine` already uses
-for its constructor callbacks.
+**The engine exposes its standard steps rather than the function being subclassed.**
+`CombatFunctionContext` hands the function a method for each standard step (`TryEvade`, `RollCrit`,
+`ApplyKeywordBonuses`, `CalculateDamage`, `ApplyDamage`, …). A function overrides behaviour by
+*declining to call* one of them, not by inheriting from the engine.
+
+> **Update, later:** these steps started as `Func`/`Action` members individually wired in
+> `CombatEngineClass.ResolveAction`, deliberately mirroring the pattern `CombatFlowMachine`'s
+> constructor callbacks use. That bought per-command override of a standard step's
+> implementation — a capability nothing ever used. Once it was clear only the shared, engine-owned
+> implementation was ever needed, the members were turned into ordinary instance methods on
+> `CombatFunctionContext`, closing over the roster/keyword collaborators directly instead of
+> through per-command closures built in `ResolveAction`. Call sites (`ctx.TryEvade(...)`, etc.)
+> and the override-by-not-calling contract are unchanged.
 
 **Parameters are one flat, closed, hand-maintained bag.** `CombatFunctionParameters` is a single
 class shared by every function, mirrored one-for-one by the `parameters` block in all three
@@ -60,13 +68,13 @@ distinguish "omitted" from "authored as 1.0", which would make per-function vali
 
 Abstract base. Two members — `Name` and `Execute(CombatFunctionContext)`. The class comment carries
 the implementation contract: call `ctx.DeductTpCost()` before touching a target, and validate your
-own parameters by throwing `InvalidOperationException` naming `ctx.Command.ActionId`.
+own parameters by throwing `InvalidOperationException` naming `ctx.Command.SourceId`.
 
 ### `CombatEngine/CombatFunctions/CombatFunctionContext.cs`
 
 Sealed, built fresh by `CombatEngineClass` once per resolved command. Splits into what's being
 resolved (`Command`, `Actor`, `ActorIsAlly`, `Parameters`, `Targets`, `AllEntities`, `GetEntity`,
-`Rng`) and the injected standard steps.
+`Rng`) and the standard-step methods.
 
 Two of the steps are deliberately split in half so a function can override one side and keep the
 other:
