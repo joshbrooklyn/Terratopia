@@ -2,6 +2,7 @@ using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
+using CombatEngine.Passives;
 using GameEngine;
 using GameEngine.DataClasses;
 
@@ -159,7 +160,7 @@ public class GameEngineClass
                 entityId, displayName, level,
                 hp, hp, 0, 0,
                 power, def, speed,
-                0f, 0f, 0.5f, passives: monster.Passives));
+                0f, 0f, 0.5f));
 
             var actions = monster.MonsterActionIds
                 .Select(id => _allMonsterActions.Lookup(id))
@@ -177,6 +178,13 @@ public class GameEngineClass
         }
 
         CombatEngineClass.Instance.InitCombat(allies, enemies);
+
+        // Passives are granted after InitCombat, which resets PassiveTracker - granting any
+        // earlier would just be wiped out.
+        foreach (var (entityId, monster) in _enemyMonsterMap)
+            foreach (var passiveName in monster.Passives ?? [])
+                PassiveTracker.Add(passiveName, entityId);
+
         return new CombatStartData(allySeeds, enemySeeds);
     }
 
@@ -199,7 +207,7 @@ public class GameEngineClass
             m.PowerBase   + m.Level * m.PowerPerLevel,
             m.DefenseBase + m.Level * m.DefensePerLevel,
             m.SpeedBase   + m.Level * m.SpeedBasePerLevel,
-            0f, 0f, 0.5f, passives: m.Passives);
+            0f, 0f, 0.5f);
     }
 
     public CombatCommand MakeTechCommand(string actorId, string techId)

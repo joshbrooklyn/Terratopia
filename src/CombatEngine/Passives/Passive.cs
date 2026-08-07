@@ -12,4 +12,9 @@ public abstract class Passive
     {
         return (false, 0); // false = death not prevented, 0 = no revive HP to apply
     }
+
+    public virtual int TotalApplications(CombatEntity entity)
+    {
+        return PassiveTracker.Get(Name, entity.EntityId).TotalApplications;
+    }
 }

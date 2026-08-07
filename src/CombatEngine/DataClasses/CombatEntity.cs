@@ -9,14 +9,12 @@ public class CombatEntity
     public CombatEntity(string entityId, string name, int level,
         int maxHp, int hp, int maxTp, int tp,
         int power, int defense, int speed,
-        float evasion, float critChance, float critModifier,
-        IReadOnlyList<string>? passives = null)
+        float evasion, float critChance, float critModifier)
     {
         EntityId = entityId; Name = name; Level = level;
         MaxHp = maxHp; Hp = hp; MaxTp = maxTp; Tp = tp;
         _power = power; _defense = defense; _speed = speed;
         Evasion = evasion; CritChance = critChance; CritModifier = critModifier;
-        Passives = passives?.ToList() ?? new();
     }
 
     public string EntityId { get; }
@@ -47,10 +45,6 @@ public class CombatEntity
     public float CritChance { get; }
     public float CritModifier { get; }
 
-    public IReadOnlyList<string> Passives { get; }
-
-    private readonly HashSet<string> _consumedPassives = new();
-    public IReadOnlyCollection<string> ConsumedPassives => _consumedPassives;
     private readonly Dictionary<BuffDebuffStat, BuffDebuff> _buffsDebuffs = new();
     private readonly Dictionary<RegenDrainStat, RegenDrain> _regensDrains = new();
 
@@ -85,7 +79,7 @@ public class CombatEntity
 
     private void HandleDefeat(string sourceId, string sourceName)
     {
-        foreach (var passive in PassiveRegistry.Resolve(Passives))
+        foreach (var passive in PassiveTracker.GetPassives(EntityId))
         {
             var (deathPrevented, reviveHp) = passive.OnBeforeDeath(this);
 
@@ -458,8 +452,4 @@ public class CombatEntity
         public bool CancelOnEntityDeath;
         public bool CancelOnApplierDeath;
     }
-
-    public void ConsumePassive(string passiveName) => _consumedPassives.Add(passiveName);
-
-    public bool HasConsumedPassive(string passiveName) => _consumedPassives.Contains(passiveName);
 }

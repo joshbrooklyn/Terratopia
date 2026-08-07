@@ -29,12 +29,16 @@ public class LivingDeadTests
             entityId: "defender", name: "Defender", level: 1,
             maxHp: 25, hp: 25, maxTp: 0, tp: 0,
             power: 5, defense: 0, speed: 5,
-            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f,
-            passives: defenderPassives);
+            evasion: 0.0f, critChance: 0.0f, critModifier: 0.0f);
 
         engine.InitCombat(
             allies:  [attacker],
             enemies: [defender]);
+
+        // Passives are granted after InitCombat (which resets PassiveTracker), mirroring how
+        // GameEngineClass.InitSkirmishCombat grants monster passives.
+        foreach (var name in defenderPassives ?? [])
+            PassiveTracker.Add(name, "defender");
 
         // Wire AFTER InitCombat (which calls CombatEventBus.Reset()).
         CombatEventBus.WaitingForTurn += (_, _, _, isAlly) =>
@@ -70,13 +74,13 @@ public class LivingDeadTests
         //       high defense — so only the attacker's hits matter and combat runs across
         //       multiple rounds. The test records every EntityDamaged/EntityRevived new-HP value
         //       for "defender" plus counts of EntityRevived and EntityDeath. On the first lethal
-        //       hit, HP would drop to 0, but LivingDeadPassive.TryPreventDeath intercepts it and
-        //       immediately bumps HP back up to 1, so the trace should show 0 then 1. On the next lethal
-        //       hit the passive is already consumed (ConsumedPassives already contains its
-        //       name), so this time HP drops to 0 and stays there — a real death. The test
-        //       asserts the HP trace is exactly [0, 1, 0], revivedCount is 1, deathCount is 1,
-        //       the defender ends up dead at 0 HP, and its ConsumedPassives set contains the
-        //       LivingDead passive name.
+        //       hit, HP would drop to 0, but LivingDeadPassive.OnBeforeDeath intercepts it and
+        //       immediately bumps HP back up to 1, so the trace should show 0 then 1. On the next
+        //       lethal hit the passive is already consumed (PassiveTracker already shows
+        //       TotalApplications > 0 for it on "defender"), so this time HP drops to 0 and stays
+        //       there — a real death. The test asserts the HP trace is exactly [0, 1, 0],
+        //       revivedCount is 1, deathCount is 1, the defender ends up dead at 0 HP, and the
+        //       tracker shows one total activation of LivingDead on "defender".
         var (engine, _, defender) = SetupCombat([LivingDeadPassive.PassiveName]);
 
         var hpTrace = new List<int>();
@@ -95,7 +99,7 @@ public class LivingDeadTests
         Assert.Equal(1, deathCount);
         Assert.True(defender.IsDead);
         Assert.Equal(0, defender.Hp);
-        Assert.Contains(LivingDeadPassive.PassiveName, defender.ConsumedPassives);
+        Assert.Equal(1, PassiveTracker.Get(LivingDeadPassive.PassiveName, "defender").TotalApplications);
     }
 
     [Fact]
@@ -107,9 +111,9 @@ public class LivingDeadTests
         //       which proves LivingDead is actually doing something rather than death
         //       -prevention being the engine's default behavior.
         // How:  SetupCombat is called with defenderPassives: null, so the defender has no
-        //       passives attached at all and nothing intercepts HandleEntityDefeated's death
-        //       -prevention hook. The test counts EntityRevived and EntityDeath events raised
-        //       for "defender" across the whole fight, then asserts EntityRevived never fired
+        //       passives granted at all and nothing intercepts HandleDefeat's death-prevention
+        //       hook. The test counts EntityRevived and EntityDeath events raised for "defender"
+        //       across the whole fight, then asserts EntityRevived never fired
         //       (revivedCount == 0), EntityDeath fired exactly once (deathCount == 1), and the
         //       defender ends the fight dead at 0 HP.
         var (engine, _, defender) = SetupCombat(defenderPassives: null);
@@ -127,16 +131,95 @@ public class LivingDeadTests
         Assert.True(defender.IsDead);
         Assert.Equal(0, defender.Hp);
     }
+
+    [Fact]
+    public void Remove_BeforeLethalHit_EntityDiesOutrightDespiteHavingBeenGrantedLivingDead()
+    {
+        // What: verifies PassiveTracker.Remove actually strips the passive from dispatch —
+        //       an entity that was granted LivingDead but has it removed before its first
+        //       lethal hit dies normally, the same as if it never had the passive.
+        // How:  SetupCombat grants the defender LivingDead, then a RoundStarted handler removes
+        //       it again on round 1 - before the attacker's turn resolves, since RoundStarted
+        //       fires ahead of turn dispatch. The first (and only) lethal hit then finds no
+        //       LivingDead entry in the tracker, so HandleDefeat's dispatch loop is empty and
+        //       the entity dies outright.
+        var (engine, _, defender) = SetupCombat([LivingDeadPassive.PassiveName]);
+
+        CombatEventBus.RoundStarted += (round, _, _) =>
+        {
+            if (round == 1)
+                PassiveTracker.Remove(LivingDeadPassive.PassiveName, "defender");
+        };
+
+        int revivedCount = 0;
+        int deathCount = 0;
+        CombatEventBus.EntityRevived += (id, _, _, _, _, _) => { if (id == "defender") revivedCount++; };
+        CombatEventBus.EntityDeath   += (id, _, _, _) => { if (id == "defender") deathCount++; };
+
+        engine.BeginCombat();
+
+        Assert.Equal(0, revivedCount);
+        Assert.Equal(1, deathCount);
+        Assert.True(defender.IsDead);
+        Assert.Empty(PassiveTracker.GetPassives("defender"));
+    }
+
+    [Fact]
+    public void Remove_ThenAdd_ReArmsAConsumedPassive()
+    {
+        // What: verifies that removing and re-adding a passive resets its activation history —
+        //       a LivingDead that already revived once (and would normally be consumed for the
+        //       rest of the combat) fires again after being Remove()d and re-Add()ed. The
+        //       attacker can never die (its damage is floored to 0 by the defender's defense), so
+        //       the fight only ends once the defender runs out of revives - a re-arm just buys it
+        //       one extra life, it doesn't make it unkillable.
+        // How:  The defender starts with LivingDead and survives its first lethal hit via the
+        //       usual revive. The EntityRevived handler then immediately Removes and re-Adds the
+        //       passive on "defender" - but only once, guarded by a flag - which drops and
+        //       rebuilds its PassiveTracker record. The second lethal hit should therefore revive
+        //       the defender again instead of killing it for real (since the guard doesn't fire a
+        //       second time, TotalApplications reads 1 rather than 2 afterwards); the third lethal
+        //       hit finds the re-armed record already consumed again and the defender dies for
+        //       real.
+        var (engine, _, defender) = SetupCombat([LivingDeadPassive.PassiveName]);
+
+        bool reArmed = false;
+        CombatEventBus.EntityRevived += (id, _, _, _, _, _) =>
+        {
+            if (id == "defender" && !reArmed)
+            {
+                reArmed = true;
+                PassiveTracker.Remove(LivingDeadPassive.PassiveName, "defender");
+                PassiveTracker.Add(LivingDeadPassive.PassiveName, "defender");
+            }
+        };
+
+        var hpTrace = new List<int>();
+        int revivedCount = 0;
+        int deathCount = 0;
+        CombatEventBus.EntityDamaged += (id, _, _, _, _, _, _, _, _, newHp) => { if (id == "defender") hpTrace.Add(newHp); };
+        CombatEventBus.EntityRevived += (id, _, _, newHp, _, _) => { if (id == "defender") { hpTrace.Add(newHp); revivedCount++; } };
+        CombatEventBus.EntityDeath   += (id, _, _, _) => { if (id == "defender") deathCount++; };
+
+        engine.BeginCombat();
+
+        // Two revives (initial + one re-arm), then a real death on the third lethal hit.
+        Assert.Equal([0, 1, 0, 1, 0], hpTrace);
+        Assert.Equal(2, revivedCount);
+        Assert.Equal(1, deathCount);
+        Assert.True(defender.IsDead);
+        Assert.Equal(1, PassiveTracker.Get(LivingDeadPassive.PassiveName, "defender").TotalApplications);
+    }
 }
 
 [Collection("CombatEngineSerial")]
 public class LivingDeadPassiveTests
 {
-    private static CombatEntity MakeEntity(int hp) => new(
-        entityId: "e", name: "E", level: 1,
+    private static CombatEntity MakeEntity(string id, int hp) => new(
+        entityId: id, name: id, level: 1,
         maxHp: 10, hp: hp, maxTp: 0, tp: 0,
         power: 0, defense: 0, speed: 0,
-        evasion: 0f, critChance: 0f, critModifier: 0f, passives: [LivingDeadPassive.PassiveName]);
+        evasion: 0f, critChance: 0f, critModifier: 0f);
 
     [Fact]
     public void HandleDefeat_FirstCall_RevivesAtOneHp()
@@ -144,21 +227,25 @@ public class LivingDeadPassiveTests
         // What: drives LivingDeadPassive through the real combat entity (TakeDamage ->
         //       HandleDefeat -> OnBeforeDeath) to verify that on the entity's first lethal hit
         //       it revives at 1 HP instead of dying.
-        // How:  MakeEntity(1) builds a CombatEntity at 1 HP carrying the LivingDead passive.
-        //       killme.TakeDamage(attacker, 1, ...) brings it to 0 HP, which triggers
-        //       HandleDefeat -> LivingDeadPassive.OnBeforeDeath, which should add the passive's
-        //       name to killme.ConsumedPassives (marking it used) and report (true, 1 HP) so the
-        //       engine sets Hp back to 1 instead of marking the entity dead. The test asserts
-        //       killme is not dead, killme.Hp is 1, and ConsumedPassives contains the LivingDead
-        //       passive name.
-        var killme  = MakeEntity(1);
-        var attacker = MakeEntity(1);
+        // How:  PassiveTracker.Reset() clears any state left by other tests (the store is
+        //       static), then MakeEntity("killme", 1) builds a CombatEntity at 1 HP and
+        //       PassiveTracker.Add grants it LivingDead. killme.TakeDamage(attacker, 1, ...)
+        //       brings it to 0 HP, which triggers HandleDefeat -> LivingDeadPassive.OnBeforeDeath,
+        //       which should record an activation for "killme" (marking it used) and report
+        //       (true, 1 HP) so the engine sets Hp back to 1 instead of marking the entity dead.
+        //       The test asserts killme is not dead, killme.Hp is 1, and the tracker shows one
+        //       total activation of LivingDead on "killme".
+        PassiveTracker.Reset();
+
+        var killme   = MakeEntity("killme", 1);
+        var attacker = MakeEntity("attacker", 1);
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "killme");
 
         killme.TakeDamage(attacker, 1, "test", "Test"); // simulate lethal damage
 
         Assert.False(killme.IsDead);
         Assert.Equal(1, killme.Hp);
-        Assert.Contains(LivingDeadPassive.PassiveName, killme.ConsumedPassives);
+        Assert.Equal(1, PassiveTracker.Get(LivingDeadPassive.PassiveName, "killme").TotalApplications);
     }
 
     [Fact]
@@ -167,15 +254,19 @@ public class LivingDeadPassiveTests
         // What: verifies LivingDeadPassive is single-use — a second call to OnBeforeDeath on
         //       the same entity must report deathPrevented: false and leave HP at 0, rather than
         //       reviving again.
-        // How:  The passive is invoked once up front to consume it (mirroring the setup in
+        // How:  PassiveTracker.Reset() clears state left by other tests. The passive is invoked
+        //       once up front to consume it (mirroring the setup in
         //       HandleDefeat_FirstCall_RevivesAtOneHp), then entity.TakeDamage brings HP back to
         //       0 to simulate a second lethal hit. Calling OnBeforeDeath(entity) again should hit
-        //       the internal `HasConsumedPassive` guard — since the name is already in
-        //       ConsumedPassives, the method returns (false, 0) immediately without touching HP.
-        //       The test asserts the second call's deathPrevented is false and entity.Hp is
-        //       still 0.
-        var entity  = MakeEntity(1);
+        //       the tracker's TotalApplications > 0 guard — since an activation is already
+        //       recorded for this entity, the method returns (false, 0) immediately without
+        //       touching HP. The test asserts the second call's deathPrevented is false and
+        //       entity.Hp is still 0.
+        PassiveTracker.Reset();
+
+        var entity  = MakeEntity("entity", 1);
         var passive = new LivingDeadPassive();
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "entity");
         passive.OnBeforeDeath(entity);
 
         entity.TakeDamage(entity, entity.Hp, "test", "Test"); // simulate a second lethal hit
@@ -183,5 +274,99 @@ public class LivingDeadPassiveTests
 
         Assert.False(preventedAgain);
         Assert.Equal(0, entity.Hp);
+    }
+}
+
+[Collection("CombatEngineSerial")]
+public class PassiveTrackerTests
+{
+    [Fact]
+    public void RecordActivation_AccumulatesTotalWhileBeginRoundResetsPerRoundCount()
+    {
+        // What: TotalApplications is a running combat-long count; ApplicationsThisRound resets
+        //       every round.
+        PassiveTracker.Reset();
+        var passive = new LivingDeadPassive();
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "e1");
+
+        PassiveTracker.RecordActivation(passive, "e1");
+        PassiveTracker.RecordActivation(passive, "e1");
+        var afterRound1 = PassiveTracker.Get(LivingDeadPassive.PassiveName, "e1");
+        Assert.Equal(2, afterRound1.ApplicationsThisRound);
+        Assert.Equal(2, afterRound1.TotalApplications);
+
+        PassiveTracker.BeginRound(2);
+        var afterBeginRound2 = PassiveTracker.Get(LivingDeadPassive.PassiveName, "e1");
+        Assert.Equal(0, afterBeginRound2.ApplicationsThisRound);
+        Assert.Equal(2, afterBeginRound2.TotalApplications);
+
+        PassiveTracker.RecordActivation(passive, "e1");
+        var afterRound2 = PassiveTracker.Get(LivingDeadPassive.PassiveName, "e1");
+        Assert.Equal(1, afterRound2.ApplicationsThisRound);
+        Assert.Equal(3, afterRound2.TotalApplications);
+    }
+
+    [Fact]
+    public void RoundApplied_ReflectsTheRoundAddWasCalled()
+    {
+        // What: RoundApplied stamps whichever round Add() happened in, so
+        //       CurrentRound - RoundApplied gives "rounds elapsed since acquired" at any point.
+        PassiveTracker.Reset();
+        Assert.Equal(1, PassiveTracker.CurrentRound);
+
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "e1");
+        Assert.Equal(1, PassiveTracker.Get(LivingDeadPassive.PassiveName, "e1").RoundApplied);
+
+        PassiveTracker.BeginRound(3);
+        Assert.Equal(3, PassiveTracker.CurrentRound);
+        Assert.Equal(2, PassiveTracker.CurrentRound - PassiveTracker.Get(LivingDeadPassive.PassiveName, "e1").RoundApplied);
+
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "e2");
+        Assert.Equal(3, PassiveTracker.Get(LivingDeadPassive.PassiveName, "e2").RoundApplied);
+    }
+
+    [Fact]
+    public void Reset_ClearsOwnershipAndHistory()
+    {
+        PassiveTracker.Reset();
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "e1");
+        PassiveTracker.RecordActivation(new LivingDeadPassive(), "e1");
+
+        PassiveTracker.Reset();
+
+        Assert.Empty(PassiveTracker.GetPassives("e1"));
+        Assert.Equal(0, PassiveTracker.Get(LivingDeadPassive.PassiveName, "e1").TotalApplications);
+        Assert.Equal(1, PassiveTracker.CurrentRound);
+    }
+
+    [Fact]
+    public void Add_UnrecognisedName_CreatesNoRecord()
+    {
+        // What: mirrors PassiveRegistry.Resolve's old silent-drop behavior for bad names -
+        //       granting a name the registry doesn't know about is a no-op, not an error.
+        PassiveTracker.Reset();
+
+        PassiveTracker.Add("NotARealPassive", "e1");
+
+        Assert.Empty(PassiveTracker.GetPassives("e1"));
+    }
+
+    [Fact]
+    public void Remove_ThenAdd_RestartsHistoryFromZero()
+    {
+        PassiveTracker.Reset();
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "e1");
+        PassiveTracker.RecordActivation(new LivingDeadPassive(), "e1");
+        Assert.Equal(1, PassiveTracker.Get(LivingDeadPassive.PassiveName, "e1").TotalApplications);
+
+        PassiveTracker.Remove(LivingDeadPassive.PassiveName, "e1");
+        Assert.Empty(PassiveTracker.GetPassives("e1"));
+
+        PassiveTracker.BeginRound(4);
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "e1");
+
+        var reAdded = PassiveTracker.Get(LivingDeadPassive.PassiveName, "e1");
+        Assert.Equal(0, reAdded.TotalApplications);
+        Assert.Equal(4, reAdded.RoundApplied);
     }
 }
