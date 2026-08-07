@@ -28,4 +28,9 @@ public class CombatFunctionParameters
     // Timed regen/drain (heal/damage a fixed % of MaxHp or MaxTp at the start of every round),
     // applied once each the same way as BuffsDebuffs.
     public IReadOnlyList<RegenDrainSpec>? RegensDrains { get; init; }
+
+    // Passives granted once after the action fully resolves, the same way as BuffsDebuffs. Unlike
+    // the two above, an entry has no duration - PassiveTracker.Add either grants it outright or,
+    // if the target already owns it, no-ops.
+    public IReadOnlyList<PassiveApplySpec>? PassivesApplied { get; init; }
 }

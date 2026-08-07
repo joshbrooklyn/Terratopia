@@ -19,7 +19,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 13,
+      "const": 14,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "monsterActionId": {
@@ -197,6 +197,29 @@
                 "type": "boolean",
                 "default": false,
                 "description": "When true, this entry is removed the moment the entity that applied it dies, even if the afflicted entity is someone else and stays alive. When false, it outlives its applier. Hand-maintained against CombatEngine.DataClasses.RegenDrainSpec."
+              }
+            }
+          }
+        },
+        "passivesApplied": {
+          "type": "array",
+          "uniqueBy": ["passive", "target"],
+          "description": "BasicDamage/BasicHeal: optional. Passives granted once after the action fully resolves — after all hits, and regardless of what was evaded. Granting a passive an entity already owns is a no-op. At most one entry per passive+target combination.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["passive", "target"],
+            "properties": {
+              "passive": {
+                "type": "string",
+                "enum": ["LivingDead"],
+                "description": "Hand-maintained against PassiveRegistry.cs's registered PassiveName constants (same enum as monster.schema.json's passives)."
+              },
+              "target": {
+                "type": "string",
+                "enum": ["SelectedTargets", "Self", "RandomAlly", "RandomEnemy", "AllAllies", "AllEnemies"],
+                "default": "SelectedTargets",
+                "description": "Who this entry lands on, relative to the actor and independent of the action's own targets. SelectedTargets is the action's chosen targets, de-duplicated. RandomAlly excludes the actor. All selectors consider living entities only. Hand-maintained against CombatEngine.Enums.BuffDebuffTarget (shared with buffsDebuffs/regensDrains)."
               }
             }
           }

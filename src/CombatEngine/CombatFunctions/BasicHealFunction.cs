@@ -14,8 +14,9 @@ public class BasicHealFunction : CombatFunction
     public override void Execute(CombatFunctionContext ctx)
     {
         ctx.DeductTpCost();
-        CalculateAndApplyHealing(ctx);  
+        CalculateAndApplyHealing(ctx);
         ApplyBuffsDebuffs(ctx);
         ApplyRegensDrains(ctx);
+        ApplyPassives(ctx);
     }
 }

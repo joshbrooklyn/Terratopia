@@ -4,6 +4,7 @@ using System.Linq;
 using CombatEngine;
 using CombatEngine.Enums;
 using CombatEngine.Keywords;
+using CombatEngine.Passives;
 using GameEngine.DataClasses;
 using Godot;
 
@@ -11,6 +12,7 @@ public partial class CombatantCard : PanelContainer
 {
 	private static readonly Color PositiveColor = new(0.4f, 0.9f, 0.45f);
 	private static readonly Color NegativeColor = new(1f, 0.35f, 0.35f);
+	private static readonly Color PassiveColor  = new(0.8f, 0.65f, 1f);
 
 	private string _entityId = "";
 	private Label  _evadedLabel = null!;
@@ -41,6 +43,11 @@ public partial class CombatantCard : PanelContainer
 
 	private readonly Dictionary<BuffDebuffStat, (bool IsPositive, int Rounds, bool UntilRemoved, int Value, string SourceName)> _buffs = new();
 	private readonly Dictionary<RegenDrainStat, (bool IsPositive, int Rounds, bool UntilRemoved, string SourceName)> _regens = new();
+	// Passives don't expire, so this is just the set of names owned right now - no per-entry state
+	// to track like _buffs/_regens. Seeded in Initialize from PassiveTracker directly (not from
+	// PassiveApplied) because passives granted at combat setup - e.g. Monster.Passives - are
+	// applied before this card, or any CombatEventBus subscriber, exists.
+	private readonly HashSet<string> _passives = new();
 
 	public void Initialize(CombatantSeed seed, bool showTp)
 	{
@@ -84,6 +91,10 @@ public partial class CombatantCard : PanelContainer
 		_inventoryEntries   = seed.Techs.Concat(seed.Items).ToList();
 		RenderInventory();
 
+		foreach (var passive in PassiveTracker.GetPassives(seed.EntityId))
+			_passives.Add(passive.Name);
+		RenderEffects();
+
 		_normalStyle = (StyleBoxFlat)GetThemeStylebox("panel").Duplicate();
 
 		_activeStyle = (StyleBoxFlat)_normalStyle.Duplicate();
@@ -105,6 +116,7 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.RegenDrainApplied += OnRegenDrainApplied;
 		CombatEventBus.RegenDrainTicked += OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired += OnRegenDrainExpired;
+		CombatEventBus.PassiveApplied += OnPassiveApplied;
 	}
 
 	public override void _ExitTree()
@@ -120,6 +132,7 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.RegenDrainApplied -= OnRegenDrainApplied;
 		CombatEventBus.RegenDrainTicked -= OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired -= OnRegenDrainExpired;
+		CombatEventBus.PassiveApplied -= OnPassiveApplied;
 	}
 
 	// PanelContainer defaults to MouseFilter.Stop and the inner Columns tree is set to Ignore in
@@ -323,6 +336,17 @@ public partial class CombatantCard : PanelContainer
 		});
 	}
 
+	private void OnPassiveApplied(string entityId, string entityName, string passiveName, string sourceId, string sourceName)
+	{
+		if (entityId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			_passives.Add(passiveName);
+			RenderEffects();
+		});
+	}
+
 	private void RenderStat(BuffDebuffStat stat)
 	{
 		var label = stat switch
@@ -367,6 +391,13 @@ public partial class CombatantCard : PanelContainer
 				Text = $"{ResourceAbbrev(stat)} {(e.IsPositive ? "regen" : "drain")} {Duration(e.Rounds, e.UntilRemoved)} ({e.SourceName})",
 			};
 			label.AddThemeColorOverride("font_color", e.IsPositive ? PositiveColor : NegativeColor);
+			_effectsContainer.AddChild(label);
+		}
+
+		foreach (var passiveName in _passives)
+		{
+			var label = new Label { Text = $"◆ {passiveName}" };
+			label.AddThemeColorOverride("font_color", PassiveColor);
 			_effectsContainer.AddChild(label);
 		}
 	}

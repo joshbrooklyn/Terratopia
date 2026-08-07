@@ -10,4 +10,9 @@ public static class PassiveRegistry
     // dispatch path, since PassiveTracker caches the resolved instance.
     public static Passive? Resolve(string passiveName) =>
         _passives.GetValueOrDefault(passiveName);
+
+    // Every registered passive name, e.g. for schema-drift tests to check the "passive" enum in
+    // the action schemas against - the same role CombatFunctionRegistry.RegisteredNames plays for
+    // combatFunction.
+    public static IEnumerable<string> RegisteredNames => _passives.Keys;
 }

@@ -45,16 +45,18 @@ public static class PassiveTracker
     // own a passive at all - at combat setup or mid-combat, same call. Adding a passive the entity
     // already owns is a no-op, so the original RoundApplied and counts stand. Unrecognised names
     // resolve to null and are silently dropped, the same way PassiveRegistry.Resolve has always
-    // treated bad names - no record is created.
-    public static void Add(string passiveName, string entityId)
+    // treated bad names - no record is created. Returns true only when a new record was actually
+    // created, so a mid-combat caller (CombatFunction.ApplyPassives) can tell a genuine grant apart
+    // from a no-op and raise CombatEventBus.PassiveApplied only for the former.
+    public static bool Add(string passiveName, string entityId)
     {
         var key = (passiveName, entityId);
         if (_activations.ContainsKey(key))
-            return;
+            return false;
 
         var passive = PassiveRegistry.Resolve(passiveName);
         if (passive == null)
-            return;
+            return false;
 
         _activations[key] = new PassiveActivation
         {
@@ -64,6 +66,7 @@ public static class PassiveTracker
             ApplicationsThisRound = 0,
             TotalApplications     = 0,
         };
+        return true;
     }
 
     // Strips a passive from an entity mid-combat. Drops the record outright, so the entity's

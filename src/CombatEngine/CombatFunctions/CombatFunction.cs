@@ -1,6 +1,7 @@
 using CombatEngine.DataClasses;
 using CombatEngine.Enums;
 using CombatEngine.Engine;
+using CombatEngine.Passives;
 
 
 namespace CombatEngine.CombatFunctions;
@@ -75,6 +76,35 @@ public abstract class CombatFunction
 
                 entity.AddRegenDrain(spec.Stat, spec.Type == RegenDrainType.Positive, spec.Rounds, spec.UntilRemoved,
                     ctx.Command.SourceId, ctx.Command.SourceName, ctx.Actor.EntityId, spec.CancelOnEntityDeath, spec.CancelOnApplierDeath);
+            }
+        }
+    }
+
+    // Resolves and grants every passivesApplied[] entry, the same way as ApplyBuffsDebuffs and
+    // ApplyRegensDrains - shared by every function that can rider one onto its action, called once
+    // after the function has fully resolved its own damage/healing, no-ops when none were
+    // authored, and throws when two entries target the same (entity, passive) pair. Unlike the
+    // other two riders, a grant has no duration: PassiveTracker.Add either creates the record or,
+    // if the entity already owns the passive (or the name is unrecognised), no-ops - only a
+    // genuine new grant raises CombatEventBus.PassiveApplied.
+    protected static void ApplyPassives(CombatFunctionContext ctx)
+    {
+        var specs = ctx.Parameters.PassivesApplied;
+        if (specs is not { Count: > 0 })
+            return;
+
+        var applied = new HashSet<(string EntityId, string Passive)>();
+
+        foreach (var spec in specs)
+        {
+            foreach (var entity in ctx.Roster.ResolveBuffDebuffTargets(ctx.Actor, spec.Target, ctx.Targets))
+            {
+                if (!applied.Add((entity.EntityId, spec.Passive)))
+                    throw new InvalidOperationException(
+                        $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two passivesApplied entries both target {entity.Name} with {spec.Passive}.");
+
+                if (PassiveTracker.Add(spec.Passive, entity.EntityId))
+                    CombatEventBus.RaisePassiveApplied(entity.EntityId, entity.Name, spec.Passive, ctx.Command.SourceId, ctx.Command.SourceName);
             }
         }
     }

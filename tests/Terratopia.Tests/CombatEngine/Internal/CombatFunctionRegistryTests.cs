@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
+using CombatEngine.Passives;
 using GameEngine.DataClasses;
 
 namespace Terratopia.Tests.CombatEngine.Internal;
@@ -166,5 +167,63 @@ public class CombatFunctionRegistryTests
 
             Assert.Equal(expected, schemaFields);
         }
+    }
+
+    [Fact]
+    public void PassiveApplySpec_MatchesSchemaSuperset()
+    {
+        // What: verifies parameters.passivesApplied.items in every action schema declares exactly
+        //       the fields PassiveApplySpec exposes - the same hand-mirror guarantee as
+        //       BuffDebuffSpec_MatchesSchemaSuperset / RegenDrainSpec_MatchesSchemaSuperset.
+        // How:  passivesApplied.items is a closed (additionalProperties: false) hand-maintained
+        //       mirror of PassiveApplySpec, so this reflects over it, camelCases each property
+        //       name, and asserts set equality against
+        //       parameters.properties.passivesApplied.items.properties in each schema.
+        var expected = typeof(PassiveApplySpec)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => CamelCase(p.Name))
+            .OrderBy(n => n)
+            .ToArray();
+
+        foreach (var resourceName in ActionSchemaResources)
+        {
+            var schemaFields = LoadSchema(resourceName)
+                .GetProperty("properties").GetProperty("parameters").GetProperty("properties")
+                .GetProperty("passivesApplied").GetProperty("items").GetProperty("properties")
+                .EnumerateObject().Select(p => p.Name).OrderBy(n => n).ToArray();
+
+            Assert.Equal(expected, schemaFields);
+        }
+    }
+
+    [Fact]
+    public void PassiveRegistry_MatchesSchemaEnum()
+    {
+        // What: verifies the "passive" enum inside parameters.passivesApplied.items in every
+        //       action schema (and monster.schema.json's "passives" array) lists exactly the
+        //       passives PassiveRegistry actually has registered - the same drift guard
+        //       CombatFunctionRegistry_MatchesSchemaEnum runs for combatFunction.
+        // How:  reads properties.parameters.properties.passivesApplied.items.properties.passive.enum
+        //       from each action schema, plus properties.passives.items.enum from
+        //       monster.schema.json, and asserts each is set-equal to
+        //       PassiveRegistry.RegisteredNames.
+        var registered = PassiveRegistry.RegisteredNames.OrderBy(n => n).ToArray();
+
+        foreach (var resourceName in ActionSchemaResources)
+        {
+            var schemaEnum = LoadSchema(resourceName)
+                .GetProperty("properties").GetProperty("parameters").GetProperty("properties")
+                .GetProperty("passivesApplied").GetProperty("items").GetProperty("properties")
+                .GetProperty("passive").GetProperty("enum")
+                .EnumerateArray().Select(e => e.GetString()!).OrderBy(n => n).ToArray();
+
+            Assert.Equal(registered, schemaEnum);
+        }
+
+        var monsterPassiveEnum = LoadSchema("GameEngine.Schemas.monster.schema.json")
+            .GetProperty("properties").GetProperty("passives").GetProperty("items").GetProperty("enum")
+            .EnumerateArray().Select(e => e.GetString()!).OrderBy(n => n).ToArray();
+
+        Assert.Equal(registered, monsterPassiveEnum);
     }
 }

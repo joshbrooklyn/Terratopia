@@ -4,7 +4,7 @@ Reference for the `Passives` system in `CombatEngine.Passives`.
 
 ## Overview
 
-A **passive** is a named ability attached to a combat entity (currently monsters only, via `Monster.Passives`) that reacts to a combat *event* — currently, only that entity dying. Passives are data-driven by name only: the JSON data references a passive by string, and all of its actual behavior is hardcoded in a C# class.
+A **passive** is a named ability attached to a combat entity that reacts to a combat *event* — currently, only that entity dying. Passives are data-driven by name only: the JSON data references a passive by string, and all of its actual behavior is hardcoded in a C# class. An entity can come to own a passive two ways: at combat setup, via `Monster.Passives`, or mid-combat, via a Tech/Item/MonsterAction's `passivesApplied` rider (see "How it's wired end-to-end" below).
 
 This is a different mechanism from **[Keywords](keywords.md)**: passives live on *entities* and react to combat events, while keywords live on *actions* and react to how/when that specific action is used. See `keywords.md` for that system.
 
@@ -50,7 +50,7 @@ base implementation as-is, reading straight through to `PassiveTracker`.
 ### `PassiveRegistry`
 
 ```csharp
-internal static class PassiveRegistry
+public static class PassiveRegistry
 {
     private static readonly Dictionary<string, Passive> _passives =
         new Passive[] { new LivingDeadPassive() }.ToDictionary(p => p.Name);
@@ -59,14 +59,20 @@ internal static class PassiveRegistry
     // unrecognised keywords.
     public static Passive? Resolve(string passiveName) =>
         _passives.GetValueOrDefault(passiveName);
+
+    // Every registered passive name - what the "passive" enum in the action schemas and
+    // monster.schema.json's "passives" enum are both hand-maintained against, and what the
+    // matching drift-guard tests check them against.
+    public static IEnumerable<string> RegisteredNames => _passives.Keys;
 }
 ```
 
-`PassiveRegistry` is `internal` — nothing outside `CombatEngine` needs it directly.
-`Resolve` turns a single passive name into its live (stateless, shared) instance, or `null` if
-the name isn't registered. It's called from exactly one place, `PassiveTracker.Add` (see below) —
-once per grant, not once per dispatch, since `PassiveTracker` caches the resolved instance rather
-than re-resolving it on every death check.
+`PassiveRegistry` is `public` (nothing outside `CombatEngine` calls `Resolve` directly, but
+`RegisteredNames` is read cross-assembly by the schema drift-guard tests, the same way
+`CombatFunctionRegistry.RegisteredNames` already was). `Resolve` turns a single passive name into
+its live (stateless, shared) instance, or `null` if the name isn't registered. It's called from
+exactly one place, `PassiveTracker.Add` (see below) — once per grant, not once per dispatch, since
+`PassiveTracker` caches the resolved instance rather than re-resolving it on every death check.
 
 ## How it's wired end-to-end
 
@@ -93,6 +99,22 @@ than re-resolving it on every death check.
    because `InitCombat` calls `PassiveTracker.Reset()` — anything granted earlier would be wiped.
 4. **`PassiveTracker`** (see below) is the sole record of which passives an entity owns.
    `CombatEntity` itself carries no passive-related state.
+5. **Mid-combat, via `passivesApplied`** — `CombatFunctionParameters.PassivesApplied` is a
+   `PassiveApplySpec[]` rider any Tech/Item/MonsterAction can carry, exactly like `buffsDebuffs`
+   and `regensDrains`:
+   ```json
+   "passivesApplied": [
+     { "passive": "LivingDead", "target": "Self" }
+   ]
+   ```
+   `CombatFunction.ApplyPassives` (called by `BasicDamageFunction`/`BasicHealFunction`/
+   `NoDirectEffectsFunction`, the same three that opt into the other two riders) resolves each
+   entry's `target` through `CombatRoster.ResolveBuffDebuffTargets` and calls
+   `PassiveTracker.Add(spec.Passive, entity.EntityId)` for each resolved entity. Two entries that
+   resolve to the same `(entity, passive)` pair throw, naming the offending Tech/Item/MonsterAction
+   — the same collision rule `ApplyBuffsDebuffs`/`ApplyRegensDrains` enforce. When `Add` reports a
+   genuine new grant (not a re-grant of something already owned), `CombatEventBus.PassiveApplied`
+   fires so the UI can log it and the combatant card can show it.
 
 ## Trigger point
 
@@ -165,7 +187,9 @@ Keyed internally by `(passiveName, entityId)`. Lifecycle:
 - **`Add(passiveName, entityId)`** — grants the passive, resolving the name through
   `PassiveRegistry` once and caching the instance. Stamps `RoundApplied = CurrentRound`. A no-op
   if the entity already owns that passive (existing history stands) or if the name doesn't
-  resolve.
+  resolve. Returns `true` only when a new record was actually created, so a mid-combat caller
+  (`CombatFunction.ApplyPassives`) can tell a genuine grant apart from a no-op and raise
+  `CombatEventBus.PassiveApplied` only for the former.
 - **`RecordActivation(passive, entityId)`** — called by a passive's own trigger method (e.g.
   `LivingDeadPassive.OnBeforeDeath`) at the point it decides it actually did something.
   Increments both `TotalApplications` and `ApplicationsThisRound`. If the entity was never
@@ -180,7 +204,10 @@ Keyed internally by `(passiveName, entityId)`. Lifecycle:
 ### Adding and removing passives mid-combat
 
 `Add`/`Remove` aren't only for initial setup — call them any time during a combat to grant or
-strip a passive (e.g. as the effect of a tech, item, or another passive). `Remove(passiveName,
+strip a passive. The `passivesApplied` rider (see "How it's wired end-to-end" above) is the
+authored path for this, letting a Tech/Item/MonsterAction call `Add` as part of its own resolution;
+nothing currently authors a call to `Remove` from data, so stripping a passive mid-combat is still
+engine/passive-code only (e.g. `LivingDeadTests` does it directly for test setup). `Remove(passiveName,
 entityId)` drops the record entirely, history and all. That means a later `Add` of the same
 passive starts completely fresh: `RoundApplied` is restamped to whatever round the `Add` happens
 in, and both application counts go back to zero — which also **re-arms** a once-per-combat passive
@@ -228,7 +255,13 @@ removing passives mid-combat" above — which resets `TotalApplications` back to
    would look like. Use `PassiveTracker.Get`/`RecordActivation` for any activation-count or
    round-based condition the passive needs, rather than inventing new state on `CombatEntity`.
 2. Add an instance of the new class to the array in `PassiveRegistry`.
-3. Hand-add the new passive's name to `monster.schema.json`'s `passives.items.enum` under `src/GameEngine/Schemas/` (the canonical schema), then run `npm run copy-schemas` (in `GameDataEditor`) to propagate it, so game data can reference the new passive by name.
+3. Hand-add the new passive's name to **four** enums under `src/GameEngine/Schemas/` (the
+   canonical schemas — `src/GameDataEditor/schemas/` is a plain copy): `monster.schema.json`'s
+   `passives.items.enum`, and `parameters.properties.passivesApplied.items.properties.passive.enum`
+   in `tech.schema.json`, `item.schema.json`, and `monsteraction.schema.json`. Then run
+   `npm run copy-schemas` (in `GameDataEditor`) to propagate them. `PassiveRegistry_MatchesSchemaEnum`
+   (`CombatFunctionRegistryTests.cs`) fails until all four agree with `PassiveRegistry.RegisteredNames`.
 4. Nothing else to wire up — `GameEngineClass.InitSkirmishCombat` already grants every monster's
-   `Passives` via `PassiveTracker.Add` after `InitCombat`, so a new passive name in the data
-   becomes usable automatically.
+   `Passives` via `PassiveTracker.Add` after `InitCombat`, and `CombatFunction.ApplyPassives`
+   already resolves any `passivesApplied` rider through the same `Add`, so a new passive name in
+   the data becomes usable automatically on both paths.

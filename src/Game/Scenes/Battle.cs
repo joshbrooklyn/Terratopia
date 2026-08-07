@@ -87,6 +87,7 @@ public partial class Battle : Control
 		CombatEventBus.RegenDrainApplied      += OnRegenDrainApplied;
 		CombatEventBus.RegenDrainTicked       += OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired      += OnRegenDrainExpired;
+		CombatEventBus.PassiveApplied          += OnPassiveApplied;
 		CombatEventBus.CombatOver             += OnCombatOver;
 
 		GameEngineClass.Instance.BeginSkirmishCombat();
@@ -291,7 +292,8 @@ public partial class Battle : Control
 
 	// Bonuses summary shown under a tech/item's description: element, power, calc type when it's
 	// not the plain formula, multi-hit count, active keywords (Growth annotated with its current
-	// stacked bonus), and one line per buffsDebuffs/regensDrains entry the action carries.
+	// stacked bonus), and one line per buffsDebuffs/regensDrains/passivesApplied entry the action
+	// carries.
 	private string FormatBonuses(string actorId, string sourceId, CombatFunctionParameters parameters, List<string> keywords, int numAttacks)
 	{
 		var lines = new List<string>();
@@ -319,6 +321,8 @@ public partial class Battle : Control
 			var duration = spec.UntilRemoved ? "until removed" : $"{spec.Rounds} round{(spec.Rounds == 1 ? "" : "s")}";
 			lines.Add($"{spec.Stat} {(spec.Type == RegenDrainType.Positive ? "regen" : "drain")} {duration} ({spec.Target})");
 		}
+		foreach (var spec in parameters.PassivesApplied ?? [])
+			lines.Add($"Grants {spec.Passive} ({spec.Target})");
 
 		return string.Join("\n", lines);
 	}
@@ -469,6 +473,9 @@ public partial class Battle : Control
 			? $"{entityName}: {stat} {(isPositive ? "regen" : "drain")} ({sourceName}) wore off"
 			: $"{entityName}: {stat} {(isPositive ? "regen" : "drain")} ({sourceName}) countered by {counteredBySourceName}"));
 
+	private void OnPassiveApplied(string entityId, string entityName, string passiveName, string sourceId, string sourceName) =>
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} gained {passiveName} (from {sourceName})"));
+
 	private void OnCombatOver(bool playerWon) =>
 		UiEventQueue.Enqueue(() =>
 		{
@@ -514,6 +521,7 @@ public partial class Battle : Control
 		CombatEventBus.RegenDrainApplied      -= OnRegenDrainApplied;
 		CombatEventBus.RegenDrainTicked       -= OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired      -= OnRegenDrainExpired;
+		CombatEventBus.PassiveApplied          -= OnPassiveApplied;
 		CombatEventBus.CombatOver             -= OnCombatOver;
 	}
 
