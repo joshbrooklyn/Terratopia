@@ -74,13 +74,13 @@ public class LivingDeadTests
         //       high defense — so only the attacker's hits matter and combat runs across
         //       multiple rounds. The test records every EntityDamaged/EntityRevived new-HP value
         //       for "defender" plus counts of EntityRevived and EntityDeath. On the first lethal
-        //       hit, HP would drop to 0, but LivingDeadPassive.OnBeforeDeath intercepts it and
-        //       immediately bumps HP back up to 1, so the trace should show 0 then 1. On the next
-        //       lethal hit the passive is already consumed (PassiveTracker already shows
-        //       TotalApplications > 0 for it on "defender"), so this time HP drops to 0 and stays
-        //       there — a real death. The test asserts the HP trace is exactly [0, 1, 0],
-        //       revivedCount is 1, deathCount is 1, the defender ends up dead at 0 HP, and the
-        //       tracker shows one total activation of LivingDead on "defender".
+        //       hit, HP would drop to 0, but LivingDeadPassive.OnBeforeDeath intercepts it,
+        //       removes itself from PassiveTracker (so HandleDefeat's dispatch loop won't find it
+        //       again), and immediately bumps HP back up to 1, so the trace should show 0 then 1.
+        //       On the next lethal hit the entity no longer owns LivingDead at all, so this time
+        //       HP drops to 0 and stays there — a real death. The test asserts the HP trace is
+        //       exactly [0, 1, 0], revivedCount is 1, deathCount is 1, the defender ends up dead
+        //       at 0 HP, and the tracker no longer lists LivingDead among "defender"'s passives.
         var (engine, _, defender) = SetupCombat([LivingDeadPassive.PassiveName]);
 
         var hpTrace = new List<int>();
@@ -99,7 +99,7 @@ public class LivingDeadTests
         Assert.Equal(1, deathCount);
         Assert.True(defender.IsDead);
         Assert.Equal(0, defender.Hp);
-        Assert.Equal(1, PassiveTracker.Get(LivingDeadPassive.PassiveName, "defender").TotalApplications);
+        Assert.Empty(PassiveTracker.GetPassives("defender"));
     }
 
     [Fact]
@@ -174,13 +174,13 @@ public class LivingDeadTests
         //       the fight only ends once the defender runs out of revives - a re-arm just buys it
         //       one extra life, it doesn't make it unkillable.
         // How:  The defender starts with LivingDead and survives its first lethal hit via the
-        //       usual revive. The EntityRevived handler then immediately Removes and re-Adds the
-        //       passive on "defender" - but only once, guarded by a flag - which drops and
-        //       rebuilds its PassiveTracker record. The second lethal hit should therefore revive
-        //       the defender again instead of killing it for real (since the guard doesn't fire a
-        //       second time, TotalApplications reads 1 rather than 2 afterwards); the third lethal
-        //       hit finds the re-armed record already consumed again and the defender dies for
-        //       real.
+        //       usual revive - which already drops LivingDead's own PassiveTracker record (it
+        //       removes itself on firing). The EntityRevived handler then immediately Removes
+        //       (a no-op, since the record is already gone) and re-Adds the passive on "defender"
+        //       - but only once, guarded by a flag - which rebuilds its record from scratch. The
+        //       second lethal hit should therefore revive the defender again instead of killing
+        //       it for real; the third lethal hit finds the entity no longer owns LivingDead at
+        //       all (consumed again by the second revive) and it dies for real.
         var (engine, _, defender) = SetupCombat([LivingDeadPassive.PassiveName]);
 
         bool reArmed = false;
@@ -208,7 +208,7 @@ public class LivingDeadTests
         Assert.Equal(2, revivedCount);
         Assert.Equal(1, deathCount);
         Assert.True(defender.IsDead);
-        Assert.Equal(1, PassiveTracker.Get(LivingDeadPassive.PassiveName, "defender").TotalApplications);
+        Assert.Empty(PassiveTracker.GetPassives("defender"));
     }
 }
 
@@ -231,10 +231,10 @@ public class LivingDeadPassiveTests
         //       static), then MakeEntity("killme", 1) builds a CombatEntity at 1 HP and
         //       PassiveTracker.Add grants it LivingDead. killme.TakeDamage(attacker, 1, ...)
         //       brings it to 0 HP, which triggers HandleDefeat -> LivingDeadPassive.OnBeforeDeath,
-        //       which should record an activation for "killme" (marking it used) and report
-        //       (true, 1 HP) so the engine sets Hp back to 1 instead of marking the entity dead.
-        //       The test asserts killme is not dead, killme.Hp is 1, and the tracker shows one
-        //       total activation of LivingDead on "killme".
+        //       which should remove its own record from PassiveTracker (marking it used) and
+        //       report (true, 1 HP) so the engine sets Hp back to 1 instead of marking the entity
+        //       dead. The test asserts killme is not dead, killme.Hp is 1, and the tracker no
+        //       longer lists LivingDead among "killme"'s passives.
         PassiveTracker.Reset();
 
         var killme   = MakeEntity("killme", 1);
@@ -245,35 +245,35 @@ public class LivingDeadPassiveTests
 
         Assert.False(killme.IsDead);
         Assert.Equal(1, killme.Hp);
-        Assert.Equal(1, PassiveTracker.Get(LivingDeadPassive.PassiveName, "killme").TotalApplications);
+        Assert.Empty(PassiveTracker.GetPassives("killme"));
     }
 
     [Fact]
-    public void OnBeforeDeath_SecondCall_ReturnsFalseAndLeavesHpUnchanged()
+    public void OnBeforeDeath_FirstCall_RemovesOwnershipSoDispatchWontFireAgain()
     {
-        // What: verifies LivingDeadPassive is single-use — a second call to OnBeforeDeath on
-        //       the same entity must report deathPrevented: false and leave HP at 0, rather than
-        //       reviving again.
-        // How:  PassiveTracker.Reset() clears state left by other tests. The passive is invoked
-        //       once up front to consume it (mirroring the setup in
-        //       HandleDefeat_FirstCall_RevivesAtOneHp), then entity.TakeDamage brings HP back to
-        //       0 to simulate a second lethal hit. Calling OnBeforeDeath(entity) again should hit
-        //       the tracker's TotalApplications > 0 guard — since an activation is already
-        //       recorded for this entity, the method returns (false, 0) immediately without
-        //       touching HP. The test asserts the second call's deathPrevented is false and
-        //       entity.Hp is still 0.
+        // What: verifies LivingDeadPassive's single-use guarantee is enforced by ownership, not
+        //       by an internal already-triggered flag — firing OnBeforeDeath once removes the
+        //       passive from PassiveTracker outright, which is what stops HandleDefeat's dispatch
+        //       loop (PassiveTracker.GetPassives) from ever finding it on the entity again for a
+        //       later lethal hit. Calling OnBeforeDeath again directly on the same instance, as
+        //       opposed to going through the dispatch loop, is not itself guarded — nothing in
+        //       the engine does that, since HandleDefeat only invokes passives it reads back from
+        //       PassiveTracker.
+        // How:  PassiveTracker.Reset() clears state left by other tests. PassiveTracker.Add
+        //       grants "entity" LivingDead, then OnBeforeDeath is called directly once. The test
+        //       asserts it reports deathPrevented: true with the configured revive HP, and that
+        //       the tracker no longer lists LivingDead among "entity"'s passives afterward.
         PassiveTracker.Reset();
 
         var entity  = MakeEntity("entity", 1);
         var passive = new LivingDeadPassive();
         PassiveTracker.Add(LivingDeadPassive.PassiveName, "entity");
-        passive.OnBeforeDeath(entity);
 
-        entity.TakeDamage(entity, entity.Hp, "test", "Test"); // simulate a second lethal hit
-        var (preventedAgain, _) = passive.OnBeforeDeath(entity);
+        var (prevented, reviveHp) = passive.OnBeforeDeath(entity);
 
-        Assert.False(preventedAgain);
-        Assert.Equal(0, entity.Hp);
+        Assert.True(prevented);
+        Assert.Equal(CombatBalance.Current.LivingDeadReviveHp, reviveHp);
+        Assert.Empty(PassiveTracker.GetPassives("entity"));
     }
 }
 

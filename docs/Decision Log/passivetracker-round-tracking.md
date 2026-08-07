@@ -30,10 +30,11 @@ change.
    `CombatEngineClass` instance involved — every round-based passive test would instead need
    full `InitCombat`/`BuildRound` engine plumbing, and shared singleton state becomes a
    test-isolation hazard.
-3. `PassiveTracker.RecordActivation` is called from inside `Passive` subclasses (e.g.
-   `LivingDeadPassive.OnBeforeDeath`), which have no reference to `CombatEngineClass` at all —
-   the mirrored round is what lets a passive record "what round did this happen in" without
-   the passives system knowing the engine exists.
+3. `PassiveTracker.Add`/`RecordActivation`/`RemoveFrom` are called from inside `Passive`
+   subclasses (e.g. `LivingDeadPassive.OnBeforeDeath`, which calls `RemoveFrom` to enforce its
+   one-shot behavior), which have no reference to `CombatEngineClass` at all — the mirrored round
+   is what lets a passive record "what round did this happen in" without the passives system
+   knowing the engine exists.
 
 The cost of one mirrored `int`, updated from a single call site, is small and contained. The
 cost of coupling `Passives` to the `Engine` singleton is not.

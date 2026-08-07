@@ -32,6 +32,16 @@ public abstract class Passive
     {
         return PassiveTracker.Get(Name, entity.EntityId).TotalApplications;
     }
+
+    public virtual int ApplicationsThisRound(CombatEntity entity)
+    {
+        return PassiveTracker.Get(Name, entity.EntityId).ApplicationsThisRound;
+    }
+
+    public virtual void RemoveFrom(CombatEntity entity)
+    {
+        PassiveTracker.Remove(Name, entity.EntityId);
+    }
 }
 ```
 
@@ -43,9 +53,10 @@ base class; if a second trigger category is ever added (e.g. "on taking damage")
 at which `Trigger`/`PassiveTrigger` would come back, alongside a second virtual method or a
 per-trigger interface.
 
-`TotalApplications` is `virtual` rather than a plain instance method so a subclass could
-override how its own count is derived; today every passive (just `LivingDeadPassive`) uses the
-base implementation as-is, reading straight through to `PassiveTracker`.
+`TotalApplications`, `ApplicationsThisRound`, and `RemoveFrom` are `virtual` rather than plain
+instance methods so a subclass could override how its own counts are derived or what removing it
+means; today every passive (just `LivingDeadPassive`) uses the base implementations as-is, reading
+and writing straight through to `PassiveTracker`.
 
 ### `PassiveRegistry`
 
@@ -205,15 +216,16 @@ Keyed internally by `(passiveName, entityId)`. Lifecycle:
 
 `Add`/`Remove` aren't only for initial setup — call them any time during a combat to grant or
 strip a passive. The `passivesApplied` rider (see "How it's wired end-to-end" above) is the
-authored path for this, letting a Tech/Item/MonsterAction call `Add` as part of its own resolution;
-nothing currently authors a call to `Remove` from data, so stripping a passive mid-combat is still
-engine/passive-code only (e.g. `LivingDeadTests` does it directly for test setup). `Remove(passiveName,
-entityId)` drops the record entirely, history and all. That means a later `Add` of the same
-passive starts completely fresh: `RoundApplied` is restamped to whatever round the `Add` happens
-in, and both application counts go back to zero — which also **re-arms** a once-per-combat passive
-like `LivingDead`, since its guard is just `TotalApplications > 0`. There's currently no way to
-strip ownership while preserving history (e.g. to temporarily suppress a passive without resetting
-it) — that would need an `Owned` flag on the record, which nothing today reads.
+authored path for granting; a passive can also strip itself via the base class's `RemoveFrom`
+(see below) — `LivingDeadPassive` does exactly this to enforce its own one-shot behavior. Nothing
+currently authors a call to `Remove` from data, so stripping a passive from outside its own trigger
+is still engine/passive-code only (e.g. `LivingDeadTests` calls `PassiveTracker.Remove` directly
+for test setup). `Remove(passiveName, entityId)` drops the record entirely, history and all. That
+means a later `Add` of the same passive starts completely fresh: `RoundApplied` is restamped to
+whatever round the `Add` happens in, and both application counts go back to zero — which also
+**re-arms** a once-per-combat passive like `LivingDead`. There's currently no way to strip
+ownership while preserving history (e.g. to temporarily suppress a passive without resetting it)
+— that would need an `Owned` flag on the record, which nothing today reads.
 
 ## Catalog of implemented passives
 
@@ -227,24 +239,25 @@ public class LivingDeadPassive : Passive
 
     public override (bool, int) OnBeforeDeath(CombatEntity target)
     {
-        bool alreadyTriggered = TotalApplications(target) > 0;
-        if (alreadyTriggered)
-            return (false, 0);
-
-        PassiveTracker.RecordActivation(this, target.EntityId);
+        // One-shot: drop ownership now, so HandleDefeat's dispatch loop won't find this passive
+        // on the entity again for any later lethal hit.
+        RemoveFrom(target);
         return (true, CombatBalance.Current.LivingDeadReviveHp);
     }
 }
 ```
 
-The first time this entity would die, `TotalApplications(target)` — the base class's convenience
-read of `(LivingDead, target.EntityId)` in `PassiveTracker` — is still `0`, so `RecordActivation`
-bumps it to `1` and the passive reports `(true, reviveHp)` — the
-engine then sets `Hp` to `CombatBalance.Current.LivingDeadReviveHp` (1 HP by default) and raises
-`EntityRevived`. Every subsequent death attempt, `TotalApplications` is already `> 0` —
-`OnBeforeDeath` returns `(false, 0)`, and the entity dies normally. (Unless something calls
-`PassiveTracker.Remove` then re-`Add`s `LivingDead` on that entity in between — see "Adding and
-removing passives mid-combat" above — which resets `TotalApplications` back to `0` and re-arms it.)
+The first time this entity would die, `OnBeforeDeath` calls the base class's `RemoveFrom(target)`,
+which drops the `(LivingDead, target.EntityId)` record from `PassiveTracker` entirely, then reports
+`(true, reviveHp)` — the engine sets `Hp` to `CombatBalance.Current.LivingDeadReviveHp` (1 HP by
+default) and raises `EntityRevived`. Because the record is gone, `PassiveTracker.GetPassives`
+no longer returns this passive for that entity, so `HandleDefeat`'s dispatch loop simply never
+calls `OnBeforeDeath` on it again — the single-use guarantee lives in ownership, not in an
+internal flag checked at the top of the method. (Unless something calls `PassiveTracker.Add` to
+re-grant `LivingDead` on that entity in between — see "Adding and removing passives mid-combat"
+above — which creates a fresh record and re-arms it. An explicit `Remove` first isn't even
+necessary at that point, since firing already removed the old record; `Remove` only matters for
+stripping a `LivingDead` that hasn't fired yet.)
 
 ## Extending: adding a new passive
 
@@ -253,7 +266,9 @@ removing passives mid-combat" above — which resets `TotalApplications` back to
    currently only one trigger category (dying), so no separate trigger enum or intermediate base
    class to plug into — see the note under `Passive` above for what a second trigger category
    would look like. Use `PassiveTracker.Get`/`RecordActivation` for any activation-count or
-   round-based condition the passive needs, rather than inventing new state on `CombatEntity`.
+   round-based condition the passive needs, and `RemoveFrom` if the passive should strip its own
+   ownership on firing (e.g. a one-shot like `LivingDead`), rather than inventing new state on
+   `CombatEntity`.
 2. Add an instance of the new class to the array in `PassiveRegistry`.
 3. Hand-add the new passive's name to **four** enums under `src/GameEngine/Schemas/` (the
    canonical schemas — `src/GameDataEditor/schemas/` is a plain copy): `monster.schema.json`'s

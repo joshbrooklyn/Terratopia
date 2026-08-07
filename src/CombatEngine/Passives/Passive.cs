@@ -17,4 +17,14 @@ public abstract class Passive
     {
         return PassiveTracker.Get(Name, entity.EntityId).TotalApplications;
     }
+
+    public virtual int ApplicationsThisRound(CombatEntity entity)
+    {
+        return PassiveTracker.Get(Name, entity.EntityId).ApplicationsThisRound;
+    }
+
+    public virtual void RemoveFrom(CombatEntity entity)
+    {
+        PassiveTracker.Remove(Name, entity.EntityId);
+    }
 }
