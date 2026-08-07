@@ -8,24 +8,24 @@ public abstract class Passive
 
     // Returns (deathPrevented, reviveHp). When deathPrevented is true, the engine sets the
     // entity's Hp to reviveHp instead of letting it die.
-    public virtual (bool, int) OnBeforeDeath(CombatEntity target)
+    public virtual (bool, int) OnBeforeDeath(string EntityId, string EntityName)
     {
         return (false, 0); // false = death not prevented, 0 = no revive HP to apply
     }
 
-    public virtual int TotalApplications(CombatEntity entity)
+    protected virtual int TotalApplications(CombatEntity entity)
     {
         return PassiveTracker.Get(Name, entity.EntityId).TotalApplications;
     }
 
-    public virtual int ApplicationsThisRound(CombatEntity entity)
+    protected virtual int ApplicationsThisRound(CombatEntity entity)
     {
         return PassiveTracker.Get(Name, entity.EntityId).ApplicationsThisRound;
     }
 
-    public virtual void RemoveFrom(CombatEntity entity)
+    public virtual void RemoveFrom(string EntityId, string EntityName)
     {
-        if (PassiveTracker.Remove(Name, entity.EntityId))
-            CombatEventBus.RaisePassiveRemoved(entity.EntityId, entity.Name, Name);
+        if (PassiveTracker.Remove(Name, EntityId))
+            CombatEventBus.RaisePassiveRemoved(EntityId, EntityName, Name);
     }
 }

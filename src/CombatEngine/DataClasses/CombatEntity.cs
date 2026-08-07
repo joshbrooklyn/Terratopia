@@ -81,7 +81,7 @@ public class CombatEntity
     {
         foreach (var passive in PassiveTracker.GetPassives(EntityId))
         {
-            var (deathPrevented, reviveHp) = passive.OnBeforeDeath(this);
+            var (deathPrevented, reviveHp) = passive.OnBeforeDeath(this.EntityId, this.Name);
 
             if (deathPrevented)
             {

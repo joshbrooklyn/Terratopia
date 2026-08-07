@@ -286,7 +286,7 @@ public class LivingDeadPassiveTests
         var passive = new LivingDeadPassive();
         PassiveTracker.Add(LivingDeadPassive.PassiveName, "entity");
 
-        var (prevented, reviveHp) = passive.OnBeforeDeath(entity);
+        var (prevented, reviveHp) = passive.OnBeforeDeath(entity.EntityId, entity.Name);
 
         Assert.True(prevented);
         Assert.Equal(CombatBalance.Current.LivingDeadReviveHp, reviveHp);
@@ -309,10 +309,10 @@ public class LivingDeadPassiveTests
         int raisedCount = 0;
         CombatEventBus.PassiveRemoved += (_, _, _) => raisedCount++;
 
-        passive.RemoveFrom(entity);
+        passive.RemoveFrom(entity.EntityId, entity.Name); // first call - genuine
         Assert.Equal(1, raisedCount);
 
-        passive.RemoveFrom(entity); // already gone - no-op
+        passive.RemoveFrom(entity.EntityId, entity.Name); // already gone - no-op
         Assert.Equal(1, raisedCount);
     }
 }
