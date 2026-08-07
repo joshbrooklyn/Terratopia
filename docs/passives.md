@@ -40,7 +40,8 @@ public abstract class Passive
 
     public virtual void RemoveFrom(CombatEntity entity)
     {
-        PassiveTracker.Remove(Name, entity.EntityId);
+        if (PassiveTracker.Remove(Name, entity.EntityId))
+            CombatEventBus.RaisePassiveRemoved(entity.EntityId, entity.Name, Name);
     }
 }
 ```
@@ -220,12 +221,16 @@ authored path for granting; a passive can also strip itself via the base class's
 (see below) — `LivingDeadPassive` does exactly this to enforce its own one-shot behavior. Nothing
 currently authors a call to `Remove` from data, so stripping a passive from outside its own trigger
 is still engine/passive-code only (e.g. `LivingDeadTests` calls `PassiveTracker.Remove` directly
-for test setup). `Remove(passiveName, entityId)` drops the record entirely, history and all. That
-means a later `Add` of the same passive starts completely fresh: `RoundApplied` is restamped to
-whatever round the `Add` happens in, and both application counts go back to zero — which also
-**re-arms** a once-per-combat passive like `LivingDead`. There's currently no way to strip
-ownership while preserving history (e.g. to temporarily suppress a passive without resetting it)
-— that would need an `Owned` flag on the record, which nothing today reads.
+for test setup). `Remove(passiveName, entityId)` drops the record entirely, history and all, and
+returns `true` only when a record was actually dropped — the same true-only-on-genuine-change
+contract `Add` follows, so `Passive.RemoveFrom` can tell a real removal apart from a no-op and
+raise `CombatEventBus.PassiveRemoved` only for the former (the UI drops the passive from the
+combatant card's Effects list on that event). A later `Add` of the same passive starts completely
+fresh: `RoundApplied` is restamped to whatever round the `Add` happens in, and both application
+counts go back to zero — which also **re-arms** a once-per-combat passive like `LivingDead`.
+There's currently no way to strip ownership while preserving history (e.g. to temporarily suppress
+a passive without resetting it) — that would need an `Owned` flag on the record, which nothing
+today reads.
 
 ## Catalog of implemented passives
 
@@ -248,7 +253,8 @@ public class LivingDeadPassive : Passive
 ```
 
 The first time this entity would die, `OnBeforeDeath` calls the base class's `RemoveFrom(target)`,
-which drops the `(LivingDead, target.EntityId)` record from `PassiveTracker` entirely, then reports
+which drops the `(LivingDead, target.EntityId)` record from `PassiveTracker` entirely and raises
+`CombatEventBus.PassiveRemoved` (so the UI drops `LivingDead` off the combatant card), then reports
 `(true, reviveHp)` — the engine sets `Hp` to `CombatBalance.Current.LivingDeadReviveHp` (1 HP by
 default) and raises `EntityRevived`. Because the record is gone, `PassiveTracker.GetPassives`
 no longer returns this passive for that entity, so `HandleDefeat`'s dispatch loop simply never

@@ -143,3 +143,11 @@ mouse_filter = 2
 text = "-0"
 horizontal_alignment = 1
 vertical_alignment = 0
+
+[node name="HealLabel" type="Label" parent="."]
+layout_mode = 2
+modulate = Color(1, 1, 1, 0)
+mouse_filter = 2
+text = "+0"
+horizontal_alignment = 1
+vertical_alignment = 0

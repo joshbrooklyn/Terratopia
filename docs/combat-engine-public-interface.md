@@ -58,8 +58,6 @@ Static event bus; the engine's only channel for reporting what happened. All eve
 | `WaitingForTurn` | `Action<string, string, int, bool>` | entityId, entityName, currentTp, isAlly — `isAlly` tells the caller which side must act |
 | `TargetSelectionRequested` | `Action<string, string, TargetingType, IReadOnlyList<string>, IReadOnlyList<string>, int, bool>` | actorId, actorName, targetingType, validTargetIds, validTargetNames, numAttacks, allowMultipleAttackOnSameTarget — `numAttacks` is already capped to the valid-target pool size when repeats aren't allowed |
 | `CombatOver` | `Action<bool>` | playerWon |
-| `ActionRejected` | `Action<CombatCommand, string, string>` | command, actorName, reason |
-| `ActionResolved` | `Action<CombatCommand, string, IReadOnlyList<string>>` | command, actorName, targetNames |
 | `EntityDamaged` | `Action<string, string, int, string, string, string, string, bool, int, int>` | targetId, targetName, amount, actorId, actorName, sourceId, sourceName, isCriticalHit, oldHp, newHp — sourceId/sourceName identify the Tech/Item/MonsterAction (`CombatCommand.SourceId`/`SourceName`) that caused the damage, distinct from actorId/actorName, the entity that dealt it |
 | `EntityHealed` | `Action<string, string, int, string, string, string, string, int, int>` | targetId, targetName, amount, actorId, actorName, sourceId, sourceName, oldHp, newHp |
 | `AttackEvaded` | `Action<string, string, string, string, float, float, string, string>` | attackerId, attackerName, targetId, targetName, oldEvasion, newEvasion, sourceId, sourceName |
@@ -70,6 +68,8 @@ Static event bus; the engine's only channel for reporting what happened. All eve
 | `RegenDrainApplied` | `Action<string, string, RegenDrainStat, bool, int, bool, string, string>` | entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName — no oldValue/newValue, since applying an entry doesn't move the resource by itself; see [`regen-and-drain.md`](regen-and-drain.md) |
 | `RegenDrainTicked` | `Action<string, string, RegenDrainStat, bool, int, string, string>` | entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName |
 | `RegenDrainExpired` | `Action<string, string, RegenDrainStat, bool, string, string, string, string>` | entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName — same counteredBy rule as `BuffDebuffExpired` |
+| `PassiveApplied` | `Action<string, string, string, string, string>` | entityId, entityName, passiveName, sourceId, sourceName — raised when a `passivesApplied` rider actually grants a passive the entity didn't already own |
+| `PassiveRemoved` | `Action<string, string, string>` | entityId, entityName, passiveName — raised when a passive strips its own ownership (e.g. `LivingDead` consuming itself); no sourceId/sourceName, since removal is always the passive acting on itself |
 | `EntityTpChanged` | `Action<string, string, int, int, string, string>` | entityId, entityName, oldTp, newTp, sourceId, sourceName — also raised by the per-round Hp/Tp regen/drain delta, alongside `EntityDamaged`/`EntityHealed` |
 | `EntityDeath` | `Action<string, string, string, string>` | entityId, entityName, sourceId, sourceName |
 | `EntityRevived` | `Action<string, string, int, int, string, string>` | entityId, entityName, oldHp, newHp, sourceId, sourceName |

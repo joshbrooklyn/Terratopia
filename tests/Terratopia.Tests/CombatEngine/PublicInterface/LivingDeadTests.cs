@@ -133,6 +133,23 @@ public class LivingDeadTests
     }
 
     [Fact]
+    public void LethalDamage_WithLivingDead_RaisesPassiveRemovedExactlyOnce()
+    {
+        // What: verifies CombatEventBus.PassiveRemoved fires when LivingDeadPassive strips its own
+        //       ownership on firing, naming the defender and the passive - and that the second
+        //       lethal hit (a real death, no passive left to remove) doesn't raise it again.
+        var (engine, _, defender) = SetupCombat([LivingDeadPassive.PassiveName]);
+
+        var raised = new List<(string EntityId, string EntityName, string Passive)>();
+        CombatEventBus.PassiveRemoved += (entityId, entityName, passiveName) =>
+            raised.Add((entityId, entityName, passiveName));
+
+        engine.BeginCombat();
+
+        Assert.Equal([("defender", "Defender", LivingDeadPassive.PassiveName)], raised);
+    }
+
+    [Fact]
     public void Remove_BeforeLethalHit_EntityDiesOutrightDespiteHavingBeenGrantedLivingDead()
     {
         // What: verifies PassiveTracker.Remove actually strips the passive from dispatch —
@@ -275,6 +292,29 @@ public class LivingDeadPassiveTests
         Assert.Equal(CombatBalance.Current.LivingDeadReviveHp, reviveHp);
         Assert.Empty(PassiveTracker.GetPassives("entity"));
     }
+
+    [Fact]
+    public void RemoveFrom_OnAnEntityThatDoesNotOwnIt_RaisesNoPassiveRemoved()
+    {
+        // What: verifies Passive.RemoveFrom only raises CombatEventBus.PassiveRemoved on a genuine
+        //       removal - calling it a second time, after the passive already removed itself
+        //       (PassiveTracker.Remove is then a no-op), raises nothing.
+        PassiveTracker.Reset();
+        CombatEventBus.Reset(); // no engine.InitCombat in this test to do it for us
+
+        var entity  = MakeEntity("entity", 1);
+        var passive = new LivingDeadPassive();
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "entity");
+
+        int raisedCount = 0;
+        CombatEventBus.PassiveRemoved += (_, _, _) => raisedCount++;
+
+        passive.RemoveFrom(entity);
+        Assert.Equal(1, raisedCount);
+
+        passive.RemoveFrom(entity); // already gone - no-op
+        Assert.Equal(1, raisedCount);
+    }
 }
 
 [Collection("CombatEngineSerial")]
@@ -349,6 +389,19 @@ public class PassiveTrackerTests
         PassiveTracker.Add("NotARealPassive", "e1");
 
         Assert.Empty(PassiveTracker.GetPassives("e1"));
+    }
+
+    [Fact]
+    public void Remove_ReturnsTrueOnlyOnAGenuineRemoval()
+    {
+        // What: Remove's bool return is what lets Passive.RemoveFrom tell a real removal apart
+        //       from a no-op and raise CombatEventBus.PassiveRemoved only for the former.
+        PassiveTracker.Reset();
+        PassiveTracker.Add(LivingDeadPassive.PassiveName, "e1");
+
+        Assert.True(PassiveTracker.Remove(LivingDeadPassive.PassiveName, "e1"));
+        Assert.False(PassiveTracker.Remove(LivingDeadPassive.PassiveName, "e1")); // already gone
+        Assert.False(PassiveTracker.Remove(LivingDeadPassive.PassiveName, "never-owned"));
     }
 
     [Fact]

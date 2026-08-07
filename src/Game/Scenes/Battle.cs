@@ -88,6 +88,7 @@ public partial class Battle : Control
 		CombatEventBus.RegenDrainTicked       += OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired      += OnRegenDrainExpired;
 		CombatEventBus.PassiveApplied          += OnPassiveApplied;
+		CombatEventBus.PassiveRemoved          += OnPassiveRemoved;
 		CombatEventBus.CombatOver             += OnCombatOver;
 
 		GameEngineClass.Instance.BeginSkirmishCombat();
@@ -228,6 +229,10 @@ public partial class Battle : Control
 		}
 
 		var cmd = GameEngineClass.Instance.ChooseAiCommand(entityId);
+		// Queued rather than logged immediately: this branch runs on the engine's own stack while
+		// the enemy's "X's turn." line (raised by TurnStarted, just above WaitingForTurn in the
+		// flow) is still sitting in the queue - a direct AddLogEntry here would print out of order.
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} uses {cmd.SourceName}."));
 		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
 
@@ -248,7 +253,8 @@ public partial class Battle : Control
 
 			var capturedActorId = entityId;
 			var capturedTechId  = techId;
-			row.Pressed += () => OnTechSelected(capturedActorId, capturedTechId);
+			var capturedName    = tech.Name;
+			row.Pressed += () => OnTechSelected(capturedActorId, capturedTechId, capturedName);
 			_actionRows.Add(row);
 		}
 
@@ -274,7 +280,8 @@ public partial class Battle : Control
 
 			var capturedActorId = entityId;
 			var capturedItemId  = itemId;
-			row.Pressed += () => OnItemSelected(capturedActorId, capturedItemId);
+			var capturedName    = item.Name;
+			row.Pressed += () => OnItemSelected(capturedActorId, capturedItemId, capturedName);
 			_actionRows.Add(row);
 		}
 
@@ -327,16 +334,18 @@ public partial class Battle : Control
 		return string.Join("\n", lines);
 	}
 
-	private void OnTechSelected(string actorId, string techId)
+	private void OnTechSelected(string actorId, string techId, string techName)
 	{
 		ClearActionPane();
+		AddLogEntry($"{_entityNamesById[actorId]} uses {techName}.");
 		var cmd = GameEngineClass.Instance.MakeTechCommand(actorId, techId);
 		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
 
-	private void OnItemSelected(string actorId, string itemId)
+	private void OnItemSelected(string actorId, string itemId, string itemName)
 	{
 		ClearActionPane();
+		AddLogEntry($"{_entityNamesById[actorId]} uses {itemName}.");
 		var cmd = GameEngineClass.Instance.UseItem(actorId, itemId);
 		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
@@ -344,6 +353,7 @@ public partial class Battle : Control
 	private void OnFightSelected(string actorId)
 	{
 		ClearActionPane();
+		AddLogEntry($"{_entityNamesById[actorId]} uses Fight.");
 		var cmd = GameEngineClass.Instance.MakeFightCommand(actorId);
 		CombatEngineClass.Instance.SubmitCommand(cmd);
 	}
@@ -476,6 +486,9 @@ public partial class Battle : Control
 	private void OnPassiveApplied(string entityId, string entityName, string passiveName, string sourceId, string sourceName) =>
 		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} gained {passiveName} (from {sourceName})"));
 
+	private void OnPassiveRemoved(string entityId, string entityName, string passiveName) =>
+		UiEventQueue.Enqueue(() => AddLogEntry($"{entityName} lost {passiveName}"));
+
 	private void OnCombatOver(bool playerWon) =>
 		UiEventQueue.Enqueue(() =>
 		{
@@ -522,6 +535,7 @@ public partial class Battle : Control
 		CombatEventBus.RegenDrainTicked       -= OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired      -= OnRegenDrainExpired;
 		CombatEventBus.PassiveApplied          -= OnPassiveApplied;
+		CombatEventBus.PassiveRemoved          -= OnPassiveRemoved;
 		CombatEventBus.CombatOver             -= OnCombatOver;
 	}
 

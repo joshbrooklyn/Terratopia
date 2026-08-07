@@ -134,7 +134,7 @@ public class GameEngineClass
                 a.AdventurerId, a.Name,
                 a.Hp, a.MaxHp, a.Tp, a.MaxTp,
                 slot.Level, a.Power, a.Defense, a.Speed, a.Evasion, a.CritChance,
-                techs, items, [], []));
+                techs, items, [], [], []));
         }
 
         _enemyMonsterMap = new Dictionary<string, Monster>();
@@ -174,16 +174,25 @@ public class GameEngineClass
                 entityId, displayName,
                 hp, hp, 0, 0,
                 level, power, def, speed, 0f, 0f,
-                actions, [], [], []));
+                actions, [], [], [], []));
         }
 
         CombatEngineClass.Instance.InitCombat(allies, enemies);
 
         // Passives are granted after InitCombat, which resets PassiveTracker - granting any
-        // earlier would just be wiped out.
-        foreach (var (entityId, monster) in _enemyMonsterMap)
+        // earlier would just be wiped out. The seed is rewritten with whatever Add actually
+        // accepted (an unrecognised name is silently dropped by Add and must not appear in the UI
+        // either), since the UI seeds its owned-passives display from the seed, not from
+        // PassiveTracker directly.
+        for (int i = 0; i < enemySeeds.Count; i++)
+        {
+            var monster = _enemyMonsterMap[enemySeeds[i].EntityId];
+            var granted = new List<string>();
             foreach (var passiveName in monster.Passives ?? [])
-                PassiveTracker.Add(passiveName, entityId);
+                if (PassiveTracker.Add(passiveName, enemySeeds[i].EntityId))
+                    granted.Add(passiveName);
+            enemySeeds[i] = enemySeeds[i] with { Passives = granted };
+        }
 
         return new CombatStartData(allySeeds, enemySeeds);
     }

@@ -4,7 +4,6 @@ using System.Linq;
 using CombatEngine;
 using CombatEngine.Enums;
 using CombatEngine.Keywords;
-using CombatEngine.Passives;
 using GameEngine.DataClasses;
 using Godot;
 
@@ -17,6 +16,7 @@ public partial class CombatantCard : PanelContainer
 	private string _entityId = "";
 	private Label  _evadedLabel = null!;
 	private Label  _damageLabel = null!;
+	private Label  _healLabel   = null!;
 
 	private Label _powerEffLabel   = null!;
 	private Label _defenseEffLabel = null!;
@@ -44,9 +44,11 @@ public partial class CombatantCard : PanelContainer
 	private readonly Dictionary<BuffDebuffStat, (bool IsPositive, int Rounds, bool UntilRemoved, int Value, string SourceName)> _buffs = new();
 	private readonly Dictionary<RegenDrainStat, (bool IsPositive, int Rounds, bool UntilRemoved, string SourceName)> _regens = new();
 	// Passives don't expire, so this is just the set of names owned right now - no per-entry state
-	// to track like _buffs/_regens. Seeded in Initialize from PassiveTracker directly (not from
-	// PassiveApplied) because passives granted at combat setup - e.g. Monster.Passives - are
-	// applied before this card, or any CombatEventBus subscriber, exists.
+	// to track like _buffs/_regens. Seeded in Initialize from CombatantSeed.Passives - the one-time
+	// setup handoff, same as every other stat on the card - rather than PassiveApplied, since
+	// passives granted at combat setup (e.g. Monster.Passives) are applied before this card, or any
+	// CombatEventBus subscriber, exists. Mid-combat grants/removals come through
+	// PassiveApplied/PassiveRemoved instead.
 	private readonly HashSet<string> _passives = new();
 
 	public void Initialize(CombatantSeed seed, bool showTp)
@@ -54,6 +56,7 @@ public partial class CombatantCard : PanelContainer
 		_entityId = seed.EntityId;
 		_evadedLabel = GetNode<Label>("EvadedLabel");
 		_damageLabel = GetNode<Label>("DamageLabel");
+		_healLabel   = GetNode<Label>("HealLabel");
 
 		GetNode<Label>("Columns/StatsColumn/NameLabel").Text = seed.Name;
 		GetNode<Label>("Columns/StatsColumn/LevelLabel").Text = $"Level: {seed.Level}";
@@ -91,8 +94,8 @@ public partial class CombatantCard : PanelContainer
 		_inventoryEntries   = seed.Techs.Concat(seed.Items).ToList();
 		RenderInventory();
 
-		foreach (var passive in PassiveTracker.GetPassives(seed.EntityId))
-			_passives.Add(passive.Name);
+		foreach (var passiveName in seed.Passives)
+			_passives.Add(passiveName);
 		RenderEffects();
 
 		_normalStyle = (StyleBoxFlat)GetThemeStylebox("panel").Duplicate();
@@ -107,6 +110,7 @@ public partial class CombatantCard : PanelContainer
 
 		CombatEventBus.AttackEvaded += OnAttackEvaded;
 		CombatEventBus.EntityDamaged += OnEntityDamaged;
+		CombatEventBus.EntityHealed += OnEntityHealed;
 		CombatEventBus.EntityDeath += OnEntityDeath;
 		CombatEventBus.EntityRevived += OnEntityRevived;
 		CombatEventBus.KeywordApplied += OnKeywordApplied;
@@ -117,12 +121,14 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.RegenDrainTicked += OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired += OnRegenDrainExpired;
 		CombatEventBus.PassiveApplied += OnPassiveApplied;
+		CombatEventBus.PassiveRemoved += OnPassiveRemoved;
 	}
 
 	public override void _ExitTree()
 	{
 		CombatEventBus.AttackEvaded -= OnAttackEvaded;
 		CombatEventBus.EntityDamaged -= OnEntityDamaged;
+		CombatEventBus.EntityHealed -= OnEntityHealed;
 		CombatEventBus.EntityDeath -= OnEntityDeath;
 		CombatEventBus.EntityRevived -= OnEntityRevived;
 		CombatEventBus.KeywordApplied -= OnKeywordApplied;
@@ -133,6 +139,7 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.RegenDrainTicked -= OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired -= OnRegenDrainExpired;
 		CombatEventBus.PassiveApplied -= OnPassiveApplied;
+		CombatEventBus.PassiveRemoved -= OnPassiveRemoved;
 	}
 
 	// PanelContainer defaults to MouseFilter.Stop and the inner Columns tree is set to Ignore in
@@ -222,6 +229,30 @@ public partial class CombatantCard : PanelContainer
 			tween.TweenProperty(_damageLabel, "modulate:a", 0f, 0.8f);
 
 			Modulate = new Color(1f, 0.3f, 0.3f, 1f);
+			var flashTween = CreateTween();
+			flashTween.TweenProperty(this, "modulate", new Color(1, 1, 1, 1), 0.25f);
+		});
+	}
+
+	private void OnEntityHealed(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, int oldHp, int newHp)
+	{
+		if (targetId != _entityId) return;
+		// amount is the clamped delta (Hp - oldHp), so a heal on a full-HP target reports 0 - skip
+		// the animation rather than floating a "+0".
+		if (amount <= 0) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			_healLabel.Text = $"+{amount}";
+			_healLabel.Modulate = new Color(1, 1, 1, 1);
+			_healLabel.Position = Vector2.Zero;
+
+			var tween = CreateTween();
+			tween.SetParallel(true);
+			tween.TweenProperty(_healLabel, "position:y", -20f, 0.8f);
+			tween.TweenProperty(_healLabel, "modulate:a", 0f, 0.8f);
+
+			Modulate = new Color(0.3f, 1f, 0.3f, 1f);
 			var flashTween = CreateTween();
 			flashTween.TweenProperty(this, "modulate", new Color(1, 1, 1, 1), 0.25f);
 		});
@@ -343,6 +374,17 @@ public partial class CombatantCard : PanelContainer
 		UiEventQueue.Enqueue(() =>
 		{
 			_passives.Add(passiveName);
+			RenderEffects();
+		});
+	}
+
+	private void OnPassiveRemoved(string entityId, string entityName, string passiveName)
+	{
+		if (entityId != _entityId) return;
+
+		UiEventQueue.Enqueue(() =>
+		{
+			_passives.Remove(passiveName);
 			RenderEffects();
 		});
 	}

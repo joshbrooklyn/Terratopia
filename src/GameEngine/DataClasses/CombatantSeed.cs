@@ -10,7 +10,8 @@ public record CombatantSeed(
     IReadOnlyList<CombatantInventoryEntry> Techs,
     IReadOnlyList<CombatantInventoryEntry> Items,
     IReadOnlyList<CombatantInventoryEntry> Perks,
-    IReadOnlyList<CombatantInventoryEntry> Gear);
+    IReadOnlyList<CombatantInventoryEntry> Gear,
+    IReadOnlyList<string> Passives);
 
 public record CombatStartData(
     IReadOnlyList<CombatantSeed> Allies,

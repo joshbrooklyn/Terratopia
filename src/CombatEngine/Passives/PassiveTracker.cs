@@ -72,8 +72,10 @@ public static class PassiveTracker
     // Strips a passive from an entity mid-combat. Drops the record outright, so the entity's
     // activation history for it goes too: a later Add() re-stamps RoundApplied to that round and
     // restarts the counts from zero, which also re-arms a once-per-combat passive like LivingDead.
-    // Removing a passive the entity doesn't own is a no-op.
-    public static void Remove(string passiveName, string entityId) =>
+    // Removing a passive the entity doesn't own is a no-op. Returns true only when a record was
+    // actually dropped, so Passive.RemoveFrom can tell a genuine removal apart from a no-op and
+    // raise CombatEventBus.PassiveRemoved only for the former.
+    public static bool Remove(string passiveName, string entityId) =>
         _activations.Remove((passiveName, entityId));
 
     // The passives an entity owns, as live instances. Backs HandleDefeat's dispatch loop, which

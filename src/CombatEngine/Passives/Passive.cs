@@ -25,6 +25,7 @@ public abstract class Passive
 
     public virtual void RemoveFrom(CombatEntity entity)
     {
-        PassiveTracker.Remove(Name, entity.EntityId);
+        if (PassiveTracker.Remove(Name, entity.EntityId))
+            CombatEventBus.RaisePassiveRemoved(entity.EntityId, entity.Name, Name);
     }
 }
