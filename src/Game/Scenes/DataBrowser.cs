@@ -27,6 +27,7 @@ public partial class DataBrowser : Control
 		cats.GetNode<Button>("MonsterActionsButton").Pressed += () => LoadCategory(GameEngineClass.Instance.AllMonsterActions);
 		cats.GetNode<Button>("DungeonsButton").Pressed       += () => LoadCategory(GameEngineClass.Instance.AllDungeons);
 		cats.GetNode<Button>("AdventurersButton").Pressed    += () => LoadCategory(GameEngineClass.Instance.AllAdventurers);
+		cats.GetNode<Button>("JobsButton").Pressed           += () => LoadCategory(GameEngineClass.Instance.AllJobs);
 
 		_objectList.ItemSelected += OnObjectSelected;
 	}

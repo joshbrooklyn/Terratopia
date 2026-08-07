@@ -62,6 +62,7 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
 	{ category: 'MonsterActions', folderName: 'MonsterActions', idField: 'monsterActionId', nameField: 'name', schemaFile: 'monsteraction.schema.json' },
 	{ category: 'Techs', folderName: 'Techs', idField: 'techId', nameField: 'name', schemaFile: 'tech.schema.json' },
 	{ category: 'Items', folderName: 'Items', idField: 'itemId', nameField: 'name', schemaFile: 'item.schema.json' },
+	{ category: 'Jobs', folderName: 'Jobs', idField: 'jobId', nameField: 'name', schemaFile: 'job.schema.json' },
 	{ category: 'GameSettings', folderName: '', idField: '', nameField: '', schemaFile: 'gamesettings.schema.json', singleFile: 'GameSettings.json' },
 ];
 

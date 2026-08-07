@@ -317,12 +317,49 @@ function addPassivesApplied(data: Record<string, unknown>): MigrationResult {
 	return { notes: [] };
 }
 
+/** v1 → v2 (adventurer): backfills the new required `jobId`. Defaults to "fighter" — reassign each adventurer's job by hand. */
+function addJobId(data: Record<string, unknown>): MigrationResult {
+	data.jobId = 'fighter';
+	data.schemaVersion = 2;
+	return { notes: ['Set jobId to "fighter" — reassign each adventurer\'s job by hand.'] };
+}
+
+/** v14 → v15 (monsteraction): drops the never-wired jobClass field; nothing reads it. */
+function dropJobClassV15(data: Record<string, unknown>): MigrationResult {
+	const had = data.jobClass !== undefined;
+	delete data.jobClass;
+	data.schemaVersion = 15;
+	return { notes: had ? ['Removed jobClass (was never used by the engine).'] : [] };
+}
+
+/** v2 → v3 (adventurer): drops the primary stats, which moved to Job as hpBase/tpBase/powerBase/defenseBase/speedBase. */
+function dropAdventurerBaseStatsV3(data: Record<string, unknown>): MigrationResult {
+	const fields = ['maxHp', 'hp', 'maxTp', 'tp', 'power', 'defense', 'speed'] as const;
+	const removed = fields.filter(f => data[f] !== undefined);
+	for (const f of fields) delete data[f];
+	data.schemaVersion = 3;
+	return { notes: removed.length > 0 ? [`Removed ${removed.join(', ')} — base stats now live on the adventurer's Job.`] : [] };
+}
+
+/** v1 → v2 (job): backfills the new required base stats, moved here from Adventurer. Defaults to 80/50/10/10/10 — the block every existing adventurer carried — tune per job by hand. */
+function addJobBaseStatsV2(data: Record<string, unknown>): MigrationResult {
+	data.hpBase = 80;
+	data.tpBase = 50;
+	data.powerBase = 10;
+	data.defenseBase = 10;
+	data.speedBase = 10;
+	data.schemaVersion = 2;
+	return { notes: ['Set hpBase/tpBase/powerBase/defenseBase/speedBase to 80/50/10/10/10 — tune per job by hand.'] };
+}
+
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
 	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13, 13: addPassivesApplied },
 	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9, 9: bumpToV10, 10: backfillCancelOnDeathFlagsToV11, 11: bumpToV12, 12: addPassivesApplied },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13, 13: addPassivesApplied },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13, 13: addPassivesApplied, 14: dropJobClassV15 },
 	'gamesettings.schema.json': { 1: addTimedBuffPct, 2: addRegenDrainPct },
+	'adventurer.schema.json': { 1: addJobId, 2: dropAdventurerBaseStatsV3 },
+	'job.schema.json': { 1: addJobBaseStatsV2 },
 };
 
 export interface RunMigrationsResult {

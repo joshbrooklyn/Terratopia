@@ -8,7 +8,6 @@
     "schemaVersion",
     "monsterActionId",
     "name",
-    "jobClass",
     "tpCost",
     "tier",
     "description",
@@ -19,7 +18,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 14,
+      "const": 15,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "monsterActionId": {
@@ -29,10 +28,6 @@
     "name": {
       "type": "string",
       "description": "Display name."
-    },
-    "jobClass": {
-      "type": "string",
-      "description": "Job class this action belongs to, e.g. \"BlackMage\", \"WhiteMage\", \"Rogue\", \"Fighter\"."
     },
     "tpCost": {
       "type": "integer"

@@ -69,12 +69,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "character-specializations.md",
+                "file": "starting-character-stats-and-resources.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "character-specializations"
+              "title": "starting-character-stats-and-resources"
             }
           }
         ],
@@ -110,7 +110,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "weyland trait",
+                "query": "starting",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -243,9 +243,13 @@
   },
   "active": "8398a597a22b8bd6",
   "lastOpenFiles": [
-    "status-effects.md.tmp.28248.9272e450c432",
     "jobs.md",
+    "combat-actions.md",
+    "characters.md",
     "complex-effects-report.md",
+    "keywords.md",
+    "character-specializations.md",
+    "status-effects.md.tmp.28248.9272e450c432",
     "complex-action-effects.md",
     "order-of-operations-for-stat-changes.md",
     "how-enemy-actions-are-determined.md",
@@ -257,10 +261,6 @@
     "triggered-effects.md",
     "list-of-combat-action-features-in-implementation-order.md",
     "special-action-behavior.md",
-    "combat-actions.md",
-    "keywords.md",
-    "characters.md",
-    "character-specializations.md",
     "combat-entities.md",
     "damage-calculation.md",
     "trigger-execution-order.md",

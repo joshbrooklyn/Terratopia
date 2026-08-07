@@ -9,16 +9,7 @@ public class Adventurer : IGameDataObject
     public required int SchemaVersion { get; init; }
     public string AdventurerId { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
-
-    // Primary stats
-    public int Level { get; init; } = 1;
-    public int MaxHp { get; init; }
-    public int Hp { get; init; }
-    public int MaxTp { get; init; }
-    public int Tp { get; init; }
-    public int Power { get; init; }
-    public int Defense { get; init; }
-    public int Speed { get; init; }
+    public string JobId { get; init; } = string.Empty;
 
     // Secondary stats
     public float Evasion { get; init; }

@@ -59,6 +59,8 @@ public static class ContentLoader
 
     public static List<Adventurer> LoadAdventurers() => LoadDirectory<Adventurer>("Adventurers");
 
+    public static List<Job> LoadJobs() => LoadDirectory<Job>("Jobs");
+
     // The single GameData/GameSettings.json file - a lone file rather than a folder of entities,
     // so it doesn't go through LoadDirectory<T>, but reuses the same validate-then-deserialize step.
     public static GameSettings LoadGameSettings()

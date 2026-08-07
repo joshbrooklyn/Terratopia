@@ -4,15 +4,15 @@ Reference for how GameData JSON files are defined and validated.
 
 ## Overview
 
-Every GameData category — Adventurers, Monsters, Techs, Items, MonsterActions, Dungeons — has a corresponding [JSON Schema](https://json-schema.org/) (draft-07) that defines its exact shape. Schemas are strict, not permissive: every one sets `additionalProperties: false` and an explicit `required` list, so an unexpected or missing field is a validation error, not a silent no-op.
+Every GameData category — Adventurers, Monsters, Techs, Items, MonsterActions, Dungeons, Jobs — has a corresponding [JSON Schema](https://json-schema.org/) (draft-07) that defines its exact shape. Schemas are strict, not permissive: every one sets `additionalProperties: false` and an explicit `required` list, so an unexpected or missing field is a validation error, not a silent no-op.
 
-Two independent systems enforce these schemas: VS Code editing (the GameData Editor extension) and the C# game engine at load time. Both read from the same six files, but neither reads them from the same place — see "Canonical location & propagation" below.
+Two independent systems enforce these schemas: VS Code editing (the GameData Editor extension) and the C# game engine at load time. Both read from the same seven files, but neither reads them from the same place — see "Canonical location & propagation" below.
 
 This is a related but separate topic from **[Schema Migrations](schema-migrations.md)**: this page covers what a schema *is* and how it's validated; that page covers what happens when a schema changes and existing data files fall behind.
 
 ## Canonical location & propagation
 
-The canonical schemas live in `src/GameEngine/Schemas/`: `adventurer.schema.json`, `dungeon.schema.json`, `item.schema.json`, `monster.schema.json`, `monsteraction.schema.json`, `tech.schema.json`. There are two independent consumers of these files, neither of which reads this folder directly:
+The canonical schemas live in `src/GameEngine/Schemas/`: `adventurer.schema.json`, `dungeon.schema.json`, `item.schema.json`, `job.schema.json`, `monster.schema.json`, `monsteraction.schema.json`, `tech.schema.json`. There are two independent consumers of these files, neither of which reads this folder directly:
 
 1. **C# runtime** — the schemas are embedded resources in the GameEngine assembly (`GameEngine.csproj`: `<EmbeddedResource Include="Schemas\*.schema.json" />`), picked up automatically on every C# build.
 2. **GameData Editor (VS Code extension)** — `src/GameDataEditor/scripts/copy-schemas.js` copies every `*.schema.json` from `src/GameEngine/Schemas` into `src/GameDataEditor/schemas/`. This runs as part of `npm run compile` / `npm run watch` (`package.json`: `"compile": "npm run copy-schemas && tsc -p ./"`). The extension only ever reads its own copied folder — never `src/GameEngine/Schemas` directly.
@@ -35,7 +35,7 @@ The canonical schemas live in `src/GameEngine/Schemas/`: `adventurer.schema.json
 
 ## Consumption path 1 — VS Code editor
 
-- `package.json`'s `contributes.jsonValidation` binds file globs (`/Adventurers/*.json`, `/Monsters/*.json`, `/Techs/*.json`, `/Items/*.json`, `/MonsterActions/*.json`) directly to the copied schema files, giving native inline validation on any GameData JSON file opened in VS Code — independent of the custom Form Editor below.
+- `package.json`'s `contributes.jsonValidation` binds file globs (`/Adventurers/*.json`, `/Monsters/*.json`, `/Techs/*.json`, `/Items/*.json`, `/MonsterActions/*.json`, `/Jobs/*.json`) directly to the copied schema files, giving native inline validation on any GameData JSON file opened in VS Code — independent of the custom Form Editor below.
 - `gameDataLoader.ts` — `loadSchemaByFileName`/`loadSchemaForCategory` read and cache a schema from the copied `schemas/` folder. `getSchemaVersion(schema)` reads `properties.schemaVersion.const`, so nothing else needs to hardcode the current version number:
   ```ts
   export function getSchemaVersion(schema: JsonSchemaObject): number {
@@ -46,7 +46,7 @@ The canonical schemas live in `src/GameEngine/Schemas/`: `adventurer.schema.json
       return version;
   }
   ```
-  `CATEGORY_DEFINITIONS` maps each Form-Editor category to its folder, id/name fields, and schema file name. Note it only covers Adventurers, Monsters, Techs, and Items — MonsterActions has no Form Editor category (only native `jsonValidation`).
+  `CATEGORY_DEFINITIONS` maps each Form-Editor category to its folder, id/name fields, and schema file name. Note it only covers Adventurers, Monsters, Techs, Items, and Jobs — MonsterActions has no Form Editor category (only native `jsonValidation`).
 - `formEditorPanel.ts` — loads the category's schema via `getSchemaWithDynamicEnums`, which patches specific array fields' `enum` with live ids collected from other GameData files (`DYNAMIC_ENUM_FIELDS`; e.g. an Adventurer's `techsIds`/`itemIds` fields get their `enum` populated from whatever Techs/Items files actually exist). The resulting schema and the file's data are posted to the webview (`media/main.js`), which renders the editing form, and validated again on save via `validateAgainstSchema` (`schemaValidation.ts`) before the file is written to disk.
 
 ## Consumption path 2 — C# runtime (`ContentLoader.cs`)
@@ -65,7 +65,7 @@ private static JsonSchema GetSchema<T>() where T : IGameDataObject
 }
 ```
 
-Each data class implements `IGameDataObject.SchemaResourceName` (a static abstract property) naming its embedded schema resource. `LoadDirectory<T>` — the shared implementation behind `LoadTechs`, `LoadItems`, `LoadMonsters`, `LoadMonsterActions`, `LoadDungeons`, and `LoadAdventurers` — parses each file in the category's folder, calls `schema.Evaluate(...)`, and throws `InvalidOperationException` (with every validation error's instance path and message) if it fails. Only then does it deserialize via `System.Text.Json` (camelCase naming, `JsonStringEnumConverter`).
+Each data class implements `IGameDataObject.SchemaResourceName` (a static abstract property) naming its embedded schema resource. `LoadDirectory<T>` — the shared implementation behind `LoadTechs`, `LoadItems`, `LoadMonsters`, `LoadMonsterActions`, `LoadDungeons`, `LoadAdventurers`, and `LoadJobs` — parses each file in the category's folder, calls `schema.Evaluate(...)`, and throws `InvalidOperationException` (with every validation error's instance path and message) if it fails. Only then does it deserialize via `System.Text.Json` (camelCase naming, `JsonStringEnumConverter`).
 
 This means an invalid or out-of-sync GameData file fails to *load* at runtime, not just fails editor lint — schema drift is a hard failure in-game, not a cosmetic warning.
 

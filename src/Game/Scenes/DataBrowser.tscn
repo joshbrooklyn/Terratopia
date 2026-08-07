@@ -55,6 +55,10 @@ text = "Dungeons"
 layout_mode = 2
 text = "Adventurers"
 
+[node name="JobsButton" type="Button" parent="VBoxContainer/HSplitContainer/CategoryPanel"]
+layout_mode = 2
+text = "Jobs"
+
 [node name="InnerSplit" type="HSplitContainer" parent="VBoxContainer/HSplitContainer"]
 layout_mode = 2
 size_flags_horizontal = 3

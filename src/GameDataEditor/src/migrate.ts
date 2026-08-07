@@ -15,6 +15,7 @@ const MIGRATION_TARGETS: { folderName: string; schemaFile: string }[] = [
 	{ folderName: 'Techs', schemaFile: 'tech.schema.json' },
 	{ folderName: 'Items', schemaFile: 'item.schema.json' },
 	{ folderName: 'MonsterActions', schemaFile: 'monsteraction.schema.json' },
+	{ folderName: 'Jobs', schemaFile: 'job.schema.json' },
 ];
 
 /** GameSettings.json is a single file at the GameData root, not a folder of many entries, so it's scanned separately from MIGRATION_TARGETS. */

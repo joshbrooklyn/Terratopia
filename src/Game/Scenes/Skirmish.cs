@@ -99,7 +99,7 @@ public partial class Skirmish : Control
 		var adventurer = GameEngineClass.Instance.AllAdventurers.Lookup(adventurerId);
 		var row = _rowScene.Instantiate<SkirmishParticipantRow>();
 		_selectedAdventurerRows.AddChild(row);
-		row.Initialize(adventurerId, adventurer.Name, adventurer.Level, showRemoveButton: false);
+		row.Initialize(adventurerId, adventurer.Name, level: 1, showRemoveButton: false);
 		_adventurerRowsById[adventurerId] = row;
 	}
 

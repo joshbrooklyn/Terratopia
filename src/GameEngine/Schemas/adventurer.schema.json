@@ -8,19 +8,13 @@
     "schemaVersion",
     "adventurerId",
     "name",
-    "maxHp",
-    "hp",
-    "maxTp",
-    "tp",
-    "power",
-    "defense",
-    "speed",
+    "jobId",
     "canUseFightAction"
   ],
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 1,
+      "const": 3,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "adventurerId": {
@@ -31,26 +25,9 @@
       "type": "string",
       "description": "Display name."
     },
-    "maxHp": {
-      "type": "integer"
-    },
-    "hp": {
-      "type": "integer"
-    },
-    "maxTp": {
-      "type": "integer"
-    },
-    "tp": {
-      "type": "integer"
-    },
-    "power": {
-      "type": "integer"
-    },
-    "defense": {
-      "type": "integer"
-    },
-    "speed": {
-      "type": "integer"
+    "jobId": {
+      "type": "string",
+      "description": "Id of the job (GameData/Jobs) this adventurer has selected."
     },
     "evasion": {
       "type": "number",

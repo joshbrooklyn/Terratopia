@@ -34,6 +34,10 @@
         "url": "./schemas/monsteraction.schema.json"
       },
       {
+        "fileMatch": "/Jobs/*.json",
+        "url": "./schemas/job.schema.json"
+      },
+      {
         "fileMatch": "/GameSettings.json",
         "url": "./schemas/gamesettings.schema.json"
       }

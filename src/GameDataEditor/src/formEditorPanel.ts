@@ -81,6 +81,7 @@ const DYNAMIC_ENUM_FIELDS: Record<string, Record<string, string>> = {
 	Adventurers: {
 		techsIds: 'Techs',
 		itemIds: 'Items',
+		jobId: 'Jobs',
 	},
 	Monsters: {
 		monsterActionIds: 'MonsterActions',
@@ -101,10 +102,9 @@ function getSchemaWithDynamicEnums(extensionUri: vscode.Uri, gameDataRoot: strin
 			continue;
 		}
 		const ids = loadCategoryItems(gameDataRoot, sourceCategory).map(item => item.id).sort();
-		properties[fieldKey] = {
-			...fieldSchema,
-			items: { ...fieldSchema.items, enum: ids },
-		};
+		properties[fieldKey] = fieldSchema.type === 'array'
+			? { ...fieldSchema, items: { ...fieldSchema.items, enum: ids } }
+			: { ...fieldSchema, enum: ids };
 	}
 
 	return { ...schema, properties };

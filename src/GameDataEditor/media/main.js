@@ -33,6 +33,7 @@
 		Adventurers: [],
 		Monsters: [],
 		MonsterActions: [],
+		Jobs: [],
 	};
 
 	function isFieldDisabled(category, key) {
@@ -45,7 +46,7 @@
 	// schema additions) falls into a trailing untitled section rather than disappearing.
 	const SECTION_DEFINITIONS = {
 		MonsterActions: [
-			{ title: 'Identity', fields: ['monsterActionId', 'name', 'jobClass', 'tier', 'description'] },
+			{ title: 'Identity', fields: ['monsterActionId', 'name', 'tier', 'description'] },
 			{ title: 'Targeting', fields: ['targetingType', 'validTargets', 'livingOrDead', 'allowMultipleAttackOnSameTarget'] },
 			{ title: 'Combat', fields: ['tpCost', 'numAttacks', 'keywords', 'combatFunction', 'parameters'] },
 		],
@@ -65,9 +66,14 @@
 			{ title: 'Abilities', fields: ['monsterActionIds', 'passives', 'canUseFightAction'] },
 		],
 		Adventurers: [
-			{ title: 'Identity', fields: ['adventurerId', 'name'] },
-			{ title: 'Stats', fields: ['maxHp', 'hp', 'maxTp', 'tp', 'power', 'defense', 'speed', 'evasion', 'critChance', 'critModifier'] },
+			{ title: 'Identity', fields: ['adventurerId', 'name', 'jobId'] },
+			{ title: 'Stats', fields: ['evasion', 'critChance', 'critModifier'] },
 			{ title: 'Abilities', fields: ['techsIds', 'itemIds', 'canUseFightAction'] },
+		],
+		Jobs: [
+			{ title: 'Identity', fields: ['jobId', 'name'] },
+			{ title: 'Base Stats', fields: ['hpBase', 'tpBase', 'powerBase', 'defenseBase', 'speedBase'] },
+			{ title: 'Stat Growth', fields: ['hpPerLevel', 'tpPerLevel', 'powerPerLevel', 'defensePerLevel', 'speedPerLevel'] },
 		],
 	};
 

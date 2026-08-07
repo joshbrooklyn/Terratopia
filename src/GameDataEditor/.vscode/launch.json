@@ -10,7 +10,7 @@
         "${env:TerratopiaGameDataPath}"
       ],
       "outFiles": ["${workspaceFolder}/out/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}"
+      "preLaunchTask": "npm: compile"
     }
   ]
 }

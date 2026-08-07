@@ -28,6 +28,8 @@ const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
 	'item.schema.json': { 1: stripInvalidKeywords },
 	'tech.schema.json': { 1: stripInvalidKeywords },
 	'monsteraction.schema.json': { 1: stripInvalidKeywords },
+	'adventurer.schema.json': { 1: addJobId, 2: dropAdventurerBaseStatsV3 },
+	'job.schema.json': { 1: addJobBaseStatsV2 },
 };
 ```
 
@@ -56,13 +58,15 @@ export function runMigrations(schemaFileName: string, schema: JsonSchemaObject, 
 - **No step registered** for the current version — a version gap with no automatic fix.
 - **A step ran but didn't advance `schemaVersion`** — a safety guard against an infinite loop from a buggy step.
 
-**Currently one step exists**: `stripInvalidKeywords`, registered for `item`, `tech`, and `monsteraction` schemas at version 1 (migrating 1→2). It removes any `keywords` entries not present in the schema's current `keywords.items.enum` (see [Keywords](keywords.md)), records a note per removed entry, and sets `data.schemaVersion = 2`.
+**Currently two steps exist**: `stripInvalidKeywords`, registered for `item`, `tech`, and `monsteraction` schemas at version 1 (migrating 1→2). It removes any `keywords` entries not present in the schema's current `keywords.items.enum` (see [Keywords](keywords.md)), records a note per removed entry, and sets `data.schemaVersion = 2`. `addJobId`, registered for `adventurer` at version 1 (migrating 1→2), backfills the new required `jobId` field with `"fighter"` and sets `data.schemaVersion = 2` — a note tells the author to reassign each adventurer's job by hand.
+
+Base stats were later moved from Adventurer to Job: `dropAdventurerBaseStatsV3` (adventurer 2→3) removes `maxHp`/`hp`/`maxTp`/`tp`/`power`/`defense`/`speed`, and `addJobBaseStatsV2` (job 1→2) backfills `hpBase`/`tpBase`/`powerBase`/`defenseBase`/`speedBase` to `80`/`50`/`10`/`10`/`10` — a note tells the author to tune per job by hand.
 
 ## The scan/apply tool (`migrate.ts`)
 
 Entry point `runMigrateGameData(context, onApplied?)`, wired to the command `gamedataEditor.migrateGameData` ("GameData: Scan & Migrate", registered in `extension.ts`, declared in `package.json`). **It only runs when invoked from the Command Palette** — there's no activation event or auto-trigger on file open/save.
 
-1. **Scan.** Walks a hardcoded `MIGRATION_TARGETS` list (Adventurers, Monsters, Techs, Items, MonsterActions) — deliberately separate from `gameDataLoader.ts`'s `CATEGORY_DEFINITIONS`, so MonsterActions (which has no Form Editor UI) still gets scanned for drift.
+1. **Scan.** Walks a hardcoded `MIGRATION_TARGETS` list (Adventurers, Monsters, Techs, Items, MonsterActions, Jobs) — deliberately separate from `gameDataLoader.ts`'s `CATEGORY_DEFINITIONS`, so MonsterActions (which has no Form Editor UI) still gets scanned for drift.
 2. **Per file:** parse the JSON; if `schemaVersion` is missing or behind the schema's target, run `runMigrations`; then re-validate the (possibly now-patched) data against the schema with `validateAgainstSchema`. Each file is classified:
    - `ok` — already valid, nothing to do.
    - `migrated` — a migration ran, and the result now validates.

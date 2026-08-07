@@ -11,7 +11,6 @@ public class MonsterAction : IGameDataObject
     public required int SchemaVersion { get; init; }
     public string MonsterActionId { get; init; } = "";
     public string Name { get; init; } = "";
-    public string JobClass { get; init; } = "";
     public int TpCost { get; init; }
     public int Tier { get; init; }
     public string Description { get; init; } = "";
