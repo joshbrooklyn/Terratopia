@@ -63,7 +63,7 @@
 		Monsters: [
 			{ title: 'Identity', fields: ['monsterId', 'name'] },
 			{ title: 'Stats', fields: ['hpBase', 'hpPerLevel', 'powerBase', 'powerPerLevel', 'defenseBase', 'defensePerLevel', 'speedBase', 'speedBasePerLevel'] },
-			{ title: 'Abilities', fields: ['monsterActionIds', 'passives', 'canUseFightAction'] },
+			{ title: 'Abilities', fields: ['monsterActionIds', 'triggeredEffects', 'canUseFightAction'] },
 		],
 		Adventurers: [
 			{ title: 'Identity', fields: ['adventurerId', 'name', 'jobId'] },

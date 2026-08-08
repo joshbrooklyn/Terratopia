@@ -288,7 +288,7 @@ The fields currently available to read in `ctx.Parameters`, in
 | `PowerFactor` | `double?` | The action's base power modifier — the number that scales into a damage or heal amount before keyword bonuses are added. |
 | `BuffsDebuffs` | `IReadOnlyList<BuffDebuffSpec>?` | Timed buffs/debuffs this action applies, each resolved and applied once after the action fully resolves — after all hits, all damage/healing, and regardless of what was evaded. `null` or empty means the action applies none. |
 | `RegensDrains` | `IReadOnlyList<RegenDrainSpec>?` | Timed regen/drain this action applies, resolved and applied once the same way as `BuffsDebuffs`. Heals/restores or damages/spends a fixed percentage (`GameSettings.RegenDrainHpPct`/`RegenDrainTpPct`) of the target's MaxHp/MaxTp at the start of every round, with no elemental component. See [`regen-and-drain.md`](regen-and-drain.md). |
-| `PassivesApplied` | `IReadOnlyList<PassiveApplySpec>?` | Passives this action grants, resolved and applied once the same way as `BuffsDebuffs`. Unlike the other two riders, an entry has no duration — each is just `Passive` (a name resolved via `PassiveRegistry`) and `Target`; granting a passive the target already owns is a no-op. See [`passives.md`](passives.md). |
+| `TriggeredEffectsApplied` | `IReadOnlyList<TriggeredEffectApplySpec>?` | Triggered effects this action grants, resolved and applied once the same way as `BuffsDebuffs`. Unlike the other two riders, an entry has no duration — each is just `TriggeredEffect` (a name resolved via `TriggeredEffectRegistry`) and `Target`; granting a triggered effect the target already owns is a no-op. See [`triggered-effects.md`](triggered-effects.md). |
 
 Each `BuffDebuffSpec` entry is fully self-contained — `Stat`, `Type` (`Positive`/`Negative`),
 `Target`, `Rounds`, and `UntilRemoved` are all mandatory C# `required` properties, so unlike the
@@ -324,11 +324,11 @@ See [`buffs-and-debuffs.md`](buffs-and-debuffs.md) for the full writeup — timi
 data-authoring examples, GameData Editor and migration support, and plain-English descriptions of
 the test suite. `RegensDrains` (`IReadOnlyList<RegenDrainSpec>?`) works the same way, applied
 through the analogous `ApplyRegensDrains(ctx)` helper; see
-[`regen-and-drain.md`](regen-and-drain.md) for its full writeup. `PassivesApplied`
-(`IReadOnlyList<PassiveApplySpec>?`) is the same pattern again, applied through
-`ApplyPassives(ctx)`, which calls `PassiveTracker.Add(spec.Passive, entity.EntityId)` per resolved
-entity and raises `CombatEventBus.PassiveApplied` only when that call reports a genuine new grant;
-see [`passives.md`](passives.md) for its full writeup.
+[`regen-and-drain.md`](regen-and-drain.md) for its full writeup. `TriggeredEffectsApplied`
+(`IReadOnlyList<TriggeredEffectApplySpec>?`) is the same pattern again, applied through
+`ApplyTriggeredEffects(ctx)`, which calls `TriggeredEffectTracker.Add(spec.TriggeredEffect, entity.EntityId)` per resolved
+entity and raises `CombatEventBus.TriggeredEffectApplied` only when that call reports a genuine new grant;
+see [`triggered-effects.md`](triggered-effects.md) for its full writeup.
 
 Two more `CombatFunction` statics cover the standard damage/healing loop itself:
 `CalculateAndApplyDamage(ctx)` (per target: `ctx.TryEvade`, `ctx.Keywords.ApplyKeywordBonuses`,
@@ -337,7 +337,7 @@ Two more `CombatFunction` statics cover the standard damage/healing loop itself:
 `CombatMath.CalculateHealAmount`, `target.Heal`) — both reading `PowerFactor`/`CalcType` off
 `ctx.Parameters` the same way. `BasicDamageFunction` and `BasicHealFunction` are each just
 `DeductTpCost()` + one of these + `ApplyBuffsDebuffs(ctx)` + `ApplyRegensDrains(ctx)` +
-`ApplyPassives(ctx)`.
+`ApplyTriggeredEffects(ctx)`.
 
 ## Reference: `CombatFunctionContext`
 

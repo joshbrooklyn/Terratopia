@@ -15,6 +15,6 @@ public class BasicDamageFunction : CombatFunction
         CalculateAndApplyDamage(ctx);
         ApplyBuffsDebuffs(ctx);
         ApplyRegensDrains(ctx);
-        ApplyPassives(ctx);
+        ApplyTriggeredEffects(ctx);
     }
 }

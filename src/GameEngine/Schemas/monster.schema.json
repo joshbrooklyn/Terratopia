@@ -21,7 +21,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 1,
+      "const": 2,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "monsterId": {
@@ -64,7 +64,7 @@
       "uniqueItems": true,
       "description": "Ids of monster actions (GameData/MonsterActions) this monster can use."
     },
-    "passives": {
+    "triggeredEffects": {
       "type": "array",
       "items": {
         "type": "string",
@@ -73,7 +73,7 @@
         ]
       },
       "uniqueItems": true,
-      "description": "Names of passive classes (src/CombatEngine/Passives) applied to this monster, e.g. \"LivingDead\". Hand-maintained against PassiveRegistry.cs's registered PassiveName constants — keep in sync by hand."
+      "description": "Names of triggered effect classes (src/CombatEngine/TriggeredEffects) applied to this monster, e.g. \"LivingDead\". Hand-maintained against TriggeredEffectRegistry.cs's registered TriggeredEffectName constants — keep in sync by hand."
     },
     "canUseFightAction": {
       "type": "boolean"

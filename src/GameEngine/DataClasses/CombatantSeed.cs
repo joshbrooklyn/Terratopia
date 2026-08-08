@@ -11,7 +11,7 @@ public record CombatantSeed(
     IReadOnlyList<CombatantInventoryEntry> Items,
     IReadOnlyList<CombatantInventoryEntry> Perks,
     IReadOnlyList<CombatantInventoryEntry> Gear,
-    IReadOnlyList<string> Passives);
+    IReadOnlyList<string> TriggeredEffects);
 
 public record CombatStartData(
     IReadOnlyList<CombatantSeed> Allies,

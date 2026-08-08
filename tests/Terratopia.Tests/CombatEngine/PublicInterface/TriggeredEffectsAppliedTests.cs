@@ -3,16 +3,16 @@ using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
-using CombatEngine.Passives;
+using CombatEngine.TriggeredEffects;
 
 namespace Terratopia.Tests.CombatEngine.PublicInterface;
 
 [Collection("CombatEngineSerial")]
-public class PassivesAppliedTests
+public class TriggeredEffectsAppliedTests
 {
     // Mirrors RegenDrainTests.SetupCombat: one ally, one durable enemy, the ally spends its
-    // opening move (carrying the passivesApplied rider under test) then finishes the enemy off
-    // with a FixedAmount blow so the fight terminates.
+    // opening move (carrying the triggeredEffectsApplied rider under test) then finishes the enemy
+    // off with a FixedAmount blow so the fight terminates.
     private static (CombatEngineClass engine, CombatEntity ally, CombatEntity enemy) SetupCombat(
         CombatCommand openingMove)
     {
@@ -32,7 +32,7 @@ public class PassivesAppliedTests
 
         engine.InitCombat(allies: [ally], enemies: [enemy]);
 
-        // Wire AFTER InitCombat, which calls CombatEventBus.Reset() and PassiveTracker.Reset().
+        // Wire AFTER InitCombat, which calls CombatEventBus.Reset() and TriggeredEffectTracker.Reset().
         bool openingMoveUsed = false;
         CombatEventBus.WaitingForTurn += (entityId, _, _, isAlly) =>
         {
@@ -81,50 +81,51 @@ public class PassivesAppliedTests
             CombatFunction = NoDirectEffectsFunction.FunctionName,
             Parameters     = new CombatFunctionParameters
             {
-                PassivesApplied =
+                TriggeredEffectsApplied =
                 [
-                    new PassiveApplySpec { Passive = LivingDeadPassive.PassiveName, Target = target },
+                    new TriggeredEffectApplySpec { TriggeredEffect = LivingDeadTriggeredEffect.TriggeredEffectName, Target = target },
                 ],
             },
         };
 
     [Fact]
-    public void PassivesApplied_GrantsThePassive_StampingTheCurrentRound()
+    public void TriggeredEffectsApplied_GrantsTheTriggeredEffect_StampingTheCurrentRound()
     {
-        // What: verifies a passivesApplied rider on a NoDirectEffects action actually reaches
-        //       PassiveTracker.Add - the entity ends up owning the passive, stamped with the
-        //       round the grant happened in.
+        // What: verifies a triggeredEffectsApplied rider on a NoDirectEffects action actually
+        //       reaches TriggeredEffectTracker.Add - the entity ends up owning the triggered
+        //       effect, stamped with the round the grant happened in.
         var (engine, _, _) = SetupCombat(MakeOpeningMove());
 
         engine.BeginCombat();
 
-        var activation = PassiveTracker.Get(LivingDeadPassive.PassiveName, "ally");
-        Assert.Contains(PassiveRegistry.Resolve(LivingDeadPassive.PassiveName), PassiveTracker.GetPassives("ally"));
+        var activation = TriggeredEffectTracker.Get(LivingDeadTriggeredEffect.TriggeredEffectName, "ally");
+        Assert.Contains(TriggeredEffectRegistry.Resolve(LivingDeadTriggeredEffect.TriggeredEffectName), TriggeredEffectTracker.GetTriggeredEffects("ally"));
         Assert.Equal(1, activation.RoundApplied);
     }
 
     [Fact]
-    public void PassiveApplied_FiresExactlyOncePerNewGrant()
+    public void TriggeredEffectApplied_FiresExactlyOncePerNewGrant()
     {
-        // What: verifies CombatEventBus.PassiveApplied is raised for a genuine new grant, exactly
-        //       once, naming the granted entity and the source that granted it.
+        // What: verifies CombatEventBus.TriggeredEffectApplied is raised for a genuine new grant,
+        //       exactly once, naming the granted entity and the source that granted it.
         var (engine, _, _) = SetupCombat(MakeOpeningMove());
 
-        var raised = new List<(string EntityId, string Passive, string SourceId)>();
-        CombatEventBus.PassiveApplied += (entityId, _, passiveName, sourceId, _) =>
-            raised.Add((entityId, passiveName, sourceId));
+        var raised = new List<(string EntityId, string TriggeredEffect, string SourceId)>();
+        CombatEventBus.TriggeredEffectApplied += (entityId, _, triggeredEffectName, sourceId, _) =>
+            raised.Add((entityId, triggeredEffectName, sourceId));
 
         engine.BeginCombat();
 
-        Assert.Equal([("ally", LivingDeadPassive.PassiveName, "grant_tech")], raised);
+        Assert.Equal([("ally", LivingDeadTriggeredEffect.TriggeredEffectName, "grant_tech")], raised);
     }
 
     [Fact]
-    public void ReGranting_AnAlreadyOwnedPassive_IsANoOp_AndDoesNotRaisePassiveApplied()
+    public void ReGranting_AnAlreadyOwnedTriggeredEffect_IsANoOp_AndDoesNotRaiseTriggeredEffectApplied()
     {
-        // What: verifies granting a passive the entity already owns leaves RoundApplied/counts
-        //       untouched (PassiveTracker.Add's existing no-op guard) and does not re-raise
-        //       PassiveApplied - only a genuine new grant is reported.
+        // What: verifies granting a triggered effect the entity already owns leaves
+        //       RoundApplied/counts untouched (TriggeredEffectTracker.Add's existing no-op guard)
+        //       and does not re-raise TriggeredEffectApplied - only a genuine new grant is
+        //       reported.
         var ally = new CombatEntity(
             entityId: "ally", name: "Ally", level: 1,
             maxHp: 100, hp: 100, maxTp: 50, tp: 50,
@@ -139,9 +140,9 @@ public class PassivesAppliedTests
         var engine = new CombatEngineClass(new Random(0));
         engine.InitCombat(allies: [ally], enemies: [enemy]);
 
-        // Grant it up front, same as a monster's Monster.Passives would be at combat setup.
-        PassiveTracker.Add(LivingDeadPassive.PassiveName, "ally");
-        var before = PassiveTracker.Get(LivingDeadPassive.PassiveName, "ally");
+        // Grant it up front, same as a monster's Monster.TriggeredEffects would be at combat setup.
+        TriggeredEffectTracker.Add(LivingDeadTriggeredEffect.TriggeredEffectName, "ally");
+        var before = TriggeredEffectTracker.Get(LivingDeadTriggeredEffect.TriggeredEffectName, "ally");
 
         bool openingMoveUsed = false;
         CombatEventBus.WaitingForTurn += (entityId, _, _, isAlly) =>
@@ -172,22 +173,23 @@ public class PassivesAppliedTests
         };
 
         bool raised = false;
-        CombatEventBus.PassiveApplied += (_, _, _, _, _) => raised = true;
+        CombatEventBus.TriggeredEffectApplied += (_, _, _, _, _) => raised = true;
 
         engine.BeginCombat();
 
-        var after = PassiveTracker.Get(LivingDeadPassive.PassiveName, "ally");
+        var after = TriggeredEffectTracker.Get(LivingDeadTriggeredEffect.TriggeredEffectName, "ally");
         Assert.Equal(before.RoundApplied, after.RoundApplied);
         Assert.Equal(before.TotalApplications, after.TotalApplications);
         Assert.False(raised);
     }
 
     [Fact]
-    public void UnrecognisedPassiveName_IsSilentlyDropped()
+    public void UnrecognisedTriggeredEffectName_IsSilentlyDropped()
     {
-        // What: mirrors PassiveTracker.Add's own no-op guard - an authored passivesApplied entry
-        //       naming an unregistered passive grants nothing and raises nothing, rather than
-        //       throwing (the same tolerance PowerKeywordRegistry gives bad keyword names).
+        // What: mirrors TriggeredEffectTracker.Add's own no-op guard - an authored
+        //       triggeredEffectsApplied entry naming an unregistered triggered effect grants
+        //       nothing and raises nothing, rather than throwing (the same tolerance
+        //       PowerKeywordRegistry gives bad keyword names).
         var opening = new CombatCommand
         {
             ActorId        = "ally",
@@ -198,27 +200,27 @@ public class PassivesAppliedTests
             CombatFunction = NoDirectEffectsFunction.FunctionName,
             Parameters     = new CombatFunctionParameters
             {
-                PassivesApplied = [new PassiveApplySpec { Passive = "NotARealPassive", Target = BuffDebuffTarget.SelectedTargets }],
+                TriggeredEffectsApplied = [new TriggeredEffectApplySpec { TriggeredEffect = "NotARealTriggeredEffect", Target = BuffDebuffTarget.SelectedTargets }],
             },
         };
 
         var (engine, _, _) = SetupCombat(opening);
 
         bool raised = false;
-        CombatEventBus.PassiveApplied += (_, _, _, _, _) => raised = true;
+        CombatEventBus.TriggeredEffectApplied += (_, _, _, _, _) => raised = true;
 
         engine.BeginCombat();
 
-        Assert.Empty(PassiveTracker.GetPassives("ally"));
+        Assert.Empty(TriggeredEffectTracker.GetTriggeredEffects("ally"));
         Assert.False(raised);
     }
 
     [Fact]
-    public void CollidingPassivesAppliedEntries_Throw_NamingTheAction()
+    public void CollidingTriggeredEffectsAppliedEntries_Throw_NamingTheAction()
     {
-        // What: verifies two entries that resolve to the same (entity, passive) pair are a data
-        //       error, caught even though the JSON Schema's uniqueBy can only reject identical
-        //       (passive, target) pairs - mirrors CollidingRegenDrainEntries_Throw_NamingTheAction.
+        // What: verifies two entries that resolve to the same (entity, triggeredEffect) pair are a
+        //       data error, caught even though the JSON Schema's uniqueBy can only reject identical
+        //       (triggeredEffect, target) pairs - mirrors CollidingRegenDrainEntries_Throw_NamingTheAction.
         var opening = new CombatCommand
         {
             ActorId        = "ally",
@@ -229,10 +231,10 @@ public class PassivesAppliedTests
             CombatFunction = NoDirectEffectsFunction.FunctionName,
             Parameters     = new CombatFunctionParameters
             {
-                PassivesApplied =
+                TriggeredEffectsApplied =
                 [
-                    new PassiveApplySpec { Passive = LivingDeadPassive.PassiveName, Target = BuffDebuffTarget.Self },
-                    new PassiveApplySpec { Passive = LivingDeadPassive.PassiveName, Target = BuffDebuffTarget.AllAllies },
+                    new TriggeredEffectApplySpec { TriggeredEffect = LivingDeadTriggeredEffect.TriggeredEffectName, Target = BuffDebuffTarget.Self },
+                    new TriggeredEffectApplySpec { TriggeredEffect = LivingDeadTriggeredEffect.TriggeredEffectName, Target = BuffDebuffTarget.AllAllies },
                 ],
             },
         };

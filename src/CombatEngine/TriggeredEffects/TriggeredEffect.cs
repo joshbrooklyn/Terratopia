@@ -1,8 +1,8 @@
 using CombatEngine.DataClasses;
 
-namespace CombatEngine.Passives;
+namespace CombatEngine.TriggeredEffects;
 
-public abstract class Passive
+public abstract class TriggeredEffect
 {
     public abstract string Name { get; }
 
@@ -15,17 +15,17 @@ public abstract class Passive
 
     protected virtual int TotalApplications(CombatEntity entity)
     {
-        return PassiveTracker.Get(Name, entity.EntityId).TotalApplications;
+        return TriggeredEffectTracker.Get(Name, entity.EntityId).TotalApplications;
     }
 
     protected virtual int ApplicationsThisRound(CombatEntity entity)
     {
-        return PassiveTracker.Get(Name, entity.EntityId).ApplicationsThisRound;
+        return TriggeredEffectTracker.Get(Name, entity.EntityId).ApplicationsThisRound;
     }
 
     public virtual void RemoveFrom(string EntityId, string EntityName)
     {
-        if (PassiveTracker.Remove(Name, EntityId))
-            CombatEventBus.RaisePassiveRemoved(EntityId, EntityName, Name);
+        if (TriggeredEffectTracker.Remove(Name, EntityId))
+            CombatEventBus.RaiseTriggeredEffectRemoved(EntityId, EntityName, Name);
     }
 }

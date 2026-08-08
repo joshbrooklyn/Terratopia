@@ -115,7 +115,7 @@ buff/debuff relationship:
   removed the instant the entity *holding* it dies, before `EntityDeath` is raised. When false, it
   is simply left in place, un-cleared — without this flag, a dead entity keeps a stale entry sitting
   inert in `CombatEntity._buffsDebuffs` forever, since nothing else ever purges it. Note that
-  `CombatEntity.Revive` does not itself clear `IsDead`: its only caller today, `LivingDeadPassive`,
+  `CombatEntity.Revive` does not itself clear `IsDead`: its only caller today, `LivingDeadTriggeredEffect`,
   runs *before* `MarkDead()` inside `HandleDefeat`, preventing death from ever being marked in the
   first place, rather than reversing it after the fact — so `CancelOnEntityDeath` is not a "does
   this survive a resurrection" flag for anything in the engine today, just "does this get cleaned up
@@ -220,7 +220,7 @@ caught in two places that catch two different shapes of mistake:
    parameter): a stat holds at most one buff/debuff; re-applying the same polarity extends the
    duration without compounding the magnitude (unless either side is `UntilRemoved`, see above),
    and the opposite polarity cancels the existing entry outright.
-7. **`CombatEntity.HandleDefeat`** — after the passive prevention check and before
+7. **`CombatEntity.HandleDefeat`** — after the triggered-effect prevention check and before
    `MarkDead()`/`RaiseEntityDeath`, sweeps the entity's own buffs/debuffs for `CancelOnEntityDeath`
    entries and removes them.
 8. **`CombatRoster`** — subscribes to `CombatEventBus.EntityDeath` in its constructor; on any

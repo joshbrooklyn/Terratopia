@@ -6,7 +6,7 @@ Reference for the `Keywords` system in `CombatEngine.Keywords`.
 
 A **keyword** is a named modifier tag attached to a single action (a `Tech`, `Item`, or `MonsterAction`). When that action is used in combat, its keywords adjust the action's effective power factor — the multiplier that scales into damage. Keywords are conditional (e.g. "target is above 75% HP") or stack with repeated use (e.g. "gains power the more it's used").
 
-This is a different mechanism from **[Passives](passives.md)**: keywords live on *actions* and react to how/when that action is used, while passives live on *entities* and react to combat events (currently, death). See `passives.md` for that system.
+This is a different mechanism from **[Triggered Effects](triggered-effects.md)**: keywords live on *actions* and react to how/when that action is used, while triggered effects live on *entities* and react to combat events (currently, death). See `triggered-effects.md` for that system.
 
 ## Core types
 

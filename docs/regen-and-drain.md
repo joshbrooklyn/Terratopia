@@ -142,7 +142,7 @@ entity partway through its own entries (an entity can hold at most one `Hp` and 
 stops applying further entries that same round.
 
 An `Hp` Drain can be the killing blow: it routes through `TakeDamage`, so `HandleDefeat` and
-`OnDeath` passives (e.g. Living Dead) fire exactly as they would for damage from any other action.
+`OnDeath` triggered effects (e.g. Living Dead) fire exactly as they would for damage from any other action.
 
 `Tp` regen/drain on a monster (`MaxTp` is always `0` for enemies) computes a zero delta and is a
 silent no-op — no `EntityTpChanged` fires.

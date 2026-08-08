@@ -62,6 +62,8 @@ export function runMigrations(schemaFileName: string, schema: JsonSchemaObject, 
 
 Base stats were later moved from Adventurer to Job: `dropAdventurerBaseStatsV3` (adventurer 2→3) removes `maxHp`/`hp`/`maxTp`/`tp`/`power`/`defense`/`speed`, and `addJobBaseStatsV2` (job 1→2) backfills `hpBase`/`tpBase`/`powerBase`/`defenseBase`/`speedBase` to `80`/`50`/`10`/`10`/`10` — a note tells the author to tune per job by hand.
 
+"Passive" was later renamed to "TriggeredEffect" throughout the system (see [Triggered Effects](triggered-effects.md)): `renamePassivesAppliedToV14`/`V15`/`V16` (tech 13→14, item 14→15, monsteraction 15→16) rename `parameters.passivesApplied` to `triggeredEffectsApplied` and each entry's `passive` field to `triggeredEffect`, and `renameMonsterPassivesToV2` (monster 1→2) renames the top-level `passives` field to `triggeredEffects`.
+
 ## The scan/apply tool (`migrate.ts`)
 
 Entry point `runMigrateGameData(context, onApplied?)`, wired to the command `gamedataEditor.migrateGameData` ("GameData: Scan & Migrate", registered in `extension.ts`, declared in `package.json`). **It only runs when invoked from the Command Palette** — there's no activation event or auto-trigger on file open/save.
@@ -82,4 +84,4 @@ Entry point `runMigrateGameData(context, onApplied?)`, wired to the command `gam
 2. Write a new `MigrationStep` in `migrations.ts` that mutates `data` in place and sets `data.schemaVersion` to the new version number.
 3. Register it in `MIGRATIONS`, keyed by the schema's file name and the version it migrates *from* (not to).
 
-Note that `monster.schema.json` and `dungeon.schema.json` currently have no entries in `MIGRATIONS` at all — their `schemaVersion` hasn't needed bumping yet. That's expected, not a bug; add entries for them only once a change to those schemas actually requires one.
+`dungeon.schema.json` currently has no entries in `MIGRATIONS` at all — its `schemaVersion` hasn't needed bumping yet. That's expected, not a bug; add entries for it only once a change to that schema actually requires one. `monster.schema.json` got its first entry (`1: renameMonsterPassivesToV2`) once the `passives` → `triggeredEffects` rename gave it something to migrate.

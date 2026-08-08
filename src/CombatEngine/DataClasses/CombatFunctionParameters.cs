@@ -29,8 +29,8 @@ public class CombatFunctionParameters
     // applied once each the same way as BuffsDebuffs.
     public IReadOnlyList<RegenDrainSpec>? RegensDrains { get; init; }
 
-    // Passives granted once after the action fully resolves, the same way as BuffsDebuffs. Unlike
-    // the two above, an entry has no duration - PassiveTracker.Add either grants it outright or,
-    // if the target already owns it, no-ops.
-    public IReadOnlyList<PassiveApplySpec>? PassivesApplied { get; init; }
+    // Triggered effects granted once after the action fully resolves, the same way as BuffsDebuffs.
+    // Unlike the two above, an entry has no duration - TriggeredEffectTracker.Add either grants it
+    // outright or, if the target already owns it, no-ops.
+    public IReadOnlyList<TriggeredEffectApplySpec>? TriggeredEffectsApplied { get; init; }
 }

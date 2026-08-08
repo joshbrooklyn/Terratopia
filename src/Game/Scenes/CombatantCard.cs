@@ -9,9 +9,9 @@ using Godot;
 
 public partial class CombatantCard : PanelContainer
 {
-	private static readonly Color PositiveColor = new(0.4f, 0.9f, 0.45f);
-	private static readonly Color NegativeColor = new(1f, 0.35f, 0.35f);
-	private static readonly Color PassiveColor  = new(0.8f, 0.65f, 1f);
+	private static readonly Color PositiveColor       = new(0.4f, 0.9f, 0.45f);
+	private static readonly Color NegativeColor       = new(1f, 0.35f, 0.35f);
+	private static readonly Color TriggeredEffectColor = new(0.8f, 0.65f, 1f);
 
 	private string _entityId = "";
 	private Label  _evadedLabel = null!;
@@ -43,13 +43,14 @@ public partial class CombatantCard : PanelContainer
 
 	private readonly Dictionary<BuffDebuffStat, (bool IsPositive, int Rounds, bool UntilRemoved, int Value, string SourceName)> _buffs = new();
 	private readonly Dictionary<RegenDrainStat, (bool IsPositive, int Rounds, bool UntilRemoved, string SourceName)> _regens = new();
-	// Passives don't expire, so this is just the set of names owned right now - no per-entry state
-	// to track like _buffs/_regens. Seeded in Initialize from CombatantSeed.Passives - the one-time
-	// setup handoff, same as every other stat on the card - rather than PassiveApplied, since
-	// passives granted at combat setup (e.g. Monster.Passives) are applied before this card, or any
-	// CombatEventBus subscriber, exists. Mid-combat grants/removals come through
-	// PassiveApplied/PassiveRemoved instead.
-	private readonly HashSet<string> _passives = new();
+	// Triggered effects don't expire, so this is just the set of names owned right now - no
+	// per-entry state to track like _buffs/_regens. Seeded in Initialize from
+	// CombatantSeed.TriggeredEffects - the one-time setup handoff, same as every other stat on the
+	// card - rather than TriggeredEffectApplied, since triggered effects granted at combat setup
+	// (e.g. Monster.TriggeredEffects) are applied before this card, or any CombatEventBus
+	// subscriber, exists. Mid-combat grants/removals come through
+	// TriggeredEffectApplied/TriggeredEffectRemoved instead.
+	private readonly HashSet<string> _triggeredEffects = new();
 
 	public void Initialize(CombatantSeed seed, bool showTp)
 	{
@@ -94,8 +95,8 @@ public partial class CombatantCard : PanelContainer
 		_inventoryEntries   = seed.Techs.Concat(seed.Items).ToList();
 		RenderInventory();
 
-		foreach (var passiveName in seed.Passives)
-			_passives.Add(passiveName);
+		foreach (var triggeredEffectName in seed.TriggeredEffects)
+			_triggeredEffects.Add(triggeredEffectName);
 		RenderEffects();
 
 		_normalStyle = (StyleBoxFlat)GetThemeStylebox("panel").Duplicate();
@@ -120,8 +121,8 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.RegenDrainApplied += OnRegenDrainApplied;
 		CombatEventBus.RegenDrainTicked += OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired += OnRegenDrainExpired;
-		CombatEventBus.PassiveApplied += OnPassiveApplied;
-		CombatEventBus.PassiveRemoved += OnPassiveRemoved;
+		CombatEventBus.TriggeredEffectApplied += OnTriggeredEffectApplied;
+		CombatEventBus.TriggeredEffectRemoved += OnTriggeredEffectRemoved;
 	}
 
 	public override void _ExitTree()
@@ -138,8 +139,8 @@ public partial class CombatantCard : PanelContainer
 		CombatEventBus.RegenDrainApplied -= OnRegenDrainApplied;
 		CombatEventBus.RegenDrainTicked -= OnRegenDrainTicked;
 		CombatEventBus.RegenDrainExpired -= OnRegenDrainExpired;
-		CombatEventBus.PassiveApplied -= OnPassiveApplied;
-		CombatEventBus.PassiveRemoved -= OnPassiveRemoved;
+		CombatEventBus.TriggeredEffectApplied -= OnTriggeredEffectApplied;
+		CombatEventBus.TriggeredEffectRemoved -= OnTriggeredEffectRemoved;
 	}
 
 	// PanelContainer defaults to MouseFilter.Stop and the inner Columns tree is set to Ignore in
@@ -367,24 +368,24 @@ public partial class CombatantCard : PanelContainer
 		});
 	}
 
-	private void OnPassiveApplied(string entityId, string entityName, string passiveName, string sourceId, string sourceName)
+	private void OnTriggeredEffectApplied(string entityId, string entityName, string triggeredEffectName, string sourceId, string sourceName)
 	{
 		if (entityId != _entityId) return;
 
 		UiEventQueue.Enqueue(() =>
 		{
-			_passives.Add(passiveName);
+			_triggeredEffects.Add(triggeredEffectName);
 			RenderEffects();
 		});
 	}
 
-	private void OnPassiveRemoved(string entityId, string entityName, string passiveName)
+	private void OnTriggeredEffectRemoved(string entityId, string entityName, string triggeredEffectName)
 	{
 		if (entityId != _entityId) return;
 
 		UiEventQueue.Enqueue(() =>
 		{
-			_passives.Remove(passiveName);
+			_triggeredEffects.Remove(triggeredEffectName);
 			RenderEffects();
 		});
 	}
@@ -436,10 +437,10 @@ public partial class CombatantCard : PanelContainer
 			_effectsContainer.AddChild(label);
 		}
 
-		foreach (var passiveName in _passives)
+		foreach (var triggeredEffectName in _triggeredEffects)
 		{
-			var label = new Label { Text = $"◆ {passiveName}" };
-			label.AddThemeColorOverride("font_color", PassiveColor);
+			var label = new Label { Text = $"◆ {triggeredEffectName}" };
+			label.AddThemeColorOverride("font_color", TriggeredEffectColor);
 			_effectsContainer.AddChild(label);
 		}
 	}

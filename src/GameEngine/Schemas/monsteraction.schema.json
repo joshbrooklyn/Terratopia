@@ -18,7 +18,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 15,
+      "const": 16,
       "description": "Schema version this file was written against. Managed by the GameData Editor — do not hand-edit."
     },
     "monsterActionId": {
@@ -196,19 +196,19 @@
             }
           }
         },
-        "passivesApplied": {
+        "triggeredEffectsApplied": {
           "type": "array",
-          "uniqueBy": ["passive", "target"],
-          "description": "BasicDamage/BasicHeal: optional. Passives granted once after the action fully resolves — after all hits, and regardless of what was evaded. Granting a passive an entity already owns is a no-op. At most one entry per passive+target combination.",
+          "uniqueBy": ["triggeredEffect", "target"],
+          "description": "BasicDamage/BasicHeal: optional. Triggered effects granted once after the action fully resolves — after all hits, and regardless of what was evaded. Granting a triggered effect an entity already owns is a no-op. At most one entry per triggeredEffect+target combination.",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["passive", "target"],
+            "required": ["triggeredEffect", "target"],
             "properties": {
-              "passive": {
+              "triggeredEffect": {
                 "type": "string",
                 "enum": ["LivingDead"],
-                "description": "Hand-maintained against PassiveRegistry.cs's registered PassiveName constants (same enum as monster.schema.json's passives)."
+                "description": "Hand-maintained against TriggeredEffectRegistry.cs's registered TriggeredEffectName constants (same enum as monster.schema.json's triggeredEffects)."
               },
               "target": {
                 "type": "string",

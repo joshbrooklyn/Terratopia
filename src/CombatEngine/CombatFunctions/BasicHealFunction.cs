@@ -17,6 +17,6 @@ public class BasicHealFunction : CombatFunction
         CalculateAndApplyHealing(ctx);
         ApplyBuffsDebuffs(ctx);
         ApplyRegensDrains(ctx);
-        ApplyPassives(ctx);
+        ApplyTriggeredEffects(ctx);
     }
 }

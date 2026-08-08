@@ -20,7 +20,7 @@ public class Monster : IGameDataObject
     public int SpeedBasePerLevel { get; init; }
 
     public List<string> MonsterActionIds { get; init; } = [];
-    public List<string>? Passives { get; init; }
+    public List<string>? TriggeredEffects { get; init; }
 
     // Combat access
     public bool CanUseFightAction { get; init; }

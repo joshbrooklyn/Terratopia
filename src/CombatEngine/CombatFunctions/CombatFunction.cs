@@ -1,7 +1,7 @@
 using CombatEngine.DataClasses;
 using CombatEngine.Enums;
 using CombatEngine.Engine;
-using CombatEngine.Passives;
+using CombatEngine.TriggeredEffects;
 
 
 namespace CombatEngine.CombatFunctions;
@@ -80,31 +80,31 @@ public abstract class CombatFunction
         }
     }
 
-    // Resolves and grants every passivesApplied[] entry, the same way as ApplyBuffsDebuffs and
-    // ApplyRegensDrains - shared by every function that can rider one onto its action, called once
-    // after the function has fully resolved its own damage/healing, no-ops when none were
-    // authored, and throws when two entries target the same (entity, passive) pair. Unlike the
-    // other two riders, a grant has no duration: PassiveTracker.Add either creates the record or,
-    // if the entity already owns the passive (or the name is unrecognised), no-ops - only a
-    // genuine new grant raises CombatEventBus.PassiveApplied.
-    protected static void ApplyPassives(CombatFunctionContext ctx)
+    // Resolves and grants every triggeredEffectsApplied[] entry, the same way as ApplyBuffsDebuffs
+    // and ApplyRegensDrains - shared by every function that can rider one onto its action, called
+    // once after the function has fully resolved its own damage/healing, no-ops when none were
+    // authored, and throws when two entries target the same (entity, triggeredEffect) pair. Unlike
+    // the other two riders, a grant has no duration: TriggeredEffectTracker.Add either creates the
+    // record or, if the entity already owns the triggered effect (or the name is unrecognised),
+    // no-ops - only a genuine new grant raises CombatEventBus.TriggeredEffectApplied.
+    protected static void ApplyTriggeredEffects(CombatFunctionContext ctx)
     {
-        var specs = ctx.Parameters.PassivesApplied;
+        var specs = ctx.Parameters.TriggeredEffectsApplied;
         if (specs is not { Count: > 0 })
             return;
 
-        var applied = new HashSet<(string EntityId, string Passive)>();
+        var applied = new HashSet<(string EntityId, string TriggeredEffect)>();
 
         foreach (var spec in specs)
         {
             foreach (var entity in ctx.Roster.ResolveBuffDebuffTargets(ctx.Actor, spec.Target, ctx.Targets))
             {
-                if (!applied.Add((entity.EntityId, spec.Passive)))
+                if (!applied.Add((entity.EntityId, spec.TriggeredEffect)))
                     throw new InvalidOperationException(
-                        $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two passivesApplied entries both target {entity.Name} with {spec.Passive}.");
+                        $"{ctx.Command.CombatFunction} ('{ctx.Command.SourceId}'): two triggeredEffectsApplied entries both target {entity.Name} with {spec.TriggeredEffect}.");
 
-                if (PassiveTracker.Add(spec.Passive, entity.EntityId))
-                    CombatEventBus.RaisePassiveApplied(entity.EntityId, entity.Name, spec.Passive, ctx.Command.SourceId, ctx.Command.SourceName);
+                if (TriggeredEffectTracker.Add(spec.TriggeredEffect, entity.EntityId))
+                    CombatEventBus.RaiseTriggeredEffectApplied(entity.EntityId, entity.Name, spec.TriggeredEffect, ctx.Command.SourceId, ctx.Command.SourceName);
             }
         }
     }

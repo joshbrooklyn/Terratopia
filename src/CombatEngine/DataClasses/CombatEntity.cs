@@ -1,6 +1,6 @@
 using CombatEngine.Engine;
 using CombatEngine.Enums;
-using CombatEngine.Passives;
+using CombatEngine.TriggeredEffects;
 
 namespace CombatEngine.DataClasses;
 
@@ -79,18 +79,18 @@ public class CombatEntity
 
     private void HandleDefeat(string sourceId, string sourceName)
     {
-        foreach (var passive in PassiveTracker.GetPassives(EntityId))
+        foreach (var triggeredEffect in TriggeredEffectTracker.GetTriggeredEffects(EntityId))
         {
-            var (deathPrevented, reviveHp) = passive.OnBeforeDeath(this.EntityId, this.Name);
+            var (deathPrevented, reviveHp) = triggeredEffect.OnBeforeDeath(this.EntityId, this.Name);
 
             if (deathPrevented)
             {
                 int oldHp = Hp;
                 Hp = reviveHp;
                 Logger.Debug($"[combat] Revive: {Name} oldHp={oldHp} -> revived at hp={Hp}");
-                CombatEventBus.RaiseEntityRevived(EntityId, Name, oldHp, Hp, sourceId, sourceName);     
+                CombatEventBus.RaiseEntityRevived(EntityId, Name, oldHp, Hp, sourceId, sourceName);
 
-                return; // only one passive can prevent death, so stop after the first one that does           
+                return; // only one triggered effect can prevent death, so stop after the first one that does
             }
         }
 
@@ -301,7 +301,7 @@ public class CombatEntity
     // resource's max, computed directly here rather than through CombatMath - no Defense
     // mitigation, no element, matching the design ("no elemental component"). Routes through the
     // existing TakeDamage/Heal/SpendTp/RestoreTp so clamping, death handling (HandleDefeat/OnDeath
-    // passives), and the usual EntityDamaged/EntityHealed/EntityTpChanged events all fire exactly
+    // triggered effects), and the usual EntityDamaged/EntityHealed/EntityTpChanged events all fire exactly
     // as they would for any other source. The entity itself is passed as the "actor" - the
     // sourceId/sourceName reported are the tech/item that originally inflicted the regen/drain.
     private void ApplyRegensDrains()

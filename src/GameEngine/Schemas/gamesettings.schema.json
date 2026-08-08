@@ -120,7 +120,7 @@
     },
     "livingDeadReviveHp": {
       "type": "integer",
-      "description": "LivingDeadPassive: Hp the entity is revived with when the passive triggers."
+      "description": "LivingDeadTriggeredEffect: Hp the entity is revived with when the triggered effect fires."
     },
     "timedBuffPct": {
       "type": "number",

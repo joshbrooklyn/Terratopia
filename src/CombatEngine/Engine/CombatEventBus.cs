@@ -40,17 +40,18 @@ public static class CombatEventBus
     public static event Action<string, string, RegenDrainStat, bool, int, string, string>?       RegenDrainTicked;  // entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName
     public static event Action<string, string, RegenDrainStat, bool, string, string, string, string>? RegenDrainExpired; // entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName
 
-    // A passive granted mid-combat by an action's passivesApplied rider. Only raised when the
-    // entity did not already own it - PassiveTracker.Add is a no-op on a re-grant, and that no-op
-    // is not reported here. Passives never tick or expire on their own, so unlike
-    // BuffDebuffApplied/RegenDrainApplied there is no Ticked counterpart - only the Applied/Removed
-    // pair below.
-    public static event Action<string, string, string, string, string>? PassiveApplied; // entityId, entityName, passiveName, sourceId, sourceName
-    // A passive stripping its own ownership (e.g. LivingDead consuming itself on death). Only
-    // raised on a genuine removal - PassiveTracker.Remove is a no-op if the entity didn't own the
-    // passive, and that no-op is not reported here. No sourceId/sourceName: removal is always the
-    // passive acting on itself, so there is no separate causing Tech/Item/MonsterAction to name.
-    public static event Action<string, string, string>? PassiveRemoved; // entityId, entityName, passiveName
+    // A triggered effect granted mid-combat by an action's triggeredEffectsApplied rider. Only
+    // raised when the entity did not already own it - TriggeredEffectTracker.Add is a no-op on a
+    // re-grant, and that no-op is not reported here. Triggered effects never tick or expire on
+    // their own, so unlike BuffDebuffApplied/RegenDrainApplied there is no Ticked counterpart -
+    // only the Applied/Removed pair below.
+    public static event Action<string, string, string, string, string>? TriggeredEffectApplied; // entityId, entityName, triggeredEffectName, sourceId, sourceName
+    // A triggered effect stripping its own ownership (e.g. LivingDead consuming itself on death).
+    // Only raised on a genuine removal - TriggeredEffectTracker.Remove is a no-op if the entity
+    // didn't own the triggered effect, and that no-op is not reported here. No sourceId/sourceName:
+    // removal is always the triggered effect acting on itself, so there is no separate causing
+    // Tech/Item/MonsterAction to name.
+    public static event Action<string, string, string>? TriggeredEffectRemoved; // entityId, entityName, triggeredEffectName
 
     // Entity lifecycle
     public static event Action<string, string, int, int, string, string>? EntityTpChanged;     // entityId, entityName, oldTp, newTp, sourceId, sourceName
@@ -74,8 +75,8 @@ public static class CombatEventBus
     internal static void RaiseRegenDrainApplied(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, bool untilRemoved, string sourceId, string sourceName) => RegenDrainApplied?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, untilRemoved, sourceId, sourceName);
     internal static void RaiseRegenDrainTicked(string entityId, string entityName, RegenDrainStat stat, bool isPositive, int roundsRemaining, string sourceId, string sourceName) => RegenDrainTicked?.Invoke(entityId, entityName, stat, isPositive, roundsRemaining, sourceId, sourceName);
     internal static void RaiseRegenDrainExpired(string entityId, string entityName, RegenDrainStat stat, bool isPositive, string sourceId, string sourceName, string counteredBySourceId, string counteredBySourceName) => RegenDrainExpired?.Invoke(entityId, entityName, stat, isPositive, sourceId, sourceName, counteredBySourceId, counteredBySourceName);
-    internal static void RaisePassiveApplied(string entityId, string entityName, string passiveName, string sourceId, string sourceName) => PassiveApplied?.Invoke(entityId, entityName, passiveName, sourceId, sourceName);
-    internal static void RaisePassiveRemoved(string entityId, string entityName, string passiveName) => PassiveRemoved?.Invoke(entityId, entityName, passiveName);
+    internal static void RaiseTriggeredEffectApplied(string entityId, string entityName, string triggeredEffectName, string sourceId, string sourceName) => TriggeredEffectApplied?.Invoke(entityId, entityName, triggeredEffectName, sourceId, sourceName);
+    internal static void RaiseTriggeredEffectRemoved(string entityId, string entityName, string triggeredEffectName) => TriggeredEffectRemoved?.Invoke(entityId, entityName, triggeredEffectName);
     internal static void RaiseEntityTpChanged(string entityId, string entityName, int oldTp, int newTp, string sourceId, string sourceName) => EntityTpChanged?.Invoke(entityId, entityName, oldTp, newTp, sourceId, sourceName);
     internal static void RaiseEntityDeath(string entityId, string entityName, string sourceId, string sourceName) => EntityDeath?.Invoke(entityId, entityName, sourceId, sourceName);
     internal static void RaiseEntityRevived(string entityId, string entityName, int oldHp, int newHp, string sourceId, string sourceName) => EntityRevived?.Invoke(entityId, entityName, oldHp, newHp, sourceId, sourceName);
@@ -99,8 +100,8 @@ public static class CombatEventBus
         RegenDrainApplied      = null;
         RegenDrainTicked       = null;
         RegenDrainExpired      = null;
-        PassiveApplied         = null;
-        PassiveRemoved         = null;
+        TriggeredEffectApplied = null;
+        TriggeredEffectRemoved = null;
         EntityTpChanged        = null;
         EntityDeath            = null;
         EntityRevived          = null;

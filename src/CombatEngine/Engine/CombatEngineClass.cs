@@ -1,7 +1,7 @@
 using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Keywords;
-using CombatEngine.Passives;
+using CombatEngine.TriggeredEffects;
 
 namespace CombatEngine.Engine;
 
@@ -34,7 +34,7 @@ public class CombatEngineClass
         IReadOnlyList<CombatEntity> enemies)
     {
         CombatEventBus.Reset();
-        PassiveTracker.Reset();
+        TriggeredEffectTracker.Reset();
         _roundNumber = 0;
 
         _roster   = new CombatRoster(allies, enemies, _rng);
@@ -70,7 +70,7 @@ public class CombatEngineClass
         }
 
         _roundNumber++;
-        PassiveTracker.BeginRound(_roundNumber);
+        TriggeredEffectTracker.BeginRound(_roundNumber);
         _turnOrder.BuildRound(_roster.GetLivingEntities());
         CombatEventBus.RaiseRoundStarted(_roundNumber, _turnOrder.CurrentTurnOrderIds, _turnOrder.CurrentTurnOrderNames);
 

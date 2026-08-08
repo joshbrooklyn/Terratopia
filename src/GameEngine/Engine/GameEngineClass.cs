@@ -2,7 +2,7 @@ using CombatEngine.CombatFunctions;
 using CombatEngine.DataClasses;
 using CombatEngine.Engine;
 using CombatEngine.Enums;
-using CombatEngine.Passives;
+using CombatEngine.TriggeredEffects;
 using GameEngine;
 using GameEngine.DataClasses;
 
@@ -183,19 +183,19 @@ public class GameEngineClass
 
         CombatEngineClass.Instance.InitCombat(allies, enemies);
 
-        // Passives are granted after InitCombat, which resets PassiveTracker - granting any
-        // earlier would just be wiped out. The seed is rewritten with whatever Add actually
-        // accepted (an unrecognised name is silently dropped by Add and must not appear in the UI
-        // either), since the UI seeds its owned-passives display from the seed, not from
-        // PassiveTracker directly.
+        // Triggered effects are granted after InitCombat, which resets TriggeredEffectTracker -
+        // granting any earlier would just be wiped out. The seed is rewritten with whatever Add
+        // actually accepted (an unrecognised name is silently dropped by Add and must not appear in
+        // the UI either), since the UI seeds its owned-triggered-effects display from the seed, not
+        // from TriggeredEffectTracker directly.
         for (int i = 0; i < enemySeeds.Count; i++)
         {
             var monster = _enemyMonsterMap[enemySeeds[i].EntityId];
             var granted = new List<string>();
-            foreach (var passiveName in monster.Passives ?? [])
-                if (PassiveTracker.Add(passiveName, enemySeeds[i].EntityId))
-                    granted.Add(passiveName);
-            enemySeeds[i] = enemySeeds[i] with { Passives = granted };
+            foreach (var triggeredEffectName in monster.TriggeredEffects ?? [])
+                if (TriggeredEffectTracker.Add(triggeredEffectName, enemySeeds[i].EntityId))
+                    granted.Add(triggeredEffectName);
+            enemySeeds[i] = enemySeeds[i] with { TriggeredEffects = granted };
         }
 
         return new CombatStartData(allySeeds, enemySeeds);

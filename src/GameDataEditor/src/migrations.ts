@@ -317,6 +317,60 @@ function addPassivesApplied(data: Record<string, unknown>): MigrationResult {
 	return { notes: [] };
 }
 
+/**
+ * Renames parameters.passivesApplied → triggeredEffectsApplied, and each entry's `passive` field
+ * → `triggeredEffect`. Part of the "Passive" → "TriggeredEffect" rename across the whole system.
+ */
+function renamePassivesApplied(data: Record<string, unknown>, nextVersion: number): MigrationResult {
+	const parameters = data.parameters as Record<string, unknown> | undefined;
+	const notes: string[] = [];
+
+	const entries = parameters?.passivesApplied;
+	if (Array.isArray(entries)) {
+		for (const entry of entries) {
+			if (!entry || typeof entry !== 'object') continue;
+			const e = entry as Record<string, unknown>;
+			if ('passive' in e) {
+				e.triggeredEffect = e.passive;
+				delete e.passive;
+			}
+		}
+		parameters!.triggeredEffectsApplied = entries;
+		delete parameters!.passivesApplied;
+		notes.push('Renamed passivesApplied to triggeredEffectsApplied.');
+	}
+
+	data.schemaVersion = nextVersion;
+	return { notes };
+}
+
+/** v13 → v14 (tech): see renamePassivesApplied. */
+function renamePassivesAppliedToV14(data: Record<string, unknown>): MigrationResult {
+	return renamePassivesApplied(data, 14);
+}
+
+/** v14 → v15 (item): see renamePassivesApplied. */
+function renamePassivesAppliedToV15(data: Record<string, unknown>): MigrationResult {
+	return renamePassivesApplied(data, 15);
+}
+
+/** v15 → v16 (monsteraction): see renamePassivesApplied. */
+function renamePassivesAppliedToV16(data: Record<string, unknown>): MigrationResult {
+	return renamePassivesApplied(data, 16);
+}
+
+/** v1 → v2 (monster): renames `passives` → `triggeredEffects`; nothing else to backfill. */
+function renameMonsterPassivesToV2(data: Record<string, unknown>): MigrationResult {
+	const notes: string[] = [];
+	if ('passives' in data) {
+		data.triggeredEffects = data.passives;
+		delete data.passives;
+		notes.push('Renamed passives to triggeredEffects.');
+	}
+	data.schemaVersion = 2;
+	return { notes };
+}
+
 /** v1 → v2 (adventurer): backfills the new required `jobId`. Defaults to "fighter" — reassign each adventurer's job by hand. */
 function addJobId(data: Record<string, unknown>): MigrationResult {
 	data.jobId = 'fighter';
@@ -354,9 +408,10 @@ function addJobBaseStatsV2(data: Record<string, unknown>): MigrationResult {
 
 /** Migration steps, keyed by schema file name, then by the version being migrated *from*. */
 const MIGRATIONS: Record<string, Record<number, MigrationStep>> = {
-	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13, 13: addPassivesApplied },
-	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9, 9: bumpToV10, 10: backfillCancelOnDeathFlagsToV11, 11: bumpToV12, 12: addPassivesApplied },
-	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13, 13: addPassivesApplied, 14: dropJobClassV15 },
+	'item.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: addMaxUses, 4: bumpToV5, 5: bumpToV6, 6: bumpToV7, 7: buffDebuffToArrayV8, 8: backfillUntilRemovedToV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13, 13: addPassivesApplied, 14: renamePassivesAppliedToV15 },
+	'tech.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropTraitsV9, 9: bumpToV10, 10: backfillCancelOnDeathFlagsToV11, 11: bumpToV12, 12: addPassivesApplied, 13: renamePassivesAppliedToV14 },
+	'monsteraction.schema.json': { 1: stripInvalidKeywords, 2: directEffectsToCombatFunction, 3: bumpToV4, 4: bumpToV5, 5: bumpToV6, 6: buffDebuffToArrayV7, 7: backfillUntilRemovedToV8, 8: dropNumTargetsV9, 9: dropTraitsV10, 10: bumpToV11, 11: backfillCancelOnDeathFlagsToV12, 12: bumpToV13, 13: addPassivesApplied, 14: dropJobClassV15, 15: renamePassivesAppliedToV16 },
+	'monster.schema.json': { 1: renameMonsterPassivesToV2 },
 	'gamesettings.schema.json': { 1: addTimedBuffPct, 2: addRegenDrainPct },
 	'adventurer.schema.json': { 1: addJobId, 2: dropAdventurerBaseStatsV3 },
 	'job.schema.json': { 1: addJobBaseStatsV2 },
