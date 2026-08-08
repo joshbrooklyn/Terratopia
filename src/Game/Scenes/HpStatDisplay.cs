@@ -28,19 +28,19 @@ public partial class HpStatDisplay : Label
 	private void OnEntityDamaged(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, bool isCriticalHit, int oldHp, int newHp)
 	{
 		if (targetId != _entityId) return;
-		SetHp(newHp);
+		UiEventQueue.Enqueue(() => SetHp(newHp));
 	}
 
 	private void OnEntityHealed(string targetId, string targetName, int amount, string actorId, string actorName, string sourceId, string sourceName, int oldHp, int newHp)
 	{
 		if (targetId != _entityId) return;
-		SetHp(newHp);
+		UiEventQueue.Enqueue(() => SetHp(newHp));
 	}
 
 	private void OnEntityRevived(string entityId, string entityName, int oldHp, int newHp, string sourceId, string sourceName)
 	{
 		if (entityId != _entityId) return;
-		SetHp(newHp);
+		UiEventQueue.Enqueue(() => SetHp(newHp));
 	}
 
 	private void SetHp(int newHp)
